@@ -36,8 +36,13 @@ describe('DocumentManager', () => {
     const user = userEvent.setup();
     const create = vi.fn(() => 'blob:x');
     const revoke = vi.fn();
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
     Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const downloads: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download);
+    });
     render(<DocumentManager entityType="ppa" entityId="ppa-1" canUpload canDownload canDelete />);
     await user.click(
       await screen.findByRole('button', { name: lo.dropzone.downloadFile('PPA-NamTheun2-Agreement-Signed.pdf') }),
@@ -45,6 +50,8 @@ describe('DocumentManager', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('blob:x'));
     expect(create).toHaveBeenCalled();
     expect(click).toHaveBeenCalled();
+    expect(downloads).toEqual(['PPA-NamTheun2-Agreement-Signed.pdf']);
+    Object.assign(URL, { createObjectURL: origCreate, revokeObjectURL: origRevoke });
   });
 
   it('confirms before deleting', async () => {

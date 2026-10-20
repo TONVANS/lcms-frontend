@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FileDropzone } from './file-dropzone';
@@ -38,5 +38,24 @@ describe('FileDropzone & FileList', () => {
     await user.upload(screen.getByLabelText(lo.dropzone.prompt), [ok, exe]);
     expect(onFiles).toHaveBeenCalledWith([ok]);
     expect(onReject).toHaveBeenCalledWith([lo.dropzone.badType('a.exe')]);
+  });
+
+  it('derives the hint from accept and links it to the input', () => {
+    const { rerender } = render(<FileDropzone onFilesSelected={vi.fn()} maxSizeMb={5} />);
+    const hint = screen.getByText(lo.dropzone.hint('PDF, DOC, DOCX, JPG, JPEG, PNG', 5));
+    expect(screen.getByLabelText(lo.dropzone.prompt)).toHaveAttribute('aria-describedby', hint.id);
+    rerender(<FileDropzone onFilesSelected={vi.fn()} maxSizeMb={5} accept=".xlsx,.csv" />);
+    expect(screen.getByText(lo.dropzone.hint('XLSX, CSV', 5))).toBeInTheDocument();
+  });
+
+  it('ignores drops while disabled but still prevents default navigation', () => {
+    const onFiles = vi.fn();
+    const { container } = render(<FileDropzone onFilesSelected={onFiles} disabled />);
+    const label = container.querySelector('label') as HTMLElement;
+    const file = new File(['x'], 'ok.pdf', { type: 'application/pdf' });
+    const ev = createEvent.drop(label, { dataTransfer: { files: [file] } });
+    fireEvent(label, ev);
+    expect(ev.defaultPrevented).toBe(true);
+    expect(onFiles).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { Download, File, FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
+import { BADGE_TONE_CLASS } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { lo } from '@/lib/i18n/lo';
 import { formatDate } from '@/lib/utils/date';
@@ -23,6 +24,8 @@ export interface FileListProps {
   className?: string;
 }
 
+const TILE_BASE = 'border-transparent';
+
 function getFileTile(name: string, mime?: string) {
   const ext = name.split('.').pop()?.toLowerCase();
 
@@ -30,27 +33,27 @@ function getFileTile(name: string, mime?: string) {
     return {
       icon: FileText,
       label: 'PDF',
-      className: 'border-transparent bg-[#FFE4E6] text-[#BE123C] dark:border-[rgba(251,113,133,0.30)] dark:bg-[rgba(251,113,133,0.12)] dark:text-[#FDA4AF]',
+      className: cn(TILE_BASE, 'dark:border-[rgba(251,113,133,0.30)]', BADGE_TONE_CLASS.rose),
     };
   }
   if (['doc', 'docx'].includes(ext ?? '') || mime?.includes('word')) {
     return {
       icon: FileText,
       label: 'DOC',
-      className: 'border-transparent bg-[#DBEAFE] text-[#1E40AF] dark:border-[rgba(96,165,250,0.30)] dark:bg-[rgba(96,165,250,0.12)] dark:text-[#93C5FD]',
+      className: cn(TILE_BASE, 'dark:border-[rgba(96,165,250,0.30)]', BADGE_TONE_CLASS.blue),
     };
   }
   if (['xls', 'xlsx'].includes(ext ?? '') || mime?.includes('sheet')) {
     return {
       icon: FileSpreadsheet,
       label: 'XLS',
-      className: 'border-transparent bg-[#D1FAE5] text-[#047857] dark:border-[rgba(52,211,153,0.30)] dark:bg-[rgba(52,211,153,0.12)] dark:text-[#6EE7B7]',
+      className: cn(TILE_BASE, 'dark:border-[rgba(52,211,153,0.30)]', BADGE_TONE_CLASS.emerald),
     };
   }
   return {
     icon: File,
     label: ext?.toUpperCase() ?? 'FILE',
-    className: 'border-transparent bg-[#F1F5F9] text-[#334155] dark:border-[rgba(148,163,184,0.30)] dark:bg-[rgba(148,163,184,0.14)] dark:text-[#CBD5E1]',
+    className: cn(TILE_BASE, 'dark:border-[rgba(148,163,184,0.30)]', BADGE_TONE_CLASS.slate),
   };
 }
 

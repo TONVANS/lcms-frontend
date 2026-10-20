@@ -125,7 +125,7 @@ export const lo = {
   dropzone: {
     dragActive: 'ວາງໄຟລ໌ລົງບ່ອນນີ້',
     prompt: 'ຄລິກເພື່ອເລືອກໄຟລ໌ ຫຼື ລາກໄຟລ໌ມາໃສ່ບ່ອນນີ້',
-    hint: (maxMb: number) => `ຮອງຮັບ PDF, DOCX, XLSX, PNG ຂະໜາດສູງສຸດ ${maxMb}MB`,
+    hint: (types: string, maxMb: number) => `ຮອງຮັບ ${types} ຂະໜາດສູງສຸດ ${maxMb}MB`,
     uploading: 'ກຳລັງອັບໂຫຼດ...',
     remove: 'ລຶບອອກ',
     download: 'ດາວໂຫຼດ',

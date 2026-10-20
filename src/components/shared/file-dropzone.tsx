@@ -1,7 +1,7 @@
 'use client';
 
 import { UploadCloud } from 'lucide-react';
-import { type ChangeEvent, type DragEvent, useState } from 'react';
+import { type ChangeEvent, type DragEvent, useId, useState } from 'react';
 import { env } from '@/config/env';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
@@ -13,6 +13,15 @@ export interface FileDropzoneProps {
   accept?: string;
   disabled?: boolean;
   className?: string;
+}
+
+function acceptLabel(accept: string): string {
+  const exts = accept
+    .split(',')
+    .map((t) => t.trim())
+    .filter((t) => t.startsWith('.'))
+    .map((t) => t.slice(1).toUpperCase());
+  return [...new Set(exts)].join(', ');
 }
 
 function matchesAccept(file: File, accept: string): boolean {
@@ -39,6 +48,7 @@ export function FileDropzone({
   className,
 }: FileDropzoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const hintId = useId();
 
   const handleFiles = (files: File[]) => {
     if (files.length === 0) return;
@@ -81,12 +91,13 @@ export function FileDropzone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      aria-disabled={disabled || undefined}
       className={cn(
         'group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer select-none',
         'border-[rgba(212,179,122,0.45)] bg-[rgba(212,179,122,0.03)] hover:bg-[rgba(212,179,122,0.06)] hover:border-[#d4b37a]',
         'focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus-ring)',
         isDragOver && 'border-[#d4b37a] bg-[rgba(212,179,122,0.1)] scale-[1.01]',
-        disabled && 'pointer-events-none opacity-50',
+        disabled && 'cursor-not-allowed opacity-50',
         className,
       )}
     >
@@ -98,6 +109,7 @@ export function FileDropzone({
         className="sr-only"
         disabled={disabled}
         aria-label={lo.dropzone.prompt}
+        aria-describedby={hintId}
       />
 
       <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#d4b37a]/30 bg-[#d4b37a]/10 text-[#d4b37a] transition-transform duration-200 group-hover:scale-110">
@@ -108,8 +120,8 @@ export function FileDropzone({
         {isDragOver ? lo.dropzone.dragActive : lo.dropzone.prompt}
       </p>
 
-      <p className="mt-1 text-xs text-[var(--text-muted)]">
-        {lo.dropzone.hint(maxSizeMb)}
+      <p id={hintId} className="mt-1 text-xs text-[var(--text-muted)]">
+        {lo.dropzone.hint(acceptLabel(accept), maxSizeMb)}
       </p>
     </label>
   );

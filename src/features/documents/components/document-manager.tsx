@@ -111,18 +111,23 @@ export function DocumentManager({
   };
 
   const handleDownload = async (file: { id: string; name: string }) => {
+    let url: string | null = null;
     try {
       const blob = await documentsService.download(file.id);
-      const url = URL.createObjectURL(blob);
+      url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = file.name;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
     } catch (err) {
       toast.error(toUserMessage(normalizeError(err)) || lo.errors.unknown);
+    } finally {
+      if (url) {
+        const toRevoke = url;
+        setTimeout(() => URL.revokeObjectURL(toRevoke), 0);
+      }
     }
   };
 
