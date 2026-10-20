@@ -1,8 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { env } from '@/config/env';
 import { clearMockSession, readMockSession, setMockSession } from '@/lib/auth/session';
+import { MOCK_USERS } from '../mocks/auth.mock';
+import { authService } from '../api/auth.service';
 import { useAuthStore } from './auth.store';
 
-const initial = { user: null, status: 'idle', endReason: null } as const;
+const initial = { user: null, status: 'idle', endReason: null, error: null } as const;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 beforeEach(() => {
   clearMockSession();
@@ -85,5 +92,66 @@ describe('auth store', () => {
       endReason: 'expired',
     });
     expect(readMockSession()).toBeNull();
+  });
+
+  it('fetchMe without cookie leaves a prior endReason unchanged', async () => {
+    useAuthStore.setState({ endReason: 'logout' });
+    await useAuthStore.getState().fetchMe();
+    expect(useAuthStore.getState().endReason).toBe('logout');
+  });
+
+  it('live mode: fetchMe calls /auth/me even without a readable cookie', async () => {
+    const original = env.NEXT_PUBLIC_API_MODE;
+    env.NEXT_PUBLIC_API_MODE = 'live';
+    try {
+      const me = vi.spyOn(authService, 'me').mockResolvedValue(MOCK_USERS[0]);
+      await useAuthStore.getState().fetchMe();
+      expect(me).toHaveBeenCalledTimes(1);
+      expect(useAuthStore.getState().status).toBe('authenticated');
+    } finally {
+      env.NEXT_PUBLIC_API_MODE = original;
+    }
+  });
+
+  it('stale cookie: a single unauthenticated transition, endReason expired', async () => {
+    setMockSession('ghost', false);
+    const seen: string[] = [];
+    const unsub = useAuthStore.subscribe((s) => seen.push(s.status));
+    await useAuthStore.getState().fetchMe();
+    unsub();
+    expect(seen.filter((s) => s === 'unauthenticated')).toHaveLength(1);
+    expect(useAuthStore.getState().endReason).toBe('expired');
+  });
+
+  it('network error on /auth/me -> status error, session kept', async () => {
+    setMockSession('admin', false);
+    useAuthStore.setState({ user: MOCK_USERS[0], endReason: null });
+    vi.spyOn(authService, 'me').mockRejectedValue({ status: 0, code: 'NETWORK', message: 'x' });
+    await useAuthStore.getState().fetchMe();
+    const s = useAuthStore.getState();
+    expect(s.status).toBe('error');
+    expect(s.error?.code).toBe('NETWORK');
+    expect(s.user).toEqual(MOCK_USERS[0]);
+    expect(s.endReason).toBeNull();
+    expect(readMockSession()).toBe('admin');
+  });
+
+  it('logout with a failing request still clears local state', async () => {
+    setMockSession('admin', false);
+    useAuthStore.setState({ user: MOCK_USERS[0], status: 'authenticated' });
+    vi.spyOn(authService, 'logout').mockRejectedValue({ status: 0, code: 'NETWORK', message: '' });
+    await useAuthStore.getState().logout();
+    expect(useAuthStore.getState()).toMatchObject({
+      status: 'unauthenticated',
+      user: null,
+      endReason: 'logout',
+    });
+    expect(readMockSession()).toBeNull();
+  });
+
+  it('expire while loading does nothing', () => {
+    useAuthStore.setState({ status: 'loading' });
+    useAuthStore.getState().expire();
+    expect(useAuthStore.getState()).toMatchObject({ status: 'loading', endReason: null });
   });
 });

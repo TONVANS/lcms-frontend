@@ -1,3 +1,5 @@
+import { env } from '@/config/env';
+
 export const SESSION_COOKIE = 'lcms_session';
 
 const THIRTY_DAYS = 2592000;
@@ -24,4 +26,13 @@ export function readMockSession(): string | null {
 export function clearMockSession(): void {
   if (typeof document === 'undefined') return;
   document.cookie = `${SESSION_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
+}
+
+/**
+ * Whether a session may exist. Mock mode: the mock cookie is readable. Live mode: the
+ * session cookie is httpOnly and unreadable, the proxy guarantees it on protected
+ * routes, and the backend is the authority, so always true.
+ */
+export function hasSessionHint(): boolean {
+  return env.NEXT_PUBLIC_API_MODE === 'mock' ? readMockSession() !== null : true;
 }
