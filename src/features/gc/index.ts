@@ -19,3 +19,4 @@ export {
   type GcContractInput,
 } from './schemas/gc.schema';
 export { gcService, type GcListQuery, type GcDashboard } from './api/gc.service';
+export { GcContractsView } from './components/gc-contracts-view';

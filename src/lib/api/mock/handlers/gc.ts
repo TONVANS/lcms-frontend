@@ -65,10 +65,16 @@ function isDuplicate(contractNo: string | undefined, exceptId?: string): boolean
     .some((c) => c.id !== exceptId && c.contractNo.trim().toLowerCase() === needle);
 }
 
-function compareNullsLast(a: string | null, b: string | null, dir: 1 | -1): number {
+function compareNullsLast(
+  a: string | null,
+  b: string | null,
+  dir: 1 | -1,
+  collate = false,
+): number {
   if (a === null && b === null) return 0;
   if (a === null) return 1;
   if (b === null) return -1;
+  if (collate) return a.localeCompare(b, 'lo') * dir;
   return a < b ? -dir : a > b ? dir : 0;
 }
 
@@ -134,7 +140,7 @@ export function register(mock: MockAdapter): void {
       return true;
     });
     filtered.sort((a: GeneralContract, b: GeneralContract) =>
-      compareNullsLast(a[sort], b[sort], dir),
+      compareNullsLast(a[sort], b[sort], dir, sort === 'title'),
     );
     const start = (page - 1) * pageSize;
     const body: Paginated<GeneralContract> = {

@@ -84,6 +84,19 @@ describe('gc handlers', () => {
     }
   });
 
+  it('sorts titles with Lao collation, not code-point order', async () => {
+    setMockSession('gc.editor', false);
+    // A leading vowel (U+0EC0) sorts after every consonant by code point, but collates by the consonant that follows it.
+    const lead = await gcService.create({ ...input, contractNo: 'LAO-1', title: 'ເກ' });
+    const plain = await gcService.create({ ...input, contractNo: 'LAO-2', title: 'ຂ' });
+    expect('ເກ' < 'ຂ').toBe(false);
+    const r = await gcService.list({ sort: 'title', order: 'asc', pageSize: 50 });
+    const ids = r.items.map((c) => c.id);
+    expect(ids.indexOf(lead.id)).toBeLessThan(ids.indexOf(plain.id));
+    const titles = r.items.map((c) => c.title);
+    expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b, 'lo')));
+  });
+
   it('ignores invalid query values', async () => {
     setMockSession('gc.viewer', false);
     const r = await gcService.list({ status: 'bogus' as never, pageSize: 999, page: -2 });

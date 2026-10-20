@@ -6,6 +6,7 @@ const pages = [
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
   { name: 'ppa', path: '/ppa', user: 'admin' },
+  { name: 'gc-list', path: '/contracts/list', user: 'admin' },
 ] as const;
 
 for (const theme of ['dark', 'light'] as const) {
@@ -16,6 +17,15 @@ for (const theme of ['dark', 'light'] as const) {
         if (p.user) await loginAs(page, p.user);
         await page.goto(p.path);
         await page.waitForLoadState('networkidle');
+        // Axe samples colours mid-fade for the staggered table rows; let finite animations settle.
+        await page.evaluate(async () => {
+          await Promise.all(
+            document
+              .getAnimations()
+              .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+              .map((a) => a.finished.catch(() => undefined)),
+          );
+        });
       });
 
       test('no horizontal scroll', async ({ page }) => {
