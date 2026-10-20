@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { getModuleFromPath } from '@/config/navigation';
+import { useAlertsStore } from '@/features/alerts';
+import { useAuthStore } from '@/features/auth';
 import { useUiStore } from '@/stores/ui.store';
 import { AppSidebar } from './app-sidebar';
 import { BackgroundGlows } from './background-glows';
@@ -10,11 +12,22 @@ import { Topbar } from './topbar';
 
 interface AppShellProps {
   children: ReactNode;
+  /** Overrides the alerts store count (tests / stories). */
   unreadCount?: number;
 }
 
-export function AppShell({ children, unreadCount = 0 }: AppShellProps) {
+export function AppShell({ children, unreadCount: unreadOverride }: AppShellProps) {
   const pathname = usePathname();
+  const authStatus = useAuthStore((s) => s.status);
+  const storeUnread = useAlertsStore((s) => s.unreadCount);
+  const unreadCount = unreadOverride ?? storeUnread;
+
+  useEffect(() => {
+    const alerts = useAlertsStore.getState();
+    if (authStatus === 'authenticated') void alerts.fetch();
+    else alerts.reset();
+  }, [authStatus]);
+
   const moduleKey = getModuleFromPath(pathname);
   const setLastModule = useUiStore((s) => s.setLastModule);
 
@@ -40,7 +53,7 @@ export function AppShell({ children, unreadCount = 0 }: AppShellProps) {
   return (
     <>
       <BackgroundGlows />
-      <div className="mx-auto flex max-w-[1280px] flex-col gap-6 p-6">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 p-6">
         <Topbar variant="home" unreadCount={unreadCount} />
         <main id="main-content">{children}</main>
       </div>

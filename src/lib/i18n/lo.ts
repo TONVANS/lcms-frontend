@@ -81,6 +81,9 @@ export const lo = {
     alertSummary: 'ສະຫຼຸບການແຈ້ງເຕືອນ',
     openModule: 'ເຂົ້າສູ່ໂມດູນ',
     noUpcoming: 'ບໍ່ມີກຳນົດການໃນ 30 ມື້ຂ້າງໜ້າ',
+    stats: { total: 'ທັງໝົດ', active: 'ມີຜົນບັງຄັບໃຊ້', expiring: 'ໃກ້ໝົດອາຍຸ' },
+    buckets: { within7: 'ພາຍໃນ 7 ມື້', within30: '8–30 ມື້', within90: '31–90 ມື້' },
+    loadError: 'ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໜ້າຫຼັກໄດ້',
   },
   forbidden: { title: 'ບໍ່ມີສິດເຂົ້າເຖິງ' },
   nav: {

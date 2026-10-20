@@ -1,12 +1,14 @@
 import type { AxiosInstance } from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import { register as registerAlerts } from './handlers/alerts';
 import { register as registerAuth } from './handlers/auth';
+import { register as registerHome } from './handlers/home';
 
 type Handler = (mock: MockAdapter) => void;
 
 // Handler modules (src/lib/api/mock/handlers/*.ts) each export `register`.
 // Later tasks append their `register` functions here.
-const handlers: Handler[] = [registerAuth];
+const handlers: Handler[] = [registerAuth, registerHome, registerAlerts];
 
 export function installMocks(instance: AxiosInstance, opts?: { delay?: number }): MockAdapter {
   const delay = opts?.delay ?? (process.env.NODE_ENV === 'test' ? 0 : 300);
