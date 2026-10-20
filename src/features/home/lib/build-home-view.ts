@@ -1,13 +1,13 @@
 import { getAccessibleModules } from '@/lib/auth/permissions';
 import { daysLeft } from '@/lib/utils/date';
 import type { User } from '@/types/domain';
-import type { HomeSummary } from '../types';
+import type { HomeSummary, HomeViewModel } from '../types';
 
-/** Defence in depth: restrict a summary to the user's modules and recompute alert buckets. */
-export function filterSummaryForUser(s: HomeSummary, u: User, today: Date = new Date()): HomeSummary {
+/** Derives the Home view: module filter (defence in depth), upcoming 0..30 list and alert buckets. */
+export function buildHomeView(s: HomeSummary, u: User, today: Date = new Date()): HomeViewModel {
   const allowed = new Set(getAccessibleModules(u));
   const modules = s.modules.filter((m) => allowed.has(m.module));
-  const withDays = s.upcoming
+  const withDays = s.alerts
     .filter((a) => allowed.has(a.module))
     .map((a) => ({ a, d: daysLeft(a.dueDate, today) }));
 

@@ -3,12 +3,13 @@ import { cn } from '@/lib/utils/cn';
 import { FadeIn } from './fade-in';
 import { GlassCard } from './glass-card';
 
-type KpiVariant = 'default' | 'warning' | 'danger';
+type KpiVariant = 'default' | 'warning' | 'danger' | 'info';
 
 const VARIANT_CLASS: Record<KpiVariant, string> = {
   default: '',
   warning:
     '[--glass-bg:linear-gradient(160deg,rgba(251,191,36,0.14),rgba(251,191,36,0.04))] [--glass-border:rgba(251,191,36,0.35)]',
+  info: '[--glass-bg:linear-gradient(160deg,rgba(37,99,235,0.12),rgba(37,99,235,0.04))] [--glass-border:rgba(37,99,235,0.30)] dark:[--glass-bg:linear-gradient(160deg,rgba(96,165,250,0.14),rgba(96,165,250,0.04))] dark:[--glass-border:rgba(96,165,250,0.35)]',
   danger:
     '[--glass-bg:linear-gradient(160deg,rgba(251,113,133,0.14),rgba(251,113,133,0.04))] [--glass-border:rgba(251,113,133,0.35)]',
 };

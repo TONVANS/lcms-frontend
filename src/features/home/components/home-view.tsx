@@ -10,7 +10,7 @@ import { useAuthStore } from '@/features/auth';
 import { getLandingRoute } from '@/lib/auth/permissions';
 import { lo } from '@/lib/i18n/lo';
 import { homeService } from '../api/home.service';
-import { filterSummaryForUser } from '../lib/filter-summary';
+import { buildHomeView } from '../lib/build-home-view';
 import type { HomeSummary } from '../types';
 import { AlertSummary } from './alert-summary';
 import { ModuleCard } from './module-card';
@@ -51,7 +51,7 @@ export function HomeView() {
   };
 
   const view = useMemo(
-    () => (summary && user ? filterSummaryForUser(summary, user) : null),
+    () => (summary && user ? buildHomeView(summary, user) : null),
     [summary, user],
   );
 

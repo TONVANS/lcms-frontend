@@ -13,8 +13,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push: vi.fn() }
 
 const empty: HomeSummary = {
   modules: [],
-  upcoming: [],
-  alertBuckets: { within7: 0, within30: 0, within90: 0 },
+  alerts: [],
 };
 const full: HomeSummary = {
   modules: [
@@ -22,8 +21,7 @@ const full: HomeSummary = {
     { module: 'gc', total: 5, active: 4, expiring: 1 },
     { module: 'legal', total: 7, active: 6, expiring: 1 },
   ],
-  upcoming: [],
-  alertBuckets: { within7: 0, within30: 0, within90: 0 },
+  alerts: [],
 };
 
 function login(username: string) {

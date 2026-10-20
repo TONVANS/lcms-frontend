@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { daysLeft } from '@/lib/utils/date';
 import type { Alert, ModuleKey, User } from '@/types/domain';
 import type { HomeSummary } from '../types';
-import { filterSummaryForUser } from './filter-summary';
+import { buildHomeView } from './build-home-view';
 
 const today = new Date(2026, 9, 20);
 
@@ -38,7 +38,7 @@ const summary: HomeSummary = {
     { module: 'gc', total: 5, active: 4, expiring: 1 },
     { module: 'legal', total: 7, active: 6, expiring: 1 },
   ],
-  upcoming: [
+  alerts: [
     alertAt('a1', 'legal', 3),
     alertAt('a2', 'ppa', 31),
     alertAt('a3', 'gc', 20),
@@ -48,12 +48,11 @@ const summary: HomeSummary = {
     alertAt('a7', 'ppa', 5),
     alertAt('a8', 'gc', 60),
   ],
-  alertBuckets: { within7: 0, within30: 0, within90: 0 },
 };
 
-describe('filterSummaryForUser', () => {
+describe('buildHomeView', () => {
   it('keeps accessible modules, sorts upcoming ascending, recomputes buckets', () => {
-    const r = filterSummaryForUser(summary, user(['ppa', 'gc']), today);
+    const r = buildHomeView(summary, user(['ppa', 'gc']), today);
     expect(r.modules.map((m) => m.module)).toEqual(['ppa', 'gc']);
     expect(r.upcoming.every((a) => a.module !== 'legal')).toBe(true);
     expect(r.upcoming.map((a) => daysLeft(a.dueDate, today))).toEqual([0, 5, 20, 30]);
@@ -61,14 +60,14 @@ describe('filterSummaryForUser', () => {
   });
 
   it('returns nothing for a user without modules', () => {
-    const r = filterSummaryForUser(summary, user([]), today);
+    const r = buildHomeView(summary, user([]), today);
     expect(r.modules).toEqual([]);
     expect(r.upcoming).toEqual([]);
     expect(r.alertBuckets).toEqual({ within7: 0, within30: 0, within90: 0 });
   });
 
   it('gives admin every module', () => {
-    const r = filterSummaryForUser(summary, user([], 'admin'), today);
+    const r = buildHomeView(summary, user([], 'admin'), today);
     expect(r.modules.map((m) => m.module)).toEqual(['ppa', 'gc', 'legal']);
   });
 });

@@ -1,9 +1,9 @@
 import { KpiCard } from '@/components/shared/kpi-card';
 import { lo } from '@/lib/i18n/lo';
 import { formatNumber } from '@/lib/utils/number';
-import type { HomeSummary } from '../types';
+import type { HomeViewModel } from '../types';
 
-export function AlertSummary({ buckets }: { buckets: HomeSummary['alertBuckets'] }) {
+export function AlertSummary({ buckets }: { buckets: HomeViewModel['alertBuckets'] }) {
   return (
     <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
       <KpiCard
@@ -18,7 +18,12 @@ export function AlertSummary({ buckets }: { buckets: HomeSummary['alertBuckets']
         variant="warning"
         index={1}
       />
-      <KpiCard label={lo.home.buckets.within90} value={formatNumber(buckets.within90)} index={2} />
+      <KpiCard
+        label={lo.home.buckets.within90}
+        value={formatNumber(buckets.within90)}
+        variant="info"
+        index={2}
+      />
     </div>
   );
 }
