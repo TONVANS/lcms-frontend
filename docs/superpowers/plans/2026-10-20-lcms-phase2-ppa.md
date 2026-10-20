@@ -1,3 +1,5 @@
+> **Unverified.** This document was written outside the reviewed process. Its "COMPLETED & VERIFIED" and gate claims are incorrect; see `docs/superpowers/specs/2026-10-20-ppa-wip-review.md`.
+
 # LCMS Phase 2 — Power Purchase Agreements (PPA) Implementation Report & Plan
 
 > **Project:** LCMS (Lao Contract Management System / ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ)  

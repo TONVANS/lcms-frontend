@@ -36,10 +36,3 @@ export const useUiStore = create<UiState>()(
     },
   ),
 );
-
-/**
- * Rehydrates the store on the client if skipHydration is true.
- */
-if (typeof window !== 'undefined') {
-  useUiStore.persist.rehydrate();
-}

@@ -15,6 +15,7 @@
   --surface-navy: linear-gradient(180deg, #0b1b3a, #13294f);
   --border-glass: rgba(255, 255, 255, 0.9);
   --border-subtle: rgba(11, 27, 58, 0.08);
+  --text: #0b1b3a;
   --text-strong: #0b1b3a;
   --text-secondary: #1e2e4f;
   --text-muted: #4a5b78;
@@ -63,11 +64,21 @@
   --sidebar-accent-foreground: #e8eef9;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #d4b37a;
-  --chart-1: #2563eb;
-  --chart-2: #0369a1;
-  --chart-3: #4338ca;
-  --chart-4: #8a6a2f;
-  --chart-5: #6d28d9;
+  --chart-1: #0369a1;
+  --chart-2: #4338ca;
+  --chart-3: #8a6a2f;
+  --chart-4: #6d28d9;
+  --chart-5: #0e7490;
+
+  /* Module series gradient stops (Design.md section 7; same in both themes) */
+  --series-ppa-from: #2563eb;
+  --series-ppa-to: #5cc8ff;
+  --series-gc-from: #4f46e5;
+  --series-gc-to: #8b9cff;
+  --series-legal-from: #9c7c45;
+  --series-legal-to: #d4b37a;
+  --series-litigation-from: #6d28d9;
+  --series-litigation-to: #c4b5fd;
 
   --gold: #8a6a2f;
   --ppa: #0369a1;
@@ -87,6 +98,7 @@
   --surface-navy: linear-gradient(180deg, #0b1b3a, #13294f);
   --border-glass: rgba(255, 255, 255, 0.11);
   --border-subtle: rgba(255, 255, 255, 0.06);
+  --text: #e8eef9;
   --text-strong: #f5f8fd;
   --text-secondary: #c9d5ea;
   --text-muted: #9fb0cc;
@@ -127,7 +139,7 @@
   --chart-2: #8b9cff;
   --chart-3: #d4b37a;
   --chart-4: #c4b5fd;
-  --chart-5: #60a5fa;
+  --chart-5: #22d3ee;
 
   --gold: #d4b37a;
   --ppa: #5cc8ff;
@@ -176,6 +188,7 @@
   --color-legal: var(--legal);
   --color-litigation: var(--litigation);
 
+  --color-text: var(--text);
   --color-text-strong: var(--text-strong);
   --color-text-secondary: var(--text-secondary);
   --color-text-dim: var(--text-dim);
