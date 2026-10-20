@@ -8,9 +8,9 @@ type KpiVariant = 'default' | 'warning' | 'danger';
 const VARIANT_CLASS: Record<KpiVariant, string> = {
   default: '',
   warning:
-    'border-[rgba(251,191,36,0.35)] bg-[linear-gradient(160deg,rgba(251,191,36,0.14),rgba(251,191,36,0.04))]',
+    '[--glass-bg:linear-gradient(160deg,rgba(251,191,36,0.14),rgba(251,191,36,0.04))] [--glass-border:rgba(251,191,36,0.35)]',
   danger:
-    'border-[rgba(251,113,133,0.35)] bg-[linear-gradient(160deg,rgba(251,113,133,0.14),rgba(251,113,133,0.04))]',
+    '[--glass-bg:linear-gradient(160deg,rgba(251,113,133,0.14),rgba(251,113,133,0.04))] [--glass-border:rgba(251,113,133,0.35)]',
 };
 
 interface KpiCardProps {

@@ -11,4 +11,9 @@ describe('AlertBanner', () => {
     render(<AlertBanner tone="amber" title="A" />);
     expect(screen.getByRole('status')).toHaveTextContent('A');
   });
+  it.each(['amber', 'rose'] as const)('clears the light base color in dark for %s', (tone) => {
+    render(<AlertBanner tone={tone} title="X" />);
+    const el = screen.getByText('X').closest('[role]');
+    expect(el).toHaveClass('dark:bg-transparent');
+  });
 });
