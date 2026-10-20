@@ -80,4 +80,29 @@ describe('ConfirmDialog', () => {
     render(<ConfirmDialog open onOpenChange={() => {}} onConfirm={() => {}} />);
     expect(screen.getByRole('dialog')).toHaveClass('bg-(image:--surface-modal)');
   });
+
+  it('ignores Escape while pending and closes after resolve', async () => {
+    const user = userEvent.setup();
+    let resolve!: () => void;
+    const onOpenChange = vi.fn();
+    render(
+      <ConfirmDialog
+        open
+        onOpenChange={onOpenChange}
+        onConfirm={() => new Promise<void>((r) => (resolve = r))}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: lo.confirm.confirm }));
+    await user.keyboard('{Escape}');
+    expect(onOpenChange).not.toHaveBeenCalled();
+    resolve();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it('uses the intended responsive width', () => {
+    render(<ConfirmDialog open onOpenChange={() => {}} onConfirm={() => {}} />);
+    const cls = screen.getByRole('dialog').className;
+    expect(cls).toContain('sm:max-w-[440px]');
+    expect(cls).not.toContain('sm:max-w-sm');
+  });
 });

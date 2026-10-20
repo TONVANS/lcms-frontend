@@ -57,8 +57,14 @@ export function ConfirmDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[440px] rounded-[26px] border border-[var(--border-glass)] bg-(image:--surface-modal) p-6 shadow-2xl backdrop-blur-[28px]">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && busy) return;
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] sm:max-w-[440px] rounded-[26px] border border-[var(--border-glass)] bg-(image:--surface-modal) p-6 shadow-2xl backdrop-blur-[28px]">
         <DialogHeader className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             {icon ?? (
@@ -98,6 +104,7 @@ export function ConfirmDialog({
             type="button"
             variant={tone === 'danger' ? 'primary' : 'primary'}
             disabled={busy}
+            aria-busy={busy}
             onClick={handleConfirm}
             className={cn(
               tone === 'danger' &&
