@@ -40,3 +40,5 @@ pnpm typecheck && pnpm lint && pnpm test --run
 ```
 
 (`pnpm build` must also pass for scaffold/config changes.)
+
+`pnpm e2e` runs the Playwright suite. To also capture the Definition-of-Done screenshots into `test-results/dod/`, run `DOD_SHOTS=1 pnpm e2e`.

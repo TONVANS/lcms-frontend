@@ -15,14 +15,12 @@ test('ppa.user lands on /ppa and /legal shows forbidden', async ({ page }) => {
   await expect(page.getByText(lo.forbidden.title).first()).toBeVisible();
 });
 
-test('multi.user sees two cards and the module switcher', async ({ page }, testInfo) => {
+test('multi.user sees two cards and the module switcher', async ({ page }) => {
   await loginAs(page, 'multi.user');
   await expect(page).toHaveURL('http://localhost:3100/');
   await expect(page.getByRole('link', { name: lo.home.openModule })).toHaveCount(2);
-  if (testInfo.project.name === 'desktop') {
-    await page.getByRole('link', { name: lo.home.openModule }).first().click();
-    await expect(page.getByRole('navigation', { name: lo.nav.moduleSwitcher })).toBeVisible();
-  }
+  await page.getByRole('link', { name: lo.home.openModule }).first().click();
+  await expect(page.getByRole('navigation', { name: lo.nav.moduleSwitcher })).toBeVisible();
 });
 
 test('none.user lands on /forbidden', async ({ page }) => {

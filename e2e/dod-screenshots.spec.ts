@@ -1,6 +1,8 @@
 import { test } from '@playwright/test';
 import { loginAs, setTheme } from './helpers';
 
+test.skip(!process.env.DOD_SHOTS, 'set DOD_SHOTS=1 to capture DoD screenshots');
+
 const shots = [
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
