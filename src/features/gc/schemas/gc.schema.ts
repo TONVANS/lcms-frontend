@@ -9,41 +9,77 @@ import {
 
 const v = lo.gc.validation;
 
-const requiredText = z.string().trim().min(1, v.required);
+const isIsoDate = (s: string): boolean => z.iso.date().safeParse(s).success;
 
-const moneySchema = z.object({
-  amount: z.number(v.amountPositive).positive(v.amountPositive),
-  currency: z.enum(GC_CURRENCIES, { message: v.currency }),
-});
+const requiredText = z.string(v.required).trim().min(1, v.required);
+const optionalText = z.string(v.invalid);
 
-const equitySchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('percent'),
-    percent: z.number(v.percentRange).gt(0, v.percentRange).max(100, v.percentRange),
-  }),
-  z.object({ kind: z.literal('amount'), money: moneySchema }),
-]);
+/** Required YYYY-MM-DD. Empty reads "required"; anything else must be a real calendar date. */
+const requiredDate = z
+  .string(v.required)
+  .trim()
+  .min(1, v.required)
+  .refine((s) => s === '' || isIsoDate(s), v.dateInvalid);
+
+/** Optional YYYY-MM-DD. null or blank means open-ended. */
+const optionalDate = z
+  .string(v.dateInvalid)
+  .trim()
+  .refine((s) => s === '' || isIsoDate(s), v.dateInvalid)
+  .nullable();
+
+const moneySchema = z.object(
+  {
+    amount: z.number(v.amountPositive).positive(v.amountPositive),
+    currency: z.enum(GC_CURRENCIES, { message: v.currency }),
+  },
+  v.invalid,
+);
+
+const equitySchema = z.discriminatedUnion(
+  'kind',
+  [
+    z.object(
+      {
+        kind: z.literal('percent'),
+        percent: z.number(v.percentRange).gt(0, v.percentRange).max(100, v.percentRange),
+      },
+      v.invalid,
+    ),
+    z.object({ kind: z.literal('amount'), money: moneySchema }, v.invalid),
+  ],
+  { error: v.invalid },
+);
 
 export const gcFormSchema = z
-  .object({
-    title: requiredText.max(300, v.titleMax),
-    type: z.enum(GC_CONTRACT_TYPES, { message: v.required }),
-    contractNo: requiredText,
-    counterparty: z.string(),
-    termText: z.string(),
-    signedDate: requiredText,
-    effectiveDate: requiredText,
-    endDate: z.string().nullable(),
-    value: moneySchema.nullable(),
-    equity: equitySchema.nullable(),
-    implementer: z.string(),
-    notes: z.string().max(2000, v.notesMax),
-  })
-  .superRefine((val, ctx) => {
-    if (val.endDate && val.effectiveDate && val.endDate <= val.effectiveDate) {
-      ctx.addIssue({ code: 'custom', path: ['endDate'], message: v.endAfterEffective });
-    }
-  });
+  .object(
+    {
+      title: requiredText.max(300, v.titleMax),
+      type: z.enum(GC_CONTRACT_TYPES, { message: v.required }),
+      contractNo: requiredText,
+      counterparty: optionalText,
+      termText: optionalText,
+      signedDate: requiredDate,
+      effectiveDate: requiredDate,
+      endDate: optionalDate,
+      value: moneySchema.nullable(),
+      equity: equitySchema.nullable(),
+      implementer: optionalText,
+      notes: z.string(v.invalid).max(2000, v.notesMax),
+    },
+    v.invalid,
+  )
+  // `when` keeps this check running even when other fields have issues, so the order error
+  // is never hidden behind an unrelated one. Malformed dates are reported on their own field.
+  .refine(
+    (val) => {
+      const end = typeof val.endDate === 'string' ? val.endDate.trim() : '';
+      const eff = typeof val.effectiveDate === 'string' ? val.effectiveDate.trim() : '';
+      if (!end || !isIsoDate(end) || !isIsoDate(eff)) return true;
+      return end > eff;
+    },
+    { path: ['endDate'], message: v.endAfterEffective, when: () => true },
+  );
 
 export type GcFormValues = z.infer<typeof gcFormSchema>;
 
@@ -80,7 +116,7 @@ export function toGcPayload(f: GcFormValues): GcContractInput {
     termText: orNull(f.termText),
     signedDate: f.signedDate,
     effectiveDate: f.effectiveDate,
-    endDate: f.endDate ? f.endDate : null,
+    endDate: f.endDate === null ? null : orNull(f.endDate),
     value: f.value,
     equity: f.equity as GcEquity | null,
     implementer: orNull(f.implementer),
