@@ -56,4 +56,34 @@ describe('DatePicker', () => {
     await user.click(screen.getByRole('button', { name: lo.datePicker.clear }));
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
+
+  it('uses Lao accessible names for navigation and day buttons', async () => {
+    const user = userEvent.setup();
+    render(<DatePicker id="d" value="2026-03-01" onChange={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /01\/03\/2026/ }));
+    const dialog = await screen.findByRole('dialog', { name: lo.datePicker.open });
+    expect(within(dialog).getByRole('button', { name: lo.datePicker.prevMonth })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: lo.datePicker.nextMonth })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /05\/03\/2026/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole('combobox', { name: lo.datePicker.month })).toBeInTheDocument();
+    expect(within(dialog).getByRole('combobox', { name: lo.datePicker.year })).toBeInTheDocument();
+  });
+
+  it('moves focus to the trigger after clearing', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="2026-03-01" onSpy={() => {}} clearable />);
+    await user.click(screen.getByRole('button', { name: lo.datePicker.clear }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: lo.datePicker.placeholder }));
+  });
+
+  it('keeps label and value in the trigger name when labelId is given', () => {
+    render(
+      <>
+        <span id="lbl">ວັນທີເລີ່ມ</span>
+        <DatePicker id="d" value="2026-03-05" onChange={() => {}} labelId="lbl" />
+      </>,
+    );
+    const trigger = screen.getByRole('button', { name: /ວັນທີເລີ່ມ/ });
+    expect(trigger).toHaveAccessibleName(/05\/03\/2026/);
+  });
 });

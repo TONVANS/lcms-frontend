@@ -40,6 +40,12 @@ export const lo = {
     open: 'ເລືອກວັນທີ',
     clear: 'ລ້າງວັນທີ',
     placeholder: 'ເລືອກວັນທີ',
+    prevMonth: 'ເດືອນກ່ອນ',
+    nextMonth: 'ເດືອນຖັດໄປ',
+    today: 'ມື້ນີ້',
+    selected: 'ເລືອກແລ້ວ',
+    month: 'ເດືອນ',
+    year: 'ປີ',
   },
   currency: {
     LAK: 'ກີບ',
@@ -49,6 +55,7 @@ export const lo = {
   },
   money: {
     amount: 'ຈຳນວນເງິນ',
+    currency: 'ສະກຸນເງິນ',
   },
   auth: {
     loginTitle: 'ເຂົ້າສູ່ລະບົບ',
