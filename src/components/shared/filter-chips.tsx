@@ -20,11 +20,11 @@ export interface FilterChipsProps {
 }
 
 const ACCENT_STYLES: Record<NonNullable<FilterChipsProps['accent']>, string> = {
-  gold: 'bg-(--gold)/12 text-(--gold) border-(--gold)/30',
-  ppa: 'bg-(--ppa)/12 text-(--ppa) border-(--ppa)/30',
-  gc: 'bg-(--gc)/12 text-(--gc) border-(--gc)/30',
-  legal: 'bg-(--legal)/12 text-(--legal) border-(--legal)/30',
-  litigation: 'bg-(--litigation)/12 text-(--litigation) border-(--litigation)/30',
+  gold: 'bg-(--gold)/12 text-(--text-strong) dark:text-(--gold) border-(--gold)/30',
+  ppa: 'bg-(--ppa)/12 text-(--text-strong) dark:text-(--ppa) border-(--ppa)/30',
+  gc: 'bg-(--gc)/12 text-(--text-strong) dark:text-(--gc) border-(--gc)/30',
+  legal: 'bg-(--legal)/12 text-(--text-strong) dark:text-(--legal) border-(--legal)/30',
+  litigation: 'bg-(--litigation)/12 text-(--text-strong) dark:text-(--litigation) border-(--litigation)/30',
 };
 
 export function FilterChips({
@@ -35,7 +35,7 @@ export function FilterChips({
   ariaLabel,
   className,
 }: FilterChipsProps) {
-  const selectedStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.gold;
+  const selectedStyle = ACCENT_STYLES[accent];
 
   return (
     <div
@@ -64,7 +64,7 @@ export function FilterChips({
             {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />}
             <span>{option.label}</span>
             {typeof option.count === 'number' && (
-              <span className="ml-1 rounded-full px-1.5 py-0.2 text-[10px] tabular-nums bg-white/10 text-[var(--text-muted)]">
+              <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums text-[var(--text-secondary)]">
                 {option.count}
               </span>
             )}

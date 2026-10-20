@@ -82,7 +82,7 @@ export function PpaAlertsView() {
           value={windowFilter}
           onChange={handleFilterChange}
           accent="ppa"
-          ariaLabel={lo.ppa.alertsTitle}
+          ariaLabel={lo.ppa.alertsWindowFilter}
         />
       </div>
 

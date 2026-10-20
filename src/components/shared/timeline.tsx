@@ -19,7 +19,7 @@ export interface TimelineProps {
 
 export function Timeline({ items, className }: TimelineProps) {
   return (
-    <ol className={cn('relative flex list-none flex-col gap-6 pl-6',
+    <ol role="list" className={cn('relative flex list-none flex-col gap-6 pl-6',
         // 1px vertical connector
         "before:absolute before:bottom-3 before:left-[11px] before:top-3 before:w-px before:bg-[var(--border-subtle)] before:content-['']", className)}>
       {items.map((item) => {
@@ -31,10 +31,10 @@ export function Timeline({ items, className }: TimelineProps) {
             <span
               aria-hidden="true"
               className={cn(
-                'absolute -left-[24px] top-1.5 h-3 w-3 rounded-full transition-colors',
+                'absolute -left-[24px] top-1.5 h-3 w-3 rounded-full',
                 status === 'done' && 'bg-(--gold-decor)',
                 status === 'current' &&
-                  'border-2 border-(--gold) bg-[var(--bg-base)] ring-4 ring-(--gold)/25',
+                  'border-2 border-[#92400E] dark:border-[#FBBF24] bg-[var(--bg-base)] ring-4 ring-[#92400E]/25 dark:ring-[#FBBF24]/25',
                 status === 'future' && 'border-2 border-[var(--border-glass)] bg-[var(--surface-inset)]',
               )}
             />

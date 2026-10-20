@@ -20,7 +20,7 @@ export interface StepperProps {
 export function Stepper({ steps, currentStep, onStepClick, className }: StepperProps) {
   return (
     <nav aria-label={lo.stepper.nav} className={cn('w-full', className)}>
-      <ol className="flex items-center justify-between">
+      <ol role="list" className="flex items-center justify-between">
         {steps.map((step, idx) => {
           const isDone = currentStep > step.id;
           const isCurrent = currentStep === step.id;
@@ -43,12 +43,12 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                   aria-label={lo.stepper.stepName(step.id, step.label, state)}
                   aria-current={isCurrent ? 'step' : undefined}
                   className={cn(
-                    'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
+                    'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-[transform,opacity] duration-200',
                     'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
                     isDone &&
                       'bg-(image:--gold-gradient) text-[#0a1630] shadow-md',
                     isCurrent &&
-                      'bg-(--gc) text-(--bg-base) ring-4 ring-(--gc)/25 shadow-md',
+                      'bg-(image:--primary-gradient) text-white ring-4 ring-(--primary)/25 shadow-md',
                     !isDone &&
                       !isCurrent &&
                       'border border-[var(--border-glass)] bg-[var(--surface-glass)] text-[var(--text-dim)]',
@@ -82,7 +82,7 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                 <div
                   aria-hidden="true"
                   className={cn(
-                    'mx-2 h-0.5 flex-1 transition-colors duration-200',
+                    'mx-2 h-0.5 flex-1',
                     isDone ? 'bg-(--gold-decor)' : 'bg-[var(--border-subtle)]',
                   )}
                 />

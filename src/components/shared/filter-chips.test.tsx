@@ -32,6 +32,13 @@ describe('FilterChips', () => {
     expect(screen.queryByRole('radio')).toBeNull();
   });
 
+  it('selected chip uses readable light text and accent in dark', () => {
+    render(<FilterChips ariaLabel="x" options={options} value="all" onChange={() => {}} />);
+    const cls = screen.getByRole('button', { name: /ທັງໝົດ/ }).className;
+    expect(cls).toContain('text-(--text-strong)');
+    expect(cls).toContain('dark:text-(--gold)');
+  });
+
   it('triggers onChange when clicked', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

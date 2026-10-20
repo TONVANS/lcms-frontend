@@ -219,6 +219,7 @@ export const lo = {
       endDateRequired: 'ກະລຸນາເລືອກວັນທີສິ້ນສຸດ',
       termYearsRequired: 'ກະລຸນາປ້ອນອາຍຸສັນຍາ (ປີ)',
     },
+    alertsWindowFilter: 'ກັ່ນຕອງຕາມໄລຍະເວລາ',
     alertsTitle: 'ການແຈ້ງເຕືອນສັນຍາ PPA',
     documentsTitle: 'ຄັງເອກະສານສັນຍາ PPA',
     historyTitle: 'ປະຫວັດເຫດການສຳຄັນ',
