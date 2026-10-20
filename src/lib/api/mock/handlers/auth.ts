@@ -1,12 +1,8 @@
 import type MockAdapter from 'axios-mock-adapter';
 import { MOCK_PASSWORD, MOCK_USERS } from '@/features/auth/mocks/auth.mock';
-import { clearMockSession, readMockSession, setMockSession } from '@/lib/auth/session';
+import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { endpoints } from '../../endpoints';
-
-function sessionUser() {
-  const username = readMockSession();
-  return username ? (MOCK_USERS.find((u) => u.username === username) ?? null) : null;
-}
+import { getMockSessionUser } from '../session';
 
 export function register(mock: MockAdapter): void {
   mock.onPost(endpoints.auth.login).reply((config) => {
@@ -25,7 +21,7 @@ export function register(mock: MockAdapter): void {
   });
 
   mock.onGet(endpoints.auth.me).reply(() => {
-    const user = sessionUser();
+    const user = getMockSessionUser();
     return user ? [200, user] : [401, { code: 'UNAUTHENTICATED' }];
   });
 
@@ -35,7 +31,7 @@ export function register(mock: MockAdapter): void {
   });
 
   mock.onPost(endpoints.auth.refresh).reply(() =>
-    sessionUser() ? [200] : [401, { code: 'UNAUTHENTICATED' }],
+    getMockSessionUser() ? [200] : [401, { code: 'UNAUTHENTICATED' }],
   );
 
   mock.onPost(endpoints.auth.forgotPassword).reply(204);

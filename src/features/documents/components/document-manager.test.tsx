@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
+import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
 import { documentsService } from '../api/documents.service';
 import { DocumentManager } from './document-manager';
@@ -10,9 +11,11 @@ import { DocumentManager } from './document-manager';
 describe('DocumentManager', () => {
   beforeEach(() => {
     installMocks(api, { delay: 0 });
+    setMockSession('ppa.user', false);
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    clearMockSession();
   });
 
   it('shows error with retry on load failure', async () => {

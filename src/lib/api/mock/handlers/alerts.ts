@@ -1,44 +1,48 @@
 import type MockAdapter from 'axios-mock-adapter';
 import { MOCK_ALERTS } from '@/features/alerts/mocks/alerts.mock';
-import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
+import { buildGcAlerts } from '@/features/gc/lib/alerts';
+import { gcMockDb } from '@/features/gc/mocks/gc.mock';
 import { getAccessibleModules } from '@/lib/auth/permissions';
-import { readMockSession } from '@/lib/auth/session';
 import type { Alert, ModuleKey } from '@/types/domain';
 import { endpoints } from '../../endpoints';
+import { getMockSessionUser } from '../session';
 
-function sessionUser() {
-  const username = readMockSession();
-  return username ? (MOCK_USERS.find((u) => u.username === username) ?? null) : null;
+// Read state lives in memory (until reload), keyed by alert id, so it applies to
+// both the static alerts and the gc alerts generated on every request.
+const readIds = new Set<string>(MOCK_ALERTS.filter((a) => a.read).map((a) => a.id));
+
+function allAlerts(): Alert[] {
+  return [...MOCK_ALERTS, ...buildGcAlerts(gcMockDb.all())].map((a) => ({
+    ...a,
+    read: readIds.has(a.id),
+  }));
 }
-
-// Per-session in-memory copy so PATCH /read persists until reload.
-const alerts: Alert[] = MOCK_ALERTS.map((a) => ({ ...a }));
 
 export function register(mock: MockAdapter): void {
   mock.onGet(endpoints.alerts.list).reply((config) => {
-    const user = sessionUser();
+    const user = getMockSessionUser();
     if (!user) return [401, { code: 'UNAUTHENTICATED' }];
     const params = (config.params ?? {}) as { module?: ModuleKey; window?: number | string };
     const allowed = getAccessibleModules(user);
     const win = params.window === undefined ? undefined : Number(params.window);
-    const result = alerts.filter(
+    const result = allAlerts().filter(
       (a) =>
         allowed.includes(a.module) &&
         (!params.module || a.module === params.module) &&
         (win === undefined || (a.daysLeft >= 0 && a.daysLeft <= win)),
     );
-    return [200, result.map((a) => ({ ...a }))];
+    return [200, result];
   });
 
   mock.onPatch(/\/alerts\/[^/]+\/read$/).reply((config) => {
-    const user = sessionUser();
+    const user = getMockSessionUser();
     if (!user) return [401, { code: 'UNAUTHENTICATED' }];
     const id = config.url?.match(/\/alerts\/([^/]+)\/read$/)?.[1];
-    const alert = alerts.find((a) => a.id === id);
+    const alert = allAlerts().find((a) => a.id === id);
     if (!alert || !getAccessibleModules(user).includes(alert.module)) {
       return [404, { code: 'NOT_FOUND' }];
     }
-    alert.read = true;
+    readIds.add(alert.id);
     return [204];
   });
 }

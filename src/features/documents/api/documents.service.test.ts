@@ -1,11 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
+import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { documentsService } from './documents.service';
 
 describe('documentsService', () => {
   beforeEach(() => {
     installMocks(api, { delay: 0 });
+    setMockSession('ppa.user', false);
+  });
+  afterEach(() => {
+    clearMockSession();
   });
 
   it('lists documents for an entity', async () => {
