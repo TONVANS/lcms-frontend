@@ -70,6 +70,9 @@ export const lo = {
     themeToggle: 'ປ່ຽນໂໝດສີ',
     notifications: 'ການແຈ້ງເຕືອນ',
     userMenu: 'ເມນູຜູ້ໃຊ້',
+    searchLabel: 'ຄົ້ນຫາ',
+    unread: 'ຍັງບໍ່ໄດ້ອ່ານ',
+    breadcrumb: 'ເສັ້ນທາງນຳທາງ',
   },
   home: {
     title: 'ສູນກາງບໍລິຫານສັນຍາ',
@@ -91,5 +94,7 @@ export const lo = {
     cases: 'ຄະດີ',
     hearings: 'ນັດໄຕ່ສວນ',
     modulesSection: 'ໂມດູນ',
+    mainMenu: 'ເມນູຫຼັກ',
+    moduleSwitcher: 'ສະຫຼັບໂມດູນ',
   },
 } as const;
