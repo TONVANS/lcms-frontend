@@ -1,0 +1,48 @@
+import type { DocumentFile } from '../types';
+
+export const MOCK_DOCUMENTS: DocumentFile[] = [
+  {
+    id: 'doc-1',
+    name: 'PPA-NamTheun2-Agreement-Signed.pdf',
+    mime: 'application/pdf',
+    size: 4520000,
+    version: '1.0',
+    uploadedAt: '2026-01-15T10:00:00Z',
+    uploadedBy: 'admin',
+    entityType: 'ppa',
+    entityId: 'ppa-1',
+  },
+  {
+    id: 'doc-2',
+    name: 'Environmental-Impact-Assessment-NT2.pdf',
+    mime: 'application/pdf',
+    size: 12400000,
+    version: '2.1',
+    uploadedAt: '2026-02-01T14:30:00Z',
+    uploadedBy: 'ppa.user',
+    entityType: 'ppa',
+    entityId: 'ppa-1',
+  },
+  {
+    id: 'doc-3',
+    name: 'Technical-Specifications-NamNgum1.docx',
+    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    size: 2150000,
+    version: '1.2',
+    uploadedAt: '2026-02-20T09:15:00Z',
+    uploadedBy: 'ppa.user',
+    entityType: 'ppa',
+    entityId: 'ppa-2',
+  },
+  {
+    id: 'doc-4',
+    name: 'Tariff-Calculation-Sheet.xlsx',
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    size: 890000,
+    version: '1.0',
+    uploadedAt: '2026-03-05T11:00:00Z',
+    uploadedBy: 'admin',
+    entityType: 'ppa',
+    entityId: 'ppa-3',
+  },
+];

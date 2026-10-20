@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { registerLogoutReset } from '@/lib/auth/logout-registry';
 import type { Alert } from '@/types/domain';
 import { alertsService } from '../api/alerts.service';
 
@@ -38,3 +39,5 @@ export const useAlertsStore = create<AlertsState>()((set) => ({
     set({ ...initial(), items: [] });
   },
 }));
+
+registerLogoutReset(() => useAlertsStore.getState().reset());

@@ -59,5 +59,12 @@ export function getModuleFromPath(pathname: string): ModuleKey | null {
 
 export function isNavItemActive(pathname: string, href: string): boolean {
   if (MODULE_ROOTS.includes(href)) return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (pathname === href || pathname.startsWith(`${href}/`)) return true;
+  if (href === '/contracts/list') {
+    const match = /^\/contracts\/([^/]+)$/.exec(pathname);
+    if (match && !['list', 'new', 'alerts'].includes(match[1])) {
+      return true;
+    }
+  }
+  return false;
 }

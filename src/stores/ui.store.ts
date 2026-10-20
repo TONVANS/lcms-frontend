@@ -27,6 +27,7 @@ export const useUiStore = create<UiState>()(
       name: 'lcms-ui',
       // Resolved lazily; createJSONStorage returns undefined storage when localStorage is missing (SSR).
       storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
       partialize: (s) => ({
         sidebarCollapsed: s.sidebarCollapsed,
         lastModule: s.lastModule,
@@ -35,3 +36,10 @@ export const useUiStore = create<UiState>()(
     },
   ),
 );
+
+/**
+ * Rehydrates the store on the client if skipHydration is true.
+ */
+if (typeof window !== 'undefined') {
+  useUiStore.persist.rehydrate();
+}

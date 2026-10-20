@@ -21,6 +21,12 @@ describe('isNavItemActive', () => {
     expect(isNavItemActive('/ppa', '/ppa')).toBe(true);
     expect(isNavItemActive('/ppa/contracts-archive', '/ppa/contracts')).toBe(false);
   });
+  it('matches GC contract detail /contracts/[id] to /contracts/list', () => {
+    expect(isNavItemActive('/contracts/c-123', '/contracts/list')).toBe(true);
+    expect(isNavItemActive('/contracts/new', '/contracts/list')).toBe(false);
+    expect(isNavItemActive('/contracts/alerts', '/contracts/list')).toBe(false);
+    expect(isNavItemActive('/contracts', '/contracts/list')).toBe(false);
+  });
 });
 
 describe('MODULE_NAV', () => {

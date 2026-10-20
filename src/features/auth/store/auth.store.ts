@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { setUnauthorizedHandler } from '@/lib/api/client';
 import { normalizeError } from '@/lib/api/errors';
+import { runLogoutResets } from '@/lib/auth/logout-registry';
 import { clearMockSession, hasSessionHint } from '@/lib/auth/session';
 import type { ApiError } from '@/types/api';
 import type { User } from '@/types/domain';
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   async logout() {
     // Clear local state first so a failing/401 request cannot race with it.
     clearMockSession();
+    runLogoutResets();
     set({ user: null, status: 'unauthenticated', endReason: 'logout', error: null });
     try {
       await authService.logout();
@@ -73,6 +75,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // Only a genuine mid-session 401; fetchMe/logout own their own transitions.
     if (get().status !== 'authenticated') return;
     clearMockSession();
+    runLogoutResets();
     set({ user: null, status: 'unauthenticated', endReason: 'expired' });
   },
 }));

@@ -41,6 +41,11 @@ describe('normalizeError', () => {
     const err = { status: 401, code: 'X', message: 'm' };
     expect(normalizeError(err)).toEqual(err);
   });
+  it('maps CanceledError to ERR_CANCELED', () => {
+    const e = new AxiosError('canceled', 'ERR_CANCELED', config);
+    expect(normalizeError(e)).toMatchObject({ status: 0, code: 'ERR_CANCELED' });
+    expect(toUserMessage({ status: 0, code: 'ERR_CANCELED', message: '' })).toBe('');
+  });
   it('maps unknown values to UNKNOWN', () => {
     expect(normalizeError(new Error('boom'))).toMatchObject({ status: 0, code: 'UNKNOWN' });
   });

@@ -1,4 +1,4 @@
-import { isAxiosError } from 'axios';
+import { isAxiosError, isCancel } from 'axios';
 import { lo } from '@/lib/i18n/lo';
 import type { ApiError } from '@/types/api';
 
@@ -8,8 +8,21 @@ function isApiError(e: unknown): e is ApiError {
   return typeof o.status === 'number' && typeof o.code === 'string' && typeof o.message === 'string';
 }
 
+export function isCanceledError(e: unknown): boolean {
+  if (isCancel(e)) return true;
+  if (typeof e === 'object' && e !== null) {
+    const err = e as { code?: string; name?: string };
+    return err.code === 'ERR_CANCELED' || err.name === 'CanceledError';
+  }
+  return false;
+}
+
 export function normalizeError(e: unknown): ApiError {
   if (isApiError(e)) return e;
+  if (isCanceledError(e)) {
+    const msg = e instanceof Error ? e.message : 'canceled';
+    return { status: 0, code: 'ERR_CANCELED', message: msg };
+  }
   if (isAxiosError(e)) {
     const res = e.response;
     if (!res) {
@@ -35,6 +48,7 @@ export function normalizeError(e: unknown): ApiError {
 }
 
 export function toUserMessage(err: ApiError): string {
+  if (err.code === 'ERR_CANCELED') return '';
   if (err.code === 'NETWORK') return lo.errors.network;
   if (err.code === 'TIMEOUT') return lo.errors.timeout;
   if (err.code === 'INVALID_CREDENTIALS') return lo.errors.invalidCredentials;

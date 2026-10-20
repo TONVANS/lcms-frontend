@@ -9,7 +9,8 @@ const TONE_CLASS: Record<CountdownTone, string> = {
   planning: BADGE_TONE_CLASS.blue,
 };
 
-export function CountdownBadge({ days }: { days: number }) {
+export function CountdownBadge({ days }: { days?: number | null }) {
+  if (days == null) return null;
   const tone = getCountdownTone(days);
   if (!tone) return null;
   return (

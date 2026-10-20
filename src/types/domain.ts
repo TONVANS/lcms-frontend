@@ -19,6 +19,8 @@ export interface Department {
   name: string;
 }
 
+export type EnergyType = 'hydro' | 'solar' | 'wind' | 'coal' | 'biomass';
+
 export type ContractStatus =
   | 'draft'
   | 'negotiating'
