@@ -140,6 +140,14 @@ export const lo = {
   stepper: {
     step: (cur: number, total: number) => `ຂັ້ນຕອນທີ ${cur} ຈາກ ${total}`,
     completed: 'ສຳເລັດແລ້ວ',
+    nav: 'ຄວາມຄືບໜ້າ',
+    stepName: (n: number, label: string, state: 'done' | 'current' | 'todo') =>
+      `ຂັ້ນຕອນທີ ${n}: ${label} (${
+        state === 'done' ? 'ສຳເລັດແລ້ວ' : state === 'current' ? 'ປັດຈຸບັນ' : 'ຍັງບໍ່ເຖິງ'
+      })`,
+  },
+  timeline: {
+    status: { done: 'ສຳເລັດແລ້ວ', current: 'ປັດຈຸບັນ', future: 'ຈະມາເຖິງ' },
   },
   energy: {
     hydro: 'ພະລັງງານນ້ຳ',

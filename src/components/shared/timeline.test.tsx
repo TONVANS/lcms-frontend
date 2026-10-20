@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { lo } from '@/lib/i18n/lo';
 import { Timeline } from './timeline';
 
 const items = [
@@ -16,5 +17,13 @@ describe('Timeline', () => {
     expect(screen.getByText('ເລີ່ມຕົ້ນໂຄງການ')).toBeInTheDocument();
     expect(screen.getByText('ສັນຍາສຳປະທານ (CA)')).toBeInTheDocument();
     expect(screen.getByText('01/01/2027')).toBeInTheDocument();
+  });
+
+  it('announces status in text', () => {
+    render(<Timeline items={items} />);
+    const li = screen.getAllByRole('listitem');
+    expect(li[0]).toHaveTextContent(lo.timeline.status.done);
+    expect(li[1]).toHaveTextContent(lo.timeline.status.current);
+    expect(li[2]).toHaveTextContent(lo.timeline.status.future);
   });
 });

@@ -11,27 +11,33 @@ const options = [
 
 describe('FilterChips', () => {
   it('renders all options with counts', () => {
-    render(<FilterChips options={options} value="all" onChange={() => {}} />);
+    render(<FilterChips ariaLabel="ສະຖານະ" options={options} value="all" onChange={() => {}} />);
     expect(screen.getByText('ທັງໝົດ')).toBeInTheDocument();
     expect(screen.getByText('ມີຜົນບັງຄັບໃຊ້')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
   });
 
-  it('marks selected chip with aria-checked', () => {
-    render(<FilterChips options={options} value="active" onChange={() => {}} />);
-    const activeChip = screen.getByRole('radio', { name: /ມີຜົນບັງຄັບໃຊ້/ });
-    expect(activeChip).toHaveAttribute('aria-checked', 'true');
+  it('marks selected chip with aria-pressed', () => {
+    render(<FilterChips ariaLabel="ສະຖານະ" options={options} value="active" onChange={() => {}} />);
+    const activeChip = screen.getByRole('button', { name: /ມີຜົນບັງຄັບໃຊ້/ });
+    expect(activeChip).toHaveAttribute('aria-pressed', 'true');
 
-    const allChip = screen.getByRole('radio', { name: /ທັງໝົດ/ });
-    expect(allChip).toHaveAttribute('aria-checked', 'false');
+    const allChip = screen.getByRole('button', { name: /ທັງໝົດ/ });
+    expect(allChip).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('is a labelled group of toggle buttons', () => {
+    render(<FilterChips ariaLabel="ສະຖານະ" options={options} value="all" onChange={() => {}} />);
+    expect(screen.getByRole('group', { name: 'ສະຖານະ' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).toBeNull();
   });
 
   it('triggers onChange when clicked', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<FilterChips options={options} value="all" onChange={onChange} />);
+    render(<FilterChips ariaLabel="ສະຖານະ" options={options} value="all" onChange={onChange} />);
 
-    await user.click(screen.getByRole('radio', { name: /ຮ່າງ/ }));
+    await user.click(screen.getByRole('button', { name: /ຮ່າງ/ }));
     expect(onChange).toHaveBeenCalledWith('draft');
   });
 });

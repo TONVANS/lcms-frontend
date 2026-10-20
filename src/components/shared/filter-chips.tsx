@@ -14,28 +14,17 @@ export interface FilterChipsProps {
   options: FilterChipOption[];
   value: string;
   onChange: (value: string) => void;
-  accent?: 'gold' | 'ppa' | 'gc' | 'legal';
-  ariaLabel?: string;
+  accent?: 'gold' | 'ppa' | 'gc' | 'legal' | 'litigation';
+  ariaLabel: string;
   className?: string;
 }
 
-const ACCENT_STYLES = {
-  gold: {
-    selected:
-      'bg-[rgba(212,179,122,0.16)] text-[#d4b37a] dark:text-[#d4b37a] border-[#d4b37a]/40 shadow-[0_0_12px_rgba(212,179,122,0.15)]',
-  },
-  ppa: {
-    selected:
-      'bg-[rgba(92,200,255,0.15)] text-[#0369a1] dark:text-[#5cc8ff] border-[#0ea5e9]/40 dark:border-[#5cc8ff]/40 shadow-[0_0_12px_rgba(92,200,255,0.15)]',
-  },
-  gc: {
-    selected:
-      'bg-[rgba(139,156,255,0.15)] text-[#4338ca] dark:text-[#8b9cff] border-[#6366f1]/40 dark:border-[#8b9cff]/40 shadow-[0_0_12px_rgba(139,156,255,0.15)]',
-  },
-  legal: {
-    selected:
-      'bg-[rgba(212,179,122,0.16)] text-[#8a6a2f] dark:text-[#d4b37a] border-[#b08a4a]/40 dark:border-[#d4b37a]/40 shadow-[0_0_12px_rgba(212,179,122,0.15)]',
-  },
+const ACCENT_STYLES: Record<NonNullable<FilterChipsProps['accent']>, string> = {
+  gold: 'bg-(--gold)/12 text-(--gold) border-(--gold)/30',
+  ppa: 'bg-(--ppa)/12 text-(--ppa) border-(--ppa)/30',
+  gc: 'bg-(--gc)/12 text-(--gc) border-(--gc)/30',
+  legal: 'bg-(--legal)/12 text-(--legal) border-(--legal)/30',
+  litigation: 'bg-(--litigation)/12 text-(--litigation) border-(--litigation)/30',
 };
 
 export function FilterChips({
@@ -46,11 +35,11 @@ export function FilterChips({
   ariaLabel,
   className,
 }: FilterChipsProps) {
-  const selectedStyle = ACCENT_STYLES[accent]?.selected ?? ACCENT_STYLES.gold.selected;
+  const selectedStyle = ACCENT_STYLES[accent] ?? ACCENT_STYLES.gold;
 
   return (
     <div
-      role="radiogroup"
+      role="group"
       aria-label={ariaLabel}
       className={cn('flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-inset)] border border-[var(--border-subtle)]', className)}
     >
@@ -62,11 +51,10 @@ export function FilterChips({
           <button
             key={option.value}
             type="button"
-            role="radio"
-            aria-checked={isSelected}
+            aria-pressed={isSelected}
             onClick={() => onChange(option.value)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 min-h-[38px] text-xs font-medium transition-all duration-150 cursor-pointer select-none border',
+              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 min-h-11 text-xs font-medium transition-[transform,opacity] duration-150 cursor-pointer select-none border',
               'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
               isSelected
                 ? cn('font-semibold', selectedStyle)

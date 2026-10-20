@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { lo } from '@/lib/i18n/lo';
 import { Stepper } from './stepper';
 
 const steps = [
@@ -21,8 +22,15 @@ describe('Stepper', () => {
 
   it('marks current step with aria-current="step"', () => {
     render(<Stepper steps={steps} currentStep={2} />);
-    const step2Button = screen.getByRole('button', { name: '2' });
+    const step2Button = screen.getByRole('button', { name: lo.stepper.stepName(2, 'ຂັ້ນຕອນທີ 2', 'current') });
     expect(step2Button).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('has a Lao navigation label and names steps with state', () => {
+    render(<Stepper steps={steps} currentStep={2} />);
+    expect(screen.getByRole('navigation', { name: lo.stepper.nav })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: lo.stepper.stepName(1, 'ຂັ້ນຕອນທີ 1', 'done') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: lo.stepper.stepName(3, 'ຂັ້ນຕອນທີ 3', 'todo') })).toBeInTheDocument();
   });
 
   it('allows clicking previous completed steps', async () => {

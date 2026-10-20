@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 
 export interface StepItem {
@@ -18,11 +19,12 @@ export interface StepperProps {
 
 export function Stepper({ steps, currentStep, onStepClick, className }: StepperProps) {
   return (
-    <nav aria-label="Progress" className={cn('w-full', className)}>
+    <nav aria-label={lo.stepper.nav} className={cn('w-full', className)}>
       <ol className="flex items-center justify-between">
         {steps.map((step, idx) => {
           const isDone = currentStep > step.id;
           const isCurrent = currentStep === step.id;
+          const state = isDone ? 'done' : isCurrent ? 'current' : 'todo';
           const isClickable = Boolean(onStepClick && isDone);
 
           return (
@@ -38,21 +40,22 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                   type="button"
                   disabled={!isClickable}
                   onClick={() => isClickable && onStepClick?.(step.id)}
+                  aria-label={lo.stepper.stepName(step.id, step.label, state)}
                   aria-current={isCurrent ? 'step' : undefined}
                   className={cn(
                     'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all duration-200',
                     'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)',
                     isDone &&
-                      'bg-gradient-to-br from-[#b08a4a] to-[#d4b37a] text-[#0a1630] shadow-md shadow-[#d4b37a]/20',
+                      'bg-(image:--gold-gradient) text-[#0a1630] shadow-md',
                     isCurrent &&
-                      'bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] text-white ring-4 ring-[#2563eb]/25 shadow-md shadow-blue-500/30',
+                      'bg-(--gc) text-(--bg-base) ring-4 ring-(--gc)/25 shadow-md',
                     !isDone &&
                       !isCurrent &&
                       'border border-[var(--border-glass)] bg-[var(--surface-glass)] text-[var(--text-dim)]',
                     isClickable && 'cursor-pointer hover:scale-105',
                   )}
                 >
-                  {isDone ? <Check className="h-4 w-4 stroke-[2.5]" /> : step.id}
+                  {isDone ? <Check aria-hidden="true" className="h-4 w-4 stroke-[2.5]" /> : step.id}
                 </button>
                 <div className="mt-2 text-center">
                   <span
@@ -80,7 +83,7 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                   aria-hidden="true"
                   className={cn(
                     'mx-2 h-0.5 flex-1 transition-colors duration-200',
-                    isDone ? 'bg-[#d4b37a]' : 'bg-[var(--border-subtle)]',
+                    isDone ? 'bg-(--gold-decor)' : 'bg-[var(--border-subtle)]',
                   )}
                 />
               )}
