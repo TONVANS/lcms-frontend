@@ -1,6 +1,7 @@
 'use client';
 
-import { STATUS_META, type StatusTone } from '@/lib/constants/status';
+import { DOT_TONE_CLASS } from '@/components/shared/status-badge';
+import { STATUS_META } from '@/lib/constants/status';
 import { formatNumber } from '@/lib/utils/number';
 import { cn } from '@/lib/utils/cn';
 import type { ContractStatus } from '@/types/domain';
@@ -16,15 +17,7 @@ export interface StackedStatusBarProps {
   className?: string;
 }
 
-// Design.md §2.5 status colours, used for both themes.
-const TONE_COLOR: Record<StatusTone, string> = {
-  emerald: 'bg-[#059669]',
-  blue: 'bg-[#2563EB]',
-  violet: 'bg-[#7C3AED]',
-  amber: 'bg-[#FBBF24]',
-  rose: 'bg-[#E11D48]',
-  slate: 'bg-[#94A3B8]',
-};
+const TONE_COLOR = DOT_TONE_CLASS;
 
 export function StackedStatusBar({ data, total, className }: StackedStatusBarProps) {
   const sum = total ?? data.reduce((acc, curr) => acc + curr.count, 0);

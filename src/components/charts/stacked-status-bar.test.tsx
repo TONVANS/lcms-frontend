@@ -36,8 +36,8 @@ describe('StackedStatusBar a11y and motion', () => {
 
   it('uses Design.md colours in dots and has no transition on segments', () => {
     const { container } = render(<StackedStatusBar data={[{ status: 'active', count: 3 }]} />);
-    expect(container.innerHTML).toContain('#059669');
-    expect(container.innerHTML).not.toContain('#34d399');
+    expect(container.innerHTML).toContain('bg-[#059669]');
+    expect(container.innerHTML).toContain('dark:bg-[#34D399]');
     expect(container.innerHTML).not.toContain('transition');
   });
 });

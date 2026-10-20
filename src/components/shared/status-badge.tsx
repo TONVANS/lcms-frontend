@@ -12,7 +12,8 @@ export const BADGE_TONE_CLASS: Record<StatusTone, string> = {
   slate: 'bg-[#F1F5F9] text-[#334155] dark:bg-[rgba(148,163,184,0.14)] dark:text-[#CBD5E1]',
 };
 
-const DOT_TONE_CLASS: Record<StatusTone, string> = {
+// Also used by charts (stacked status bar) so status colours stay in one place.
+export const DOT_TONE_CLASS: Record<StatusTone, string> = {
   emerald: 'bg-[#059669] dark:bg-[#34D399]',
   blue: 'bg-[#2563EB] dark:bg-[#60A5FA]',
   violet: 'bg-[#7C3AED] dark:bg-[#A78BFA]',

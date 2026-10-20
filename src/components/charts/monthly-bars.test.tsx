@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { cloneElement, type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,7 +17,8 @@ vi.mock('recharts', async (orig) => ({
   },
 }));
 
-import { MonthlyBars } from './monthly-bars';
+import { lo } from '@/lib/i18n/lo';
+import { MonthlyBars, MonthlyBarsTooltip } from './monthly-bars';
 
 function mockMatchMedia(matches: boolean) {
   Object.defineProperty(window, 'matchMedia', {
@@ -52,6 +53,25 @@ describe('MonthlyBars', () => {
     render(<MonthlyBars data={[{ month: '2026-01', count: 2 }]} />);
     expect(barSpy).toHaveBeenCalled();
     expect(barSpy.mock.calls.at(-1)![0].isAnimationActive).toBe(true);
+  });
+
+  it.each(['ppa', 'gc', 'legal', 'litigation'] as const)(
+    'gradient stops reference series tokens for %s',
+    (accent) => {
+      mockMatchMedia(false);
+      const { container } = render(
+        <MonthlyBars data={[{ month: '2026-01', count: 2 }]} accent={accent} />,
+      );
+      const html = container.innerHTML;
+      expect(html).toContain(`var(--series-${accent}-from)`);
+      expect(html).toContain(`var(--series-${accent}-to)`);
+      expect(html.toLowerCase()).not.toContain('#be123c');
+    },
+  );
+
+  it('tooltip shows the localized items label', () => {
+    render(<MonthlyBarsTooltip active payload={[{ value: 4, payload: { month: '2026-01' } }]} />);
+    expect(screen.getByText(`4 ${lo.charts.items}`)).toBeInTheDocument();
   });
 
   it('uses unique gradient ids per instance', () => {

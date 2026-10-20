@@ -25,29 +25,39 @@ export interface MonthlyBarsProps {
   className?: string;
 }
 
-const ACCENT_COLORS = {
-  ppa: { from: '#2563eb', to: '#5cc8ff' },
-  gc: { from: '#4f46e5', to: '#8b9cff' },
-  legal: { from: '#9c7c45', to: '#d4b37a' },
-  litigation: { from: '#be123c', to: '#fb7185' },
-};
-
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 function subscribeReducedMotion(callback: () => void) {
-  if (typeof window.matchMedia !== 'function') return () => {};
   const mql = window.matchMedia(REDUCED_MOTION_QUERY);
   mql.addEventListener('change', callback);
   return () => mql.removeEventListener('change', callback);
 }
 
 function getReducedMotion() {
-  if (typeof window.matchMedia !== 'function') return false;
   return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
 function getServerReducedMotion() {
   return false;
+}
+
+export function MonthlyBarsTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: unknown; payload?: { month?: string } }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0];
+  return (
+    <div className="rounded-lg border border-[var(--border-glass)] bg-(image:--surface-modal) p-2 shadow-xl backdrop-blur-md">
+      <p className="text-[11px] text-[var(--text-muted)]">{item.payload?.month}</p>
+      <p className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
+        {String(item.value)} {lo.charts.items}
+      </p>
+    </div>
+  );
 }
 
 export function MonthlyBars({
@@ -56,7 +66,6 @@ export function MonthlyBars({
   height = 220,
   className,
 }: MonthlyBarsProps) {
-  const config = ACCENT_COLORS[accent] ?? ACCENT_COLORS.ppa;
   const fillId = `monthly-bars-${useId().replace(/:/g, '')}`;
   const prefersReducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -70,8 +79,14 @@ export function MonthlyBars({
         <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={config.to} stopOpacity={0.9} />
-              <stop offset="100%" stopColor={config.from} stopOpacity={0.7} />
+              <stop
+                offset="0%"
+                style={{ stopColor: `var(--series-${accent}-to)`, stopOpacity: 0.9 }}
+              />
+              <stop
+                offset="100%"
+                style={{ stopColor: `var(--series-${accent}-from)`, stopOpacity: 0.7 }}
+              />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -93,20 +108,7 @@ export function MonthlyBars({
           />
           <Tooltip
             cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                const item = payload[0];
-                return (
-                  <div className="rounded-lg border border-[var(--border-glass)] bg-(image:--surface-modal) p-2 shadow-xl backdrop-blur-md">
-                    <p className="text-[11px] text-[var(--text-muted)]">{item.payload.month}</p>
-                    <p className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
-                      {item.value} {lo.charts.items}
-                    </p>
-                  </div>
-                );
-              }
-              return null;
-            }}
+            content={MonthlyBarsTooltip}
           />
           <Bar
             dataKey="count"
