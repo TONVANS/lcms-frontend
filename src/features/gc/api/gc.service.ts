@@ -1,13 +1,13 @@
 import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 import type { ListQuery, Paginated } from '@/types/api';
-import type { GcContractType, GcStatus, GeneralContract } from '../types';
+import type { GcContractType, GcSortKey, GcStatus, GeneralContract } from '../types';
 import type { GcContractInput } from '../schemas/gc.schema';
 
 export interface GcListQuery extends ListQuery {
   type?: GcContractType;
   status?: GcStatus;
-  sort?: 'endDate' | 'signedDate' | 'title';
+  sort?: GcSortKey;
   order?: 'asc' | 'desc';
 }
 

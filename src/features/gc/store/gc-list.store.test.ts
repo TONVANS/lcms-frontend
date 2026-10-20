@@ -76,9 +76,7 @@ describe('gc list store', () => {
 
   it('drops an older response that resolves after a newer fetch', async () => {
     const resolvers: ((v: Paginated<GeneralContract>) => void)[] = [];
-    vi.spyOn(gcService, 'list').mockImplementation(
-      () => new Promise((r) => resolvers.push(r)),
-    );
+    vi.spyOn(gcService, 'list').mockImplementation(() => new Promise((r) => resolvers.push(r)));
     const p1 = s.getState().fetch();
     const p2 = s.getState().fetch();
     resolvers[1]!(pageOf([mk('new')]));
@@ -103,7 +101,7 @@ describe('gc list store', () => {
     await s.getState().fetch();
     expect(s.getState().items).toHaveLength(1);
     expect(s.getState().error).toBeNull();
-    expect(s.getState().status).not.toBe('error');
+    expect(s.getState().status).toBe('ready');
   });
 
   it('afterDelete steps back when the last page empties', async () => {

@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { gcService } from '../api/gc.service';
@@ -30,9 +31,7 @@ describe('useGcListUrlSync', () => {
     await act(async () => {
       renderHook(() => useGcListUrlSync());
     });
-    for (const call of nav.replace.mock.calls) {
-      expect(call[0]).toBe('/contracts/list?status=expired&page=2');
-    }
+    expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
     expect(list.mock.calls[0]![0]).toMatchObject({ status: 'expired', page: 2 });
   });
@@ -87,5 +86,55 @@ describe('useGcListUrlSync', () => {
     });
     expect(list).toHaveBeenCalledTimes(1);
     expect(useGcListStore.getState().query.status).toBe('active');
+  });
+
+  it('under StrictMode never replaces and fetches once', async () => {
+    nav.search = 'status=expired&page=2';
+    await act(async () => {
+      renderHook(() => useGcListUrlSync(), { wrapper: StrictMode });
+    });
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'expired', page: 2 });
+  });
+
+  it('only ignores the echo of the last push; a later external navigation is adopted', async () => {
+    const { rerender } = renderHook(() => useGcListUrlSync());
+    await act(async () => {});
+    await act(async () => {
+      useGcListStore.getState().setQuery({ status: 'active' });
+    });
+    await act(async () => {
+      useGcListStore.getState().setQuery({ status: 'expired' });
+    });
+    nav.search = 'status=expired';
+    await act(async () => {
+      rerender();
+    });
+    nav.search = 'status=active';
+    await act(async () => {
+      rerender();
+    });
+    expect(useGcListStore.getState().query.status).toBe('active');
+  });
+
+  it('afterDelete steps back a page and updates the URL', async () => {
+    nav.search = 'page=3';
+    const ten = Array.from({ length: 10 }, (_, i) => ({ id: `p2-${i}` }) as never);
+    list.mockImplementation(async (q: { page?: number }) =>
+      q.page === 3
+        ? { items: [], page: 3, pageSize: 10, total: 20 }
+        : { items: ten, page: 2, pageSize: 10, total: 20 },
+    );
+    renderHook(() => useGcListUrlSync());
+    await act(async () => {});
+    await act(async () => {
+      await useGcListStore.getState().afterDelete();
+    });
+    const st = useGcListStore.getState();
+    expect(st.query.page).toBe(2);
+    expect(st.items).toHaveLength(10);
+    expect(st.status).toBe('ready');
+    expect(nav.replace).toHaveBeenCalledWith('/contracts/list?page=2', { scroll: false });
   });
 });

@@ -45,6 +45,7 @@ export const useGcListStore = create<GcListState>()((set, get) => ({
 
   async fetch() {
     const gen = ++generation;
+    const prev = { status: get().status, error: get().error };
     set({ status: 'loading', error: null });
     try {
       const res = await gcService.list(get().query);
@@ -52,7 +53,13 @@ export const useGcListStore = create<GcListState>()((set, get) => ({
       set({ items: res.items, total: res.total, status: 'ready', error: null });
     } catch (e) {
       if (gen !== generation) return;
-      if (isCanceledError(e)) return;
+      if (isCanceledError(e)) {
+        // Restore what was showing before; a superseded 'loading' falls back to what the data implies.
+        const status =
+          prev.status === 'loading' ? (get().items.length > 0 ? 'ready' : 'idle') : prev.status;
+        set({ status, error: prev.error });
+        return;
+      }
       set({ status: 'error', error: normalizeError(e) });
     }
   },

@@ -16,8 +16,8 @@ export function useGcListUrlSync(): void {
 
   // Canonical string last applied in either direction; the effects below skip when equal.
   const syncedRef = useRef<string | null>(null);
-  // Strings we pushed to the URL ourselves, so their echo through useSearchParams is ignored.
-  const pushedRef = useRef<Set<string>>(new Set());
+  // Last string we pushed ourselves; its echo through useSearchParams is ignored once.
+  const pushedRef = useRef<string | null>(null);
   const currentUrlRef = useRef<string>('');
 
   const urlKey = serializeGcListQuery(parseGcListQuery(new URLSearchParams(searchParams)));
@@ -30,13 +30,15 @@ export function useGcListUrlSync(): void {
   useEffect(() => {
     const first = syncedRef.current === null;
     if (!first) {
-      if (pushedRef.current.delete(urlKey)) return;
+      if (pushedRef.current === urlKey) {
+        pushedRef.current = null;
+        return;
+      }
       if (urlKey === serializeGcListQuery(useGcListStore.getState().query)) return;
     }
     syncedRef.current = urlKey;
-    useGcListStore.getState().replaceQuery(parseGcListQuery(new URLSearchParams(searchParams)));
+    useGcListStore.getState().replaceQuery(parseGcListQuery(new URLSearchParams(urlKey)));
     void useGcListStore.getState().fetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlKey]);
 
   // store -> URL + fetch. Reads the store directly: on the mount commit `query` is stale.
@@ -45,7 +47,7 @@ export function useGcListUrlSync(): void {
     const s = serializeGcListQuery(useGcListStore.getState().query);
     if (s === syncedRef.current) return;
     syncedRef.current = s;
-    if (s !== currentUrlRef.current) pushedRef.current.add(s);
+    pushedRef.current = s !== currentUrlRef.current ? s : null;
     router.replace(pathname + (s ? `?${s}` : ''), { scroll: false });
     void useGcListStore.getState().fetch();
   }, [query, pathname, router]);

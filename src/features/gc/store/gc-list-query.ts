@@ -1,9 +1,5 @@
 import type { GcListQuery } from '../api/gc.service';
-import { GC_CONTRACT_TYPES, GC_STATUSES } from '../types';
-
-// Must match the accepted sets in the mock handler (src/lib/api/mock/handlers/gc.ts).
-export const GC_PAGE_SIZES = [10, 20, 50] as const;
-export const GC_SORT_KEYS = ['endDate', 'signedDate', 'title'] as const;
+import { GC_CONTRACT_TYPES, GC_PAGE_SIZES, GC_SORT_KEYS, GC_STATUSES } from '../types';
 
 export const DEFAULT_GC_QUERY: Required<Pick<GcListQuery, 'page' | 'pageSize' | 'sort' | 'order'>> &
   GcListQuery = { page: 1, pageSize: 10, sort: 'endDate', order: 'asc' };
@@ -24,7 +20,12 @@ export function parseGcListQuery(sp: URLSearchParams): GcListQuery {
   if (status) out.status = status;
 
   const pageRaw = sp.get('page');
-  if (pageRaw !== null && /^\d+$/.test(pageRaw) && Number(pageRaw) >= 1) {
+  if (
+    pageRaw !== null &&
+    /^\d+$/.test(pageRaw) &&
+    Number.isSafeInteger(Number(pageRaw)) &&
+    Number(pageRaw) >= 1
+  ) {
     out.page = Number(pageRaw);
   }
 

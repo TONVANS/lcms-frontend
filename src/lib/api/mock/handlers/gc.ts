@@ -5,8 +5,11 @@ import type { GcContractInput } from '@/features/gc/schemas/gc.schema';
 import {
   GC_CONTRACT_TYPES,
   GC_CURRENCIES,
+  GC_PAGE_SIZES,
+  GC_SORT_KEYS,
   GC_STATUSES,
   type GcContractType,
+  type GcSortKey,
   type GcStatus,
   type GeneralContract,
 } from '@/features/gc/types';
@@ -19,9 +22,9 @@ import { getMockSessionUser } from '../session';
 
 type Reply = [number, unknown?];
 
-const PAGE_SIZES = [10, 20, 50];
-const SORT_KEYS = ['endDate', 'signedDate', 'title'] as const;
-type SortKey = (typeof SORT_KEYS)[number];
+const PAGE_SIZES: readonly number[] = GC_PAGE_SIZES;
+const SORT_KEYS = GC_SORT_KEYS;
+type SortKey = GcSortKey;
 
 const DETAIL_RE = /^\/contracts\/([^/]+)$/;
 

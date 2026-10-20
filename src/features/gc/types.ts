@@ -21,6 +21,10 @@ export type GcContractType = (typeof GC_CONTRACT_TYPES)[number];
 export const GC_STATUSES = ['pending', 'active', 'expiring', 'expired'] as const;
 export type GcStatus = (typeof GC_STATUSES)[number];
 
+export const GC_PAGE_SIZES = [10, 20, 50] as const;
+export const GC_SORT_KEYS = ['endDate', 'signedDate', 'title'] as const;
+export type GcSortKey = (typeof GC_SORT_KEYS)[number];
+
 export const GC_CURRENCIES = ['LAK', 'USD', 'CNY'] as const;
 
 export type GcEquity = { kind: 'percent'; percent: number } | { kind: 'amount'; money: Money };

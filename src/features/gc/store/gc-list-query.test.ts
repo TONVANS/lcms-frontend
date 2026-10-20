@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_GC_QUERY,
-  GC_PAGE_SIZES,
-  parseGcListQuery,
-  serializeGcListQuery,
-} from './gc-list-query';
+import { GC_PAGE_SIZES } from '../types';
+import { DEFAULT_GC_QUERY, parseGcListQuery, serializeGcListQuery } from './gc-list-query';
 
 describe('gc list query', () => {
   it('falls back to defaults for every invalid value', () => {
@@ -33,13 +29,14 @@ describe('gc list query', () => {
     });
   });
 
-  it('accepts exactly the page sizes the handler accepts', () => {
+  it('accepts every shared page size and rejects others', () => {
     for (const n of GC_PAGE_SIZES) {
       expect(parseGcListQuery(new URLSearchParams(`pageSize=${n}`)).pageSize).toBe(n);
     }
     expect(parseGcListQuery(new URLSearchParams('pageSize=15')).pageSize).toBe(10);
     expect(parseGcListQuery(new URLSearchParams('page=1.5')).page).toBe(1);
     expect(parseGcListQuery(new URLSearchParams('page=0')).page).toBe(1);
+    expect(parseGcListQuery(new URLSearchParams('page=1000000000000000000000')).page).toBe(1);
   });
 
   it('trims q and drops empty or whitespace-only q', () => {
