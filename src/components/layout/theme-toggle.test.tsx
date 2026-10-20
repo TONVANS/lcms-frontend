@@ -5,7 +5,7 @@ import { lo } from '@/lib/i18n/lo';
 import { ThemeToggle } from './theme-toggle';
 
 const setTheme = vi.fn();
-let theme = 'dark';
+let theme: string | undefined = 'dark';
 
 vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: theme, setTheme }),
@@ -30,5 +30,17 @@ describe('ThemeToggle', () => {
     expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button'));
     expect(setTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('reports pressed after mount when resolved theme is light', () => {
+    theme = 'light';
+    render(<ThemeToggle />);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('is not pressed while the theme is unresolved', () => {
+    theme = undefined;
+    render(<ThemeToggle />);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
   });
 });
