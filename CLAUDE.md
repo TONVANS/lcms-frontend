@@ -5,6 +5,7 @@ Next.js 16 + Tailwind v4 + shadcn/ui, Lao-language UI. Package manager: pnpm.
 ## Read first
 
 - Read `Design.md` and `Frontend_LCMS_Project.md` before any UI work. They are the source of truth.
+- Read `docs/AGENT_GUIDE.md` at the start of every session: current state, reuse inventory, recipes, Phase 2 entry gates and known pitfalls.
 - Use the `ui-ux-pro-max` skill for UX review only. It must never replace LCMS tokens, fonts, colors or the glassmorphism navy style defined in `Design.md`.
 - UI copy is Lao and lives in `src/lib/i18n/lo.ts`. Code, comments and docs are English.
 
