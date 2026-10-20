@@ -1,0 +1,66 @@
+import type { User } from '@/types/domain';
+
+export const MOCK_PASSWORD = 'password';
+
+export const MOCK_USERS: User[] = [
+  {
+    id: 'u-1',
+    fullName: 'ທ້າວ ສົມພອນ ວົງສະຫວັນ',
+    username: 'admin',
+    email: 'somphone.v@lcms.la',
+    role: 'admin',
+    departmentId: 'd-1',
+    departmentName: 'ກົມບໍລິຫານທົ່ວໄປ',
+    modules: ['ppa', 'gc', 'legal'],
+  },
+  {
+    id: 'u-2',
+    fullName: 'ນາງ ແກ້ວມະນີ ສີຫາລາດ',
+    username: 'ppa.user',
+    email: 'kaewmany.s@lcms.la',
+    role: 'user',
+    departmentId: 'd-2',
+    departmentName: 'ກົມສັນຍາຊື້ຂາຍໄຟຟ້າ',
+    modules: ['ppa'],
+  },
+  {
+    id: 'u-3',
+    fullName: 'ທ້າວ ບຸນມີ ພົມມະວົງ',
+    username: 'gc.user',
+    email: 'bounmy.p@lcms.la',
+    role: 'user',
+    departmentId: 'd-3',
+    departmentName: 'ກົມສັນຍາສຳປະທານ',
+    modules: ['gc'],
+  },
+  {
+    id: 'u-4',
+    fullName: 'ນາງ ວິໄລວັນ ໄຊຍະວົງ',
+    username: 'legal.user',
+    email: 'vilayvanh.x@lcms.la',
+    role: 'user',
+    departmentId: 'd-4',
+    departmentName: 'ກົມກົດໝາຍ',
+    modules: ['legal'],
+  },
+  {
+    id: 'u-5',
+    fullName: 'ທ້າວ ຄຳຜຸຍ ມະນີວົງ',
+    username: 'multi.user',
+    email: 'khamphouy.m@lcms.la',
+    role: 'user',
+    departmentId: 'd-2',
+    departmentName: 'ກົມສັນຍາຊື້ຂາຍໄຟຟ້າ',
+    modules: ['ppa', 'gc'],
+  },
+  {
+    id: 'u-6',
+    fullName: 'ນາງ ດາລາວັນ ສຸລິຍະວົງ',
+    username: 'none.user',
+    email: 'dalavanh.s@lcms.la',
+    role: 'user',
+    departmentId: 'd-1',
+    departmentName: 'ກົມບໍລິຫານທົ່ວໄປ',
+    modules: [],
+  },
+];
