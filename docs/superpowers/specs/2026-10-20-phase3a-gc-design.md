@@ -212,7 +212,7 @@ All screens follow Design.md §5/§6 and must have skeleton, empty, error and fo
 
 ### 6.6 Support contact (team requirement 6)
 
-- `src/config/support.ts` holds the contact channels: phone, email, and optionally an internal chat link. Until real values are supplied, the values are the placeholders `[ເບີໂທ]` and `[ອີເມວ]` (Design.md §10).
+- `src/config/support.ts` holds the contact channels: phone, email, and optionally an internal chat link. Until real values are supplied, it uses sample values: phone `+856 21 000 000`, email `support@lcms.example` (the user's instruction on 2026-10-20). Replacing them is a one-file change.
 - The channels appear in two places:
   - a "ຕິດຕໍ່ແຈ້ງບັນຫາ" item in the user menu, which opens a small dialog with the channels;
   - a support card on the GC dashboard.
@@ -299,4 +299,4 @@ Uncommitted Phase 2 PPA work was found and preserved as `phase-2-ppa-wip` (6beef
 
 - Real support contact details (§6.6).
 - Native-speaker review of the new Lao strings and of the xlsx typos noted in §2.2.
-- Confirm: should open-ended contracts be allowed for every type, or only for some (e.g. shareholding, MOA)?
+- ~~Open-ended contracts by type~~ — decided 2026-10-20: allowed for **every** type.
