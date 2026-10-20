@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from '@/lib/utils/cn'
 import { Dialog as DialogPrimitive } from "radix-ui"
 
+import { lo } from '@/lib/i18n/lo'
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -76,7 +77,7 @@ function DialogContent({
             >
               <XIcon
               />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{lo.common.close}</span>
             </Button>
           </DialogPrimitive.Close>
         )}

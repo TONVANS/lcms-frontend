@@ -4,6 +4,7 @@ export const lo = {
     appName: 'LCMS',
     appSubtitle: 'ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ',
     loading: 'ກຳລັງໂຫຼດ...',
+    close: 'ປິດ',
     home: 'ໜ້າຫຼັກ',
     search: 'ຄົ້ນຫາ...',
     underConstruction: 'ໜ້ານີ້ກຳລັງພັດທະນາ',
