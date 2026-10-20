@@ -7,8 +7,18 @@ describe('getSafeNext', () => {
   });
   it('rejects unsafe values', () => {
     expect(
-      ['//evil.com', '/\\evil.com', 'https://evil.com', 'javascript:alert(1)', '', null].map(getSafeNext),
-    ).toEqual([null, null, null, null, null, null]);
+      [
+        '//evil.com',
+        '/\\evil.com',
+        'https://evil.com',
+        'javascript:alert(1)',
+        '',
+        null,
+        '/\t/evil.com',
+        '/\n/evil.com',
+        '/\r/evil.com',
+      ].map((v) => getSafeNext(v)),
+    ).toEqual([null, null, null, null, null, null, null, null, null]);
   });
 });
 

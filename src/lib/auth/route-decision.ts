@@ -3,7 +3,14 @@ import { PUBLIC_ROUTES, ROUTES } from '@/lib/constants/routes';
 export function getSafeNext(next: string | null | undefined): string | null {
   if (!next) return null;
   if (!next.startsWith('/')) return null;
-  if (next.startsWith('//') || next.startsWith('/\\')) return null;
+  if (next.startsWith('//')) return null;
+  // Control chars, whitespace and backslashes are stripped/normalised by URL parsers.
+  if (/[\x00-\x20\x7f\\]/.test(next)) return null;
+  try {
+    if (new URL(next, 'http://x').origin !== 'http://x') return null;
+  } catch {
+    return null;
+  }
   return next;
 }
 
