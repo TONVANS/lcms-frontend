@@ -43,6 +43,26 @@ describe('alerts store', () => {
     expect(useAlertsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
   });
 
+  it('drops a fetch result that resolves after reset', async () => {
+    let resolve!: (v: Alert[]) => void;
+    vi.spyOn(alertsService, 'list').mockReturnValue(new Promise<Alert[]>((r) => (resolve = r)));
+    const p = useAlertsStore.getState().fetch();
+    useAlertsStore.getState().reset();
+    resolve([mk('1', 'ppa', false)]);
+    await p;
+    expect(useAlertsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
+  });
+
+  it('drops a fetch error that arrives after reset', async () => {
+    let reject!: (e: Error) => void;
+    vi.spyOn(alertsService, 'list').mockReturnValue(new Promise<Alert[]>((_, r) => (reject = r)));
+    const p = useAlertsStore.getState().fetch();
+    useAlertsStore.getState().reset();
+    reject(new Error('late'));
+    await p;
+    expect(useAlertsStore.getState().status).toBe('idle');
+  });
+
   it('loads only the session user module alerts via the mock API', async () => {
     setMockSession('ppa.user', false);
     await useAlertsStore.getState().fetch();

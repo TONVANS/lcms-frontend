@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import { getModuleFromPath } from '@/config/navigation';
 import { useAlertsStore } from '@/features/alerts';
 import { useAuthStore } from '@/features/auth';
+import { canAccessModule } from '@/lib/auth/permissions';
 import { useUiStore } from '@/stores/ui.store';
 import { AppSidebar } from './app-sidebar';
 import { BackgroundGlows } from './background-glows';
@@ -18,17 +19,19 @@ interface AppShellProps {
 
 export function AppShell({ children, unreadCount: unreadOverride }: AppShellProps) {
   const pathname = usePathname();
-  const authStatus = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const storeUnread = useAlertsStore((s) => s.unreadCount);
   const unreadCount = unreadOverride ?? storeUnread;
 
+  // AuthGate mounts AppShell only while authenticated, so unmount == session end.
   useEffect(() => {
-    const alerts = useAlertsStore.getState();
-    if (authStatus === 'authenticated') void alerts.fetch();
-    else alerts.reset();
-  }, [authStatus]);
+    void useAlertsStore.getState().fetch();
+    return () => useAlertsStore.getState().reset();
+  }, []);
 
-  const moduleKey = getModuleFromPath(pathname);
+  const pathModule = getModuleFromPath(pathname);
+  // Forbidden modules render the home layout (spec §4); ModuleGuard shows the denial.
+  const moduleKey = pathModule && user && canAccessModule(user, pathModule) ? pathModule : null;
   const setLastModule = useUiStore((s) => s.setLastModule);
 
   useEffect(() => {

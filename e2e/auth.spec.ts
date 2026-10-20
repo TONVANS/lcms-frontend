@@ -42,13 +42,15 @@ test('stale session cookie ends on login with expired banner, no loop', async ({
   await expect(page.getByText(lo.auth.sessionExpired)).toBeVisible();
   await page.waitForTimeout(1000);
   expect(navigations).toBeLessThan(5);
+  const cookies = await context.cookies();
+  expect(cookies.find((c) => c.name === 'lcms_session')).toBeUndefined();
 });
 
 test('logout returns to login and protects routes again', async ({ page }) => {
   await loginAs(page, 'admin');
   await page.getByRole('button', { name: lo.topbar.userMenu }).click();
   await page.getByRole('menuitem', { name: lo.auth.logout }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?reason=logout$/);
   await page.goto('/ppa');
   await expect(page).toHaveURL(/\/login\?next=%2Fppa/);
 });

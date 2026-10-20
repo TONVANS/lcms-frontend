@@ -17,6 +17,12 @@ describe('AppSidebar', () => {
     useAuthStore.setState({ user: null, status: 'unauthenticated' });
   });
 
+  it('overrides the focus ring with gold on the navy surface', () => {
+    useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
+    const { container } = render(<AppSidebar module="ppa" />);
+    expect(container.querySelector('aside')).toHaveClass('[--focus-ring:#d4b37a]');
+  });
+
   it('marks the active item with aria-current', () => {
     useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
     render(<AppSidebar module="ppa" />);

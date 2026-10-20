@@ -39,7 +39,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     } else if (status === 'unauthenticated') {
       clearMockSession();
       if (endReason === 'logout') {
-        router.replace('/login');
+        router.replace('/login?reason=logout');
       } else {
         const next = pathname + (search ? `?${search}` : '');
         router.replace(`/login?reason=expired&next=${encodeURIComponent(next)}`);

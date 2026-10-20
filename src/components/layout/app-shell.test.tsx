@@ -1,0 +1,50 @@
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { alertsService, useAlertsStore } from '@/features/alerts';
+import { useAuthStore } from '@/features/auth';
+import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
+import { lo } from '@/lib/i18n/lo';
+import { useUiStore } from '@/stores/ui.store';
+import { AppShell } from './app-shell';
+
+let pathname = '/';
+vi.mock('next/navigation', () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+
+const byName = (n: string) => MOCK_USERS.find((u) => u.username === n)!;
+
+beforeEach(() => {
+  pathname = '/';
+  vi.restoreAllMocks();
+  vi.spyOn(alertsService, 'list').mockResolvedValue([]);
+  useAlertsStore.getState().reset();
+  useUiStore.setState({ lastModule: null });
+});
+
+describe('AppShell', () => {
+  it('resets the alerts store on unmount', () => {
+    useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
+    const { unmount } = render(<AppShell>child</AppShell>);
+    useAlertsStore.setState({ items: [{ id: 'x' } as never], unreadCount: 1, status: 'ready' });
+    unmount();
+    expect(useAlertsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
+  });
+
+  it('renders the home layout and does not store lastModule for a forbidden module', () => {
+    pathname = '/legal';
+    useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
+    render(<AppShell>child</AppShell>);
+    expect(screen.queryByRole('navigation', { name: lo.nav.mainMenu })).toBeNull();
+    expect(useUiStore.getState().lastModule).not.toBe('legal');
+  });
+
+  it('renders the module sidebar and sets lastModule for an accessible module', () => {
+    pathname = '/ppa';
+    useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
+    render(<AppShell>child</AppShell>);
+    expect(screen.getByRole('navigation', { name: lo.nav.mainMenu })).toBeInTheDocument();
+    expect(useUiStore.getState().lastModule).toBe('ppa');
+  });
+});

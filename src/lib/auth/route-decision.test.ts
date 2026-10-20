@@ -23,6 +23,10 @@ describe('getSafeNext', () => {
 });
 
 describe('decideRedirect', () => {
+  it('does not bounce a signed-in user off /login when reason=logout or expired', () => {
+    expect(decideRedirect({ pathname: '/login', search: '?reason=logout', hasSession: true })).toBeNull();
+    expect(decideRedirect({ pathname: '/login', search: '?reason=expired', hasSession: true })).toBeNull();
+  });
   it('redirects anonymous users to login', () => {
     expect(decideRedirect({ pathname: '/ppa', search: '?tab=1', hasSession: false })).toBe('/login?next=%2Fppa%3Ftab%3D1');
     expect(decideRedirect({ pathname: '/', search: '', hasSession: false })).toBe('/login');

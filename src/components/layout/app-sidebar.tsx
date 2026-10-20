@@ -22,7 +22,7 @@ export function AppSidebar({ module }: { module: ModuleKey }) {
   return (
     <aside
       className={cn(
-        'flex flex-col gap-5 rounded-[24px] border border-[var(--sidebar-border)] p-4 text-[#e8eef9]',
+        '[--focus-ring:#d4b37a] flex flex-col gap-5 rounded-[24px] border border-[var(--sidebar-border)] p-4 text-[#e8eef9]',
         'bg-[image:var(--surface-navy)]',
         'dark:bg-[image:var(--glass-bg)] dark:shadow-[var(--glass-shadow)] dark:[backdrop-filter:var(--glass-blur)]',
       )}

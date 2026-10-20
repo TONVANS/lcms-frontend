@@ -23,7 +23,7 @@ export function UserMenu() {
 
   async function handleLogout() {
     await useAuthStore.getState().logout();
-    router.replace('/login');
+    router.replace('/login?reason=logout');
   }
 
   return (

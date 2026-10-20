@@ -67,10 +67,10 @@ describe('AuthGate', () => {
     );
   });
 
-  it('redirects plainly to /login after an explicit logout', () => {
+  it('redirects to /login?reason=logout after an explicit logout', () => {
     useAuthStore.setState({ status: 'unauthenticated', endReason: 'logout' });
     render(<AuthGate>child</AuthGate>);
-    expect(replace).toHaveBeenCalledWith('/login');
+    expect(replace).toHaveBeenCalledWith('/login?reason=logout');
   });
 
   it('renders children when authenticated', () => {

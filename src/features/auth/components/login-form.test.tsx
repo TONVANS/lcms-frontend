@@ -80,6 +80,12 @@ describe('LoginForm', () => {
     expect(screen.getByRole('status')).toHaveTextContent(lo.auth.sessionExpired);
   });
 
+  it('shows no banner when reason=logout', () => {
+    render(<LoginForm reason="logout" />);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText(lo.auth.sessionExpired)).toBeNull();
+  });
+
   it('toggles password visibility with labelled button', async () => {
     const user = userEvent.setup();
     render(<LoginForm />);

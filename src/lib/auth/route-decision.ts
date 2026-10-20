@@ -29,8 +29,9 @@ export function decideRedirect(input: {
   }
 
   if (pathname === ROUTES.login) {
-    // Stale cookie + AuthGate redirect: do not bounce back, avoids a loop.
-    if (new URLSearchParams(search).get('reason') === 'expired') return null;
+    // Stale cookie or just-logged-out (cookie may linger until the POST lands): do not bounce back.
+    const reason = new URLSearchParams(search).get('reason');
+    if (reason === 'expired' || reason === 'logout') return null;
     return ROUTES.home;
   }
   return null;

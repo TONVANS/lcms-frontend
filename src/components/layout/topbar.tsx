@@ -24,7 +24,7 @@ export function Topbar({ unreadCount, variant }: TopbarProps) {
       className={cn(
         'flex animate-fade-in-down flex-wrap items-center justify-between gap-3 rounded-[20px] px-4 py-3',
         home
-          ? 'border border-[var(--sidebar-border)] bg-[image:var(--surface-navy)] text-[#e8eef9]'
+          ? '[--focus-ring:#d4b37a] border border-[var(--sidebar-border)] bg-[image:var(--surface-navy)] text-[#e8eef9]'
           : 'glass',
       )}
     >
