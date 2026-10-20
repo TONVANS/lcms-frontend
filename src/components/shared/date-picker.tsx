@@ -18,6 +18,7 @@ interface DatePickerProps {
   'aria-describedby'?: string;
   clearable?: boolean;
   labelId?: string;
+  required?: boolean;
 }
 
 function toDate(iso?: string | null): Date | undefined {
@@ -36,10 +37,12 @@ export function DatePicker({
   'aria-describedby': ariaDescribedby,
   clearable,
   labelId,
+  required,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const valueId = useId();
+  const reqId = useId();
   const [now] = useState(() => new Date());
   const selected = toDate(value);
   const minDate = toDate(min);
@@ -56,11 +59,16 @@ export function DatePicker({
             variant="outline"
             aria-invalid={ariaInvalid}
             aria-describedby={ariaDescribedby}
-            aria-labelledby={labelId ? `${labelId} ${valueId}` : undefined}
+            aria-labelledby={labelId ? `${labelId} ${valueId}${required ? ` ${reqId}` : ''}` : undefined}
             className={cn('h-11 flex-1 justify-start gap-2 font-normal', !selected && 'text-muted-foreground')}
           >
             <CalendarIcon aria-hidden="true" className="size-4" />
             <span id={valueId}>{selected ? formatDate(value) : lo.datePicker.placeholder}</span>
+            {required ? (
+              <span id={reqId} className="sr-only">
+                {lo.common.required}
+              </span>
+            ) : null}
           </Button>
         </PopoverTrigger>
         <PopoverContent aria-label={lo.datePicker.open} className="w-auto bg-(image:--surface-modal) p-0" align="start">

@@ -30,7 +30,6 @@ import {
   GC_FIELD_ORDER,
   GcFormFieldGroup,
   firstInvalidFieldId,
-  gcFieldId,
   type GcFormFieldName,
 } from './gc-contract-form-fields';
 
@@ -52,10 +51,11 @@ interface BodyProps {
   onOpenChange: (open: boolean) => void;
   onSaved: (c: GeneralContract) => void;
   busyRef: RefObject<boolean>;
+  onBusyChange: (busy: boolean) => void;
 }
 
 /** Mounted fresh each time the dialog opens (and per contract), so no value leaks between openings. */
-function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef }: BodyProps) {
+function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyChange }: BodyProps) {
   const form = useForm<GcFormValues>({
     resolver: zodResolver(gcFormSchema),
     defaultValues: contract ? fromGcContract(contract) : emptyGcForm(),
@@ -79,6 +79,7 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef }: BodyPr
   const onValid = async (values: GcFormValues) => {
     if (busyRef.current) return;
     busyRef.current = true;
+    onBusyChange(true);
     setBanner(null);
     try {
       const payload = toGcPayload(values);
@@ -86,6 +87,7 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef }: BodyPr
         ? await gcService.update(contract.id, payload)
         : await gcService.create(payload);
       busyRef.current = false;
+      onBusyChange(false);
       onSaved(saved);
       if (!alive.current) return;
       toast.success(lo.gc.form.saved);
@@ -93,26 +95,31 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef }: BodyPr
     } catch (e) {
       if (!alive.current) return;
       const err = normalizeError(e);
-      const matched: GcFormFieldName[] = [];
+      let unmatched = false;
+      const serverErrors: FieldErrors<GcFormValues> = {};
+      let matchedAny = false;
       for (const [key, message] of Object.entries(err.fieldErrors ?? {})) {
-        if (!FIELD_NAMES.has(key)) continue;
+        if (!FIELD_NAMES.has(key)) {
+          unmatched = true;
+          continue;
+        }
         const name = key as GcFormFieldName;
         const text =
           name === 'contractNo' && message === 'DUPLICATE_CONTRACT_NO'
             ? lo.gc.errors.duplicateNo
             : message;
         setError(name, { type: 'server', message: text });
-        matched.push(name);
+        (serverErrors as Record<string, unknown>)[name] = { type: 'server', message: text };
+        matchedAny = true;
       }
-      if (matched.length > 0) {
-        const first = GC_FIELD_ORDER.find((n) => matched.includes(n));
-        focusById(first ? gcFieldId(first) : null);
-      } else {
+      if (matchedAny) focusById(firstInvalidFieldId(serverErrors));
+      if (!matchedAny || unmatched) {
         const text = toUserMessage(err);
         if (text) setBanner(text);
       }
     } finally {
       busyRef.current = false;
+      onBusyChange(false);
     }
   };
 
@@ -146,6 +153,7 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef }: BodyPr
 
 export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: GcContractFormDialogProps) {
   const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
 
   // A request in flight cannot be abandoned: closing is ignored until it settles.
   const handleOpenChange = (next: boolean) => {
@@ -156,7 +164,8 @@ export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[90vh] max-w-[780px] gap-5 overflow-y-auto rounded-[26px] bg-(image:--surface-modal) p-6 sm:max-w-[780px] sm:p-8"
+        showCloseButton={!busy}
+        className="max-h-[90vh] max-w-[calc(100%-2rem)] gap-5 overflow-y-auto rounded-[26px] bg-(image:--surface-modal) p-6 sm:max-w-[780px] sm:p-8"
       >
         <DialogHeader className="flex-row items-center gap-3 border-b border-(--border-subtle) pb-4">
           <div
@@ -180,6 +189,7 @@ export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: 
           onOpenChange={handleOpenChange}
           onSaved={onSaved}
           busyRef={busyRef}
+          onBusyChange={setBusy}
         />
       </DialogContent>
     </Dialog>

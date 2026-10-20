@@ -18,6 +18,12 @@ describe('globals.css tokens', () => {
     expect(darkBody).toMatch(/--text:\s*#E8EEF9/i);
   });
 
+  it('defines --text-error (AA error text) in both themes, scoped to each block', () => {
+    expect(rootBody).toMatch(/--text-error:\s*#be123c/i);
+    expect(darkBody).toMatch(/--text-error:\s*#fda4af/i);
+    expect(css).toMatch(/--color-error:\s*var\(--text-error\)/);
+  });
+
   it('block extraction is scoped (dark value only in :root does not satisfy the dark block)', () => {
     const mutated = css.replace(/(\.dark\s*\{[^}]*?)--text:\s*#e8eef9;/i, '$1').replace(/(:root\s*\{)/, '$1\n  --text: #e8eef9;');
     expect(block(mutated, DARK)).not.toMatch(/--text:\s*#E8EEF9/i);

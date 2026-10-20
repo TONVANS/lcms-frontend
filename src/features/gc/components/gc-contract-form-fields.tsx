@@ -104,7 +104,7 @@ function Field({ name, label, required, error, wide, children }: FieldProps) {
         labelId,
       )}
       {error ? (
-        <p id={errorId} className="text-xs text-destructive">
+        <p id={errorId} className="text-xs text-(--text-error)">
           {error}
         </p>
       ) : null}
@@ -190,12 +190,12 @@ function EquityField({ form }: { form: UseFormReturn<GcFormValues> }) {
         {option('amount', lo.gc.equityKind.amount)}
       </RadioGroup>
       {groupError ? (
-        <p id={`${base}-error`} className="text-xs text-destructive">
+        <p id={`${base}-error`} className="text-xs text-(--text-error)">
           {groupError}
         </p>
       ) : null}
       {equity?.kind === 'percent' ? (
-        <Field name="equity-percent" label={lo.gc.form.percentInput} error={percentError}>
+        <Field name="equity-percent" label={lo.gc.form.percentInput} required error={percentError}>
           {(control) => (
             <PercentInput
               control={control}
@@ -206,12 +206,13 @@ function EquityField({ form }: { form: UseFormReturn<GcFormValues> }) {
         </Field>
       ) : null}
       {equity?.kind === 'amount' ? (
-        <Field name="equity-amount" label={lo.money.amount} error={moneyError}>
+        <Field name="equity-amount" label={lo.money.amount} required error={moneyError}>
           {(control) => (
             <MoneyInput
               id={control.id}
               aria-invalid={control['aria-invalid']}
               aria-describedby={control['aria-describedby']}
+              aria-required={control['aria-required']}
               currencies={[...GC_CURRENCIES]}
               value={Number.isFinite(equity.money.amount) ? equity.money : null}
               onChange={(m) =>
@@ -321,6 +322,7 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
                 labelId={labelId}
                 aria-invalid={c['aria-invalid']}
                 aria-describedby={c['aria-describedby']}
+                required={required}
                 clearable={name === 'endDate'}
                 value={field.value || null}
                 onChange={(v) => {

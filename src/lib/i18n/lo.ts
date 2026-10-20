@@ -5,6 +5,7 @@ export const lo = {
     appSubtitle: 'ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ',
     loading: 'ກຳລັງໂຫຼດ...',
     close: 'ປິດ',
+    required: 'ຈຳເປັນ',
     home: 'ໜ້າຫຼັກ',
     search: 'ຄົ້ນຫາ...',
     underConstruction: 'ໜ້ານີ້ກຳລັງພັດທະນາ',

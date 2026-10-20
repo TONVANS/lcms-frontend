@@ -21,6 +21,24 @@ function Harness({ initial, onSpy, clearable }: { initial: string | null; onSpy:
 }
 
 describe('DatePicker', () => {
+  it('announces required in the trigger name only when required', () => {
+    const { rerender } = render(
+      <>
+        <span id="lbl">Label</span>
+        <DatePicker id="d" labelId="lbl" value={null} onChange={() => {}} required />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: new RegExp(lo.common.required) })).toBeInTheDocument();
+    rerender(
+      <>
+        <span id="lbl">Label</span>
+        <DatePicker id="d" labelId="lbl" value={null} onChange={() => {}} />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: /Label/ })).not.toHaveTextContent(lo.common.required);
+    expect(screen.queryByRole('button', { name: new RegExp(lo.common.required) })).not.toBeInTheDocument();
+  });
+
   it('emits local YYYY-MM-DD and shows dd/mm/yyyy', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -15,6 +15,7 @@ interface MoneyInputProps {
   'aria-invalid'?: boolean;
   'aria-describedby'?: string;
   'aria-label'?: string;
+  'aria-required'?: boolean;
 }
 
 function parseAmount(raw: string): number | null {
@@ -36,6 +37,7 @@ export function MoneyInput({
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedby,
   'aria-label': ariaLabel,
+  'aria-required': ariaRequired,
 }: MoneyInputProps) {
   const [raw, setRaw] = useState(() => display(value));
   const [prevValue, setPrevValue] = useState(value);
@@ -62,6 +64,7 @@ export function MoneyInput({
         type="text"
         inputMode="decimal"
         aria-label={ariaLabel}
+        aria-required={ariaRequired}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedby}
         value={raw}

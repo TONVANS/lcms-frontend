@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
@@ -93,13 +94,21 @@ describe('GcContractFormDialog', () => {
     expect(screen.getByLabelText(new RegExp(F.title))).toHaveAttribute('aria-invalid', 'true');
   });
 
+  it('announces required dates to assistive tech through the trigger name', () => {
+    setup();
+    const req = new RegExp(lo.common.required);
+    expect(screen.getByRole('button', { name: new RegExp(`${F.effectiveDate}.*${lo.common.required}`) })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: new RegExp(`${F.signedDate}.*${lo.common.required}`) })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: new RegExp(F.endDate) })).not.toHaveAccessibleName(req);
+  });
+
   it('offers a term suggestion and applies it', async () => {
     const user = userEvent.setup();
     setup({ ...withValue(), effectiveDate: '2026-01-01', endDate: '2031-01-01', termText: null });
-    expect(screen.getByText(lo.gc.form.suggestTerm('5 ປີ'))).toBeInTheDocument();
+    expect(screen.getByText(lo.gc.form.suggestTerm(lo.gc.term.years(5)))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: lo.gc.form.useSuggestion }));
-    expect(screen.getByLabelText(F.termText)).toHaveValue('5 ປີ');
-    expect(screen.queryByText(lo.gc.form.suggestTerm('5 ປີ'))).not.toBeInTheDocument();
+    expect(screen.getByLabelText(F.termText)).toHaveValue(lo.gc.term.years(5));
+    expect(screen.queryByText(lo.gc.form.suggestTerm(lo.gc.term.years(5)))).not.toBeInTheDocument();
   });
 
   it('edit prefills and saving with a cleared value sends null', async () => {
@@ -166,7 +175,7 @@ describe('GcContractFormDialog', () => {
     const spy = vi.spyOn(gcService, 'update');
     setup(c);
     await user.click(screen.getByRole('radio', { name: lo.gc.equityKind.percent }));
-    const pct = screen.getByLabelText(lo.gc.form.percentInput);
+    const pct = screen.getByLabelText(lo.gc.form.percentInput, { exact: false });
     await user.type(pct, '150');
     await user.click(saveBtn());
     await waitFor(() => expect(pct).toHaveAttribute('aria-invalid', 'true'));
@@ -223,5 +232,73 @@ describe('GcContractFormDialog', () => {
     const { rerender } = render(<GcContractFormDialog open contract={a} {...props} />);
     rerender(<GcContractFormDialog open contract={b} {...props} />);
     expect(screen.getByLabelText(new RegExp(F.title))).toHaveValue(b.title);
+  });
+
+  it('server equity error moves focus to the equity group and shows the message', async () => {
+    const user = userEvent.setup();
+    const err: ApiError = { status: 409, code: 'X', message: '', fieldErrors: { equity: 'ສັດສ່ວນບໍ່ຖືກຕ້ອງ' } };
+    vi.spyOn(gcService, 'update').mockRejectedValue(err);
+    setup(withValue());
+    await user.click(saveBtn());
+    const radio = screen.getByRole('radio', { name: lo.gc.form.equityNone });
+    await waitFor(() => expect(radio).toHaveFocus());
+    expect(screen.getByText('ສັດສ່ວນບໍ່ຖືກຕ້ອງ')).toBeInTheDocument();
+  });
+
+  it('shows the banner too when a server key matches no field', async () => {
+    const user = userEvent.setup();
+    const err: ApiError = {
+      status: 409,
+      code: 'X',
+      message: '',
+      fieldErrors: { counterparty: 'ຄູ່ສັນຍານີ້ບໍ່ຖືກຕ້ອງ', documents: 'bad' },
+    };
+    vi.spyOn(gcService, 'update').mockRejectedValue(err);
+    setup(withValue());
+    await user.click(saveBtn());
+    expect(await screen.findByRole('alert')).toHaveTextContent(lo.errors.unknown);
+    expect(screen.getByLabelText(F.counterparty)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(F.counterparty)).toHaveFocus();
+  });
+
+  it('hides the close button while saving', async () => {
+    const user = userEvent.setup();
+    const c = withValue();
+    let resolve!: (v: GeneralContract) => void;
+    vi.spyOn(gcService, 'update').mockReturnValue(new Promise((r) => (resolve = r)));
+    setup(c);
+    expect(screen.getByRole('button', { name: lo.common.close })).toBeInTheDocument();
+    await user.click(saveBtn());
+    await waitFor(() => expect(screen.queryByRole('button', { name: lo.common.close })).not.toBeInTheDocument());
+    resolve(c);
+    await waitFor(() => expect(screen.queryByRole('button', { name: lo.common.close })).toBeInTheDocument());
+  });
+
+  it('marks percent and amount sub-fields required', async () => {
+    const user = userEvent.setup();
+    setup(withValue());
+    await user.click(screen.getByRole('radio', { name: lo.gc.equityKind.percent }));
+    const pct = screen.getByLabelText(lo.gc.form.percentInput, { exact: false });
+    expect(pct).toHaveAttribute('aria-required', 'true');
+    expect(document.getElementById('gc-field-equity-percent-label')?.querySelector('span')).toHaveAttribute('aria-hidden', 'true');
+    await user.click(screen.getByRole('radio', { name: lo.gc.equityKind.amount }));
+    expect(screen.getByLabelText(new RegExp(lo.money.amount, 'g'), { selector: '#gc-field-equity-amount' })).toHaveAttribute('aria-required', 'true');
+  });
+
+  it('parent closing mid-save: onSaved once, no toast, no onOpenChange', async () => {
+    const c = withValue();
+    let resolve!: (v: GeneralContract) => void;
+    vi.spyOn(gcService, 'update').mockReturnValue(new Promise((r) => (resolve = r)));
+    const user = userEvent.setup();
+    const props = { onOpenChange: vi.fn(), onSaved: vi.fn() };
+    const { rerender } = render(<GcContractFormDialog open contract={c} {...props} />);
+    await user.click(saveBtn());
+    await waitFor(() => expect(saveBtn()).toBeDisabled());
+    rerender(<GcContractFormDialog open={false} contract={c} {...props} />);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    resolve(c);
+    await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(props.onOpenChange).not.toHaveBeenCalled();
   });
 });
