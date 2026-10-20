@@ -17,3 +17,23 @@ describe('BarList', () => {
     expect(screen.getByText('400')).toBeInTheDocument();
   });
 });
+
+describe('BarList motion and tokens', () => {
+  it('fill has no width transition and uses grow-x', () => {
+    render(<BarList data={[{ key: 'a', label: 'A', value: 5 }]} accent="gc" />);
+    const fill = screen.getByTestId('bar-fill-a');
+    expect(fill.className).not.toMatch(/transition-(all|\[width)/);
+    expect(fill.className).not.toContain('transition');
+    expect(fill.parentElement!.className).toContain('animate-grow-x');
+    expect(fill.parentElement!.className).toContain('origin-left');
+    expect(fill.className).toContain('from-(--series-gc-from)');
+    expect(fill.className).toContain('to-(--series-gc-to)');
+    expect(fill.className).toContain('rounded-[4px]');
+    expect(fill).toHaveStyle({ width: '100%' });
+  });
+
+  it('supports the litigation accent', () => {
+    render(<BarList data={[{ key: 'a', label: 'A', value: 5 }]} accent="litigation" />);
+    expect(screen.getByTestId('bar-fill-a').className).toContain('from-(--series-litigation-from)');
+  });
+});

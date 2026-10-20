@@ -10,18 +10,22 @@ export interface BarListItem {
   subValue?: string;
 }
 
+export type BarListAccent = 'ppa' | 'gc' | 'legal' | 'litigation';
+
 export interface BarListProps {
   data: BarListItem[];
   maxValue?: number;
-  accent?: 'ppa' | 'gc' | 'legal';
+  accent?: BarListAccent;
   valueFormatter?: (value: number) => string;
   className?: string;
 }
 
-const ACCENT_GRADIENT: Record<'ppa' | 'gc' | 'legal', string> = {
-  ppa: 'bg-gradient-to-r from-[#2563eb] to-[#5cc8ff]',
-  gc: 'bg-gradient-to-r from-[#4f46e5] to-[#8b9cff]',
-  legal: 'bg-gradient-to-r from-[#9c7c45] to-[#d4b37a]',
+// Literal class strings so Tailwind can detect them.
+const ACCENT_GRADIENT: Record<BarListAccent, string> = {
+  ppa: 'bg-linear-to-r from-(--series-ppa-from) to-(--series-ppa-to)',
+  gc: 'bg-linear-to-r from-(--series-gc-from) to-(--series-gc-to)',
+  legal: 'bg-linear-to-r from-(--series-legal-from) to-(--series-legal-to)',
+  litigation: 'bg-linear-to-r from-(--series-litigation-from) to-(--series-litigation-to)',
 };
 
 export function BarList({
@@ -56,10 +60,13 @@ export function BarList({
             </div>
 
             <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-inset)]">
-              <div
-                className={cn('h-full rounded-full transition-all duration-500', gradientClass)}
-                style={{ width: `${percent}%` }}
-              />
+              <div className="h-full w-full origin-left animate-grow-x">
+                <div
+                  data-testid={`bar-fill-${item.key}`}
+                  className={cn('h-full rounded-[4px]', gradientClass)}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
             </div>
           </div>
         );

@@ -18,3 +18,26 @@ describe('StackedStatusBar', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 });
+
+describe('StackedStatusBar a11y and motion', () => {
+  it('exposes an accessible summary', () => {
+    render(
+      <StackedStatusBar
+        data={[
+          { status: 'active', count: 3 },
+          { status: 'expired', count: 1 },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('img')).toHaveAccessibleName(
+      expect.stringContaining(`${lo.status.active} 3`),
+    );
+  });
+
+  it('uses Design.md colours in dots and has no transition on segments', () => {
+    const { container } = render(<StackedStatusBar data={[{ status: 'active', count: 3 }]} />);
+    expect(container.innerHTML).toContain('#059669');
+    expect(container.innerHTML).not.toContain('#34d399');
+    expect(container.innerHTML).not.toContain('transition');
+  });
+});

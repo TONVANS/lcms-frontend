@@ -133,6 +133,9 @@ export const lo = {
     fileUploaded: 'ອັບໂຫຼດເອກະສານສຳເລັດ',
     fileDeleted: 'ລຶບເອກະສານສຳເລັດ',
   },
+  charts: {
+    items: 'ລາຍການ',
+  },
   stepper: {
     step: (cur: number, total: number) => `ຂັ້ນຕອນທີ ${cur} ຈາກ ${total}`,
     completed: 'ສຳເລັດແລ້ວ',

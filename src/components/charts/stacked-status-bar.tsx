@@ -16,22 +16,14 @@ export interface StackedStatusBarProps {
   className?: string;
 }
 
+// Design.md §2.5 status colours, used for both themes.
 const TONE_COLOR: Record<StatusTone, string> = {
-  emerald: 'bg-[#34d399]',
-  blue: 'bg-[#60a5fa]',
-  violet: 'bg-[#a78bfa]',
-  amber: 'bg-[#fbbf24]',
-  rose: 'bg-[#fb7185]',
-  slate: 'bg-[#94a3b8]',
-};
-
-const TONE_DOT: Record<StatusTone, string> = {
-  emerald: 'bg-[#34d399]',
-  blue: 'bg-[#60a5fa]',
-  violet: 'bg-[#a78bfa]',
-  amber: 'bg-[#fbbf24]',
-  rose: 'bg-[#fb7185]',
-  slate: 'bg-[#94a3b8]',
+  emerald: 'bg-[#059669]',
+  blue: 'bg-[#2563EB]',
+  violet: 'bg-[#7C3AED]',
+  amber: 'bg-[#FBBF24]',
+  rose: 'bg-[#E11D48]',
+  slate: 'bg-[#94A3B8]',
 };
 
 export function StackedStatusBar({ data, total, className }: StackedStatusBarProps) {
@@ -46,21 +38,28 @@ export function StackedStatusBar({ data, total, className }: StackedStatusBarPro
   // Filter out 0 count items for the bar segments
   const activeSegments = data.filter((d) => d.count > 0);
 
+  const summary = activeSegments
+    .map((seg) => `${(STATUS_META[seg.status] ?? { label: seg.status }).label} ${formatNumber(seg.count)}`)
+    .join(', ');
+
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       {/* Stacked bar with 2px gap and rounded ends */}
-      <div className="flex h-3.5 w-full gap-[2px] overflow-hidden rounded-md bg-[var(--surface-inset)] p-[1px]">
+      <div
+        role="img"
+        aria-label={summary}
+        className="flex h-3.5 w-full gap-[2px] overflow-hidden rounded-md bg-[var(--surface-inset)] p-[1px]">
         {activeSegments.map((seg) => {
           const percent = (seg.count / sum) * 100;
           const meta = STATUS_META[seg.status] ?? { tone: 'slate', label: seg.status };
-          const colorClass = TONE_COLOR[meta.tone] ?? 'bg-[#94a3b8]';
+          const colorClass = TONE_COLOR[meta.tone] ?? TONE_COLOR.slate;
 
           return (
             <div
               key={seg.status}
               title={`${meta.label}: ${formatNumber(seg.count)} (${percent.toFixed(1)}%)`}
               className={cn(
-                'h-full transition-all duration-300 first:rounded-l-[4px] last:rounded-r-[4px]',
+                'h-full first:rounded-l-[4px] last:rounded-r-[4px]',
                 colorClass,
               )}
               style={{ width: `${percent}%` }}
@@ -73,7 +72,7 @@ export function StackedStatusBar({ data, total, className }: StackedStatusBarPro
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
         {data.map((seg) => {
           const meta = STATUS_META[seg.status] ?? { tone: 'slate', label: seg.status };
-          const dotClass = TONE_DOT[meta.tone] ?? 'bg-[#94a3b8]';
+          const dotClass = TONE_COLOR[meta.tone] ?? TONE_COLOR.slate;
           const percent = sum > 0 ? (seg.count / sum) * 100 : 0;
 
           return (
