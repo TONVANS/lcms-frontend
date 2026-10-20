@@ -63,11 +63,11 @@ describe('MoneyInput', () => {
     expect(onChange).toHaveBeenLastCalledWith({ amount: 500, currency: 'USD' });
   });
 
-  it('resets currency to the first option once the value is cleared', async () => {
+  it('keeps the currency when a controlled parent feeds null back', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     function Harness() {
-      const [v, setV] = useState<Money | null>({ amount: 1, currency: 'USD' });
+      const [v, setV] = useState<Money | null>({ amount: 100, currency: 'USD' });
       return (
         <MoneyInput
           id="v"
@@ -84,7 +84,7 @@ describe('MoneyInput', () => {
     const input = screen.getByRole('textbox');
     await user.clear(input);
     await user.type(input, '500');
-    expect(onChange).toHaveBeenLastCalledWith({ amount: 500, currency: 'LAK' });
+    expect(onChange).toHaveBeenLastCalledWith({ amount: 500, currency: 'USD' });
   });
 
   it('names the currency select and does not hardcode the amount label', () => {

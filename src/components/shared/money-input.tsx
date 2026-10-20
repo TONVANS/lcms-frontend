@@ -44,7 +44,7 @@ export function MoneyInput({
   // Resync the text only when an external value differs from what the text already means.
   if (value !== prevValue) {
     setPrevValue(value);
-    setFallbackCurrency(value ? value.currency : currencies[0]);
+    if (value) setFallbackCurrency(value.currency);
     if ((value?.amount ?? null) !== parseAmount(raw)) setRaw(display(value));
   }
 
