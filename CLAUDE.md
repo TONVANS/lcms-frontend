@@ -23,6 +23,7 @@ Next.js 16 + Tailwind v4 + shadcn/ui, Lao-language UI. Package manager: pnpm.
 - Icon-only buttons have a Lao `aria-label`; decorative SVGs `aria-hidden="true"`; status never by color alone.
 - Unit tests colocated as `src/**/*.test.ts(x)`; e2e in `e2e/`. Unit run: `pnpm test --run <path>`.
 - Commit after each task with a conventional-commit message.
+- After any `shadcn add`, rewrite generated `from "cn"` imports to `@/lib/utils/cn`.
 
 ## Model workflow (roadmap §1)
 
