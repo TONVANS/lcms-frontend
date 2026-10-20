@@ -1,0 +1,14 @@
+'use client';
+
+import { ThemeProvider } from 'next-themes';
+import type { ReactNode } from 'react';
+import { Toaster } from '@/components/ui/sonner';
+
+export function Providers({ children }: { children: ReactNode }) {
+  return (
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      {children}
+      <Toaster position="bottom-right" />
+    </ThemeProvider>
+  );
+}
