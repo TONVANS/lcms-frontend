@@ -25,6 +25,20 @@ describe('ForgotPasswordForm', () => {
     expect(await screen.findByText(lo.auth.forgotSent)).toBeVisible();
   });
 
+  it('shows an error alert, not the sent message, on a network failure', async () => {
+    vi.spyOn(authService, 'forgotPassword').mockRejectedValue({
+      status: 0,
+      code: 'NETWORK',
+      message: '',
+    });
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+    await user.type(screen.getByLabelText(lo.auth.username), 'nobody');
+    await user.click(screen.getByRole('button', { name: lo.auth.forgotSubmit }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(lo.errors.network);
+    expect(screen.queryByText(lo.auth.forgotSent)).not.toBeInTheDocument();
+  });
+
   it('requires a username', async () => {
     const user = userEvent.setup();
     render(<ForgotPasswordForm />);

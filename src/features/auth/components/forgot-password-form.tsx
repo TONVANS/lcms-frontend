@@ -6,9 +6,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon } from 'lucide-react';
 import { FadeIn } from '@/components/shared/fade-in';
+import { AlertBanner } from '@/components/shared/alert-banner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { authService } from '../api/auth.service';
 import { loginSchema } from '../schemas/login.schema';
@@ -19,6 +21,7 @@ type ForgotInput = z.infer<typeof forgotSchema>;
 
 export function ForgotPasswordForm() {
   const [sent, setSent] = useState(false);
+  const [transportError, setTransportError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -29,10 +32,17 @@ export function ForgotPasswordForm() {
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    setTransportError(null);
     try {
       await authService.forgotPassword({ username: values.username });
-    } catch {
-      // Neutral response: never reveal whether the account exists.
+    } catch (e) {
+      const err = normalizeError(e);
+      // Transport failures say nothing about the account, so report them honestly.
+      if (err.code === 'NETWORK' || err.code === 'TIMEOUT' || err.status >= 500) {
+        setTransportError(toUserMessage(err));
+        return;
+      }
+      // Any other outcome stays neutral: never reveal whether the account exists.
     }
     setSent(true);
   });
@@ -52,6 +62,7 @@ export function ForgotPasswordForm() {
         </p>
       ) : (
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+          {transportError ? <AlertBanner tone="rose" title={transportError} /> : null}
           <p className="text-sm text-muted-foreground">{lo.auth.forgotIntro}</p>
           <div className="flex flex-col gap-2">
             <Label htmlFor="username">{lo.auth.username}</Label>
