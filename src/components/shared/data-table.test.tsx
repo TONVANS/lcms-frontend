@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
@@ -92,5 +92,46 @@ describe('DataTable', () => {
   it('does not import legacy TanStack APIs', () => {
     const src = readFileSync('src/components/shared/data-table.tsx', 'utf8');
     expect(src).not.toMatch(/Legacy/);
+  });
+
+  it('sort button carries the mandated focus ring classes', () => {
+    render(<DataTable {...base} sort={{ id: 'name', order: 'asc' }} onSortChange={() => {}} />);
+    const btn = screen.getByRole('button', { name: /ຊື່/ });
+    for (const c of [
+      'focus-visible:outline-solid',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-(--focus-ring)',
+    ]) {
+      expect(btn).toHaveClass(c);
+    }
+    expect(btn).not.toHaveClass('outline-none');
+  });
+
+  it('omits aria-sort when onSortChange is absent', () => {
+    render(<DataTable {...base} />);
+    expect(screen.getByRole('columnheader', { name: /ຊື່/ })).not.toHaveAttribute('aria-sort');
+  });
+
+  it('clamps the footer range when page is past the data', () => {
+    render(<DataTable {...base} total={25} page={4} pageSize={10} />);
+    expect(screen.getByText(lo.common.showing(25, 25))).toBeInTheDocument();
+  });
+
+  it('stops staggering after the gate without remounting rows', () => {
+    vi.useFakeTimers();
+    try {
+      render(<DataTable {...base} />);
+      const row = screen.getByText('ໂຄງການ 1').closest('tr')!;
+      expect(row).toHaveClass('animate-fade-in-up-sm');
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      const after = screen.getByText('ໂຄງການ 1').closest('tr')!;
+      expect(after).toBe(row);
+      expect(after.className).not.toMatch(/animate-/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

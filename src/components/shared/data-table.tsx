@@ -8,7 +8,7 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -23,7 +23,6 @@ import {
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { EmptyState } from './empty-state';
-import { FadeIn } from './fade-in';
 
 export interface DataTableColumn<T> {
   id: string;
@@ -61,7 +60,7 @@ export interface DataTableProps<T extends object> {
 const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 
 const STAGGER_ROWS = 10;
-const ROW_CLASS = 'border-b border-[var(--border-subtle)] transition-colors hover:bg-(--surface-inset)';
+const ROW_CLASS = 'border-b border-[var(--border-subtle)] transition-colors hover:bg-(--row-hover)';
 const cellPadding = 'px-4 py-3.5';
 
 export function DataTable<T extends object>({
@@ -116,7 +115,7 @@ export function DataTable<T extends object>({
   }, [hasRows]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const startItem = total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total);
   const endItem = Math.min(page * pageSize, total);
   const rows = table.getRowModel().rows;
 
@@ -136,7 +135,7 @@ export function DataTable<T extends object>({
                     <TableHead
                       key={header.id}
                       aria-sort={
-                        def?.sortable
+                        def?.sortable && onSortChange
                           ? sorted === 'asc'
                             ? 'ascending'
                             : sorted === 'desc'
@@ -157,7 +156,7 @@ export function DataTable<T extends object>({
                           onClick={() =>
                             onSortChange({ id: header.column.id, order: sorted === 'asc' ? 'desc' : 'asc' })
                           }
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md outline-none hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md hover:text-[var(--text)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
                         >
                           {title}
                           {sorted === 'asc' ? (
@@ -206,12 +205,13 @@ export function DataTable<T extends object>({
                     </TableCell>
                   );
                 });
-                return staggered && i < STAGGER_ROWS ? (
-                  <FadeIn key={row.id} as={TableRow} variant="up-sm" index={i} className={ROW_CLASS}>
-                    {cells}
-                  </FadeIn>
-                ) : (
-                  <TableRow key={row.id} className={ROW_CLASS}>
+                const animate = staggered && i < STAGGER_ROWS;
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={cn(ROW_CLASS, animate && 'animate-fade-in-up-sm stagger')}
+                    style={animate ? ({ '--i': i } as CSSProperties) : undefined}
+                  >
                     {cells}
                   </TableRow>
                 );

@@ -10,6 +10,7 @@
   --bg-base: #eef3fa;
   --surface-glass: rgba(255, 255, 255, 0.62);
   --surface-inset: rgba(255, 255, 255, 0.7);
+  --row-hover: rgba(11, 27, 58, 0.05);
   --surface-input: rgba(255, 255, 255, 0.85);
   --surface-modal: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 252, 0.94));
   --surface-navy: linear-gradient(180deg, #0b1b3a, #13294f);
@@ -93,6 +94,7 @@
   --bg-base: #050b1a;
   --surface-glass: rgba(255, 255, 255, 0.05);
   --surface-inset: rgba(5, 11, 26, 0.35);
+  --row-hover: rgba(255, 255, 255, 0.045);
   --surface-input: rgba(5, 11, 26, 0.5);
   --surface-modal: linear-gradient(160deg, rgba(23, 42, 84, 0.92), rgba(10, 22, 48, 0.92));
   --surface-navy: linear-gradient(180deg, #0b1b3a, #13294f);

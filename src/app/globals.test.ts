@@ -52,4 +52,9 @@ describe('globals.css tokens', () => {
     }
     expect(darkBody).not.toMatch(/--series-/);
   });
+
+  it('defines --row-hover per theme', () => {
+    expect(rootBody).toMatch(/--row-hover:\s*rgba\(11,\s*27,\s*58,\s*0\.05\)/);
+    expect(darkBody).toMatch(/--row-hover:\s*rgba\(255,\s*255,\s*255,\s*0\.045\)/);
+  });
 });
