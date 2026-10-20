@@ -137,4 +137,29 @@ describe('useGcListUrlSync', () => {
     expect(st.status).toBe('ready');
     expect(nav.replace).toHaveBeenCalledWith('/contracts/list?page=2', { scroll: false });
   });
+
+  it('ignores late echoes of earlier pushes so the latest query is not rolled back', async () => {
+    const { rerender } = renderHook(() => useGcListUrlSync());
+    await act(async () => {});
+    await act(async () => {
+      useGcListStore.getState().setQuery({ status: 'active' });
+    });
+    await act(async () => {
+      useGcListStore.getState().setQuery({ status: 'expired' });
+    });
+    const fetchesAfterPushes = list.mock.calls.length;
+    nav.search = 'status=active';
+    await act(async () => {
+      rerender();
+    });
+    nav.search = 'status=expired';
+    await act(async () => {
+      rerender();
+    });
+    expect(useGcListStore.getState().query.status).toBe('expired');
+    expect(list).toHaveBeenCalledTimes(fetchesAfterPushes);
+    expect(nav.replace).toHaveBeenLastCalledWith('/contracts/list?status=expired', {
+      scroll: false,
+    });
+  });
 });

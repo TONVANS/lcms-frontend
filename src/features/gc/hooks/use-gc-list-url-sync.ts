@@ -16,8 +16,8 @@ export function useGcListUrlSync(): void {
 
   // Canonical string last applied in either direction; the effects below skip when equal.
   const syncedRef = useRef<string | null>(null);
-  // Last string we pushed ourselves; its echo through useSearchParams is ignored once.
-  const pushedRef = useRef<string | null>(null);
+  // Our own pushes in order; an echo drops itself and every earlier entry (coalesced pushes never echo).
+  const pendingRef = useRef<string[]>([]);
   const currentUrlRef = useRef<string>('');
 
   const urlKey = serializeGcListQuery(parseGcListQuery(new URLSearchParams(searchParams)));
@@ -30,8 +30,9 @@ export function useGcListUrlSync(): void {
   useEffect(() => {
     const first = syncedRef.current === null;
     if (!first) {
-      if (pushedRef.current === urlKey) {
-        pushedRef.current = null;
+      const i = pendingRef.current.indexOf(urlKey);
+      if (i !== -1) {
+        pendingRef.current = pendingRef.current.slice(i + 1);
         return;
       }
       if (urlKey === serializeGcListQuery(useGcListStore.getState().query)) return;
@@ -47,7 +48,7 @@ export function useGcListUrlSync(): void {
     const s = serializeGcListQuery(useGcListStore.getState().query);
     if (s === syncedRef.current) return;
     syncedRef.current = s;
-    pushedRef.current = s !== currentUrlRef.current ? s : null;
+    if (s !== currentUrlRef.current) pendingRef.current = [...pendingRef.current, s];
     router.replace(pathname + (s ? `?${s}` : ''), { scroll: false });
     void useGcListStore.getState().fetch();
   }, [query, pathname, router]);
