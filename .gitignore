@@ -45,3 +45,7 @@ next-env.d.ts
 
 # agent tooling
 .superpowers/
+
+# playwright
+/test-results
+/playwright-report
