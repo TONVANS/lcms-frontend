@@ -19,6 +19,11 @@ export const endpoints = {
     dashboard: '/ppa/dashboard',
     history: (id: string) => `/ppa/contracts/${id}/history`,
   },
+  gc: {
+    list: '/contracts',
+    detail: (id: string) => `/contracts/${id}`,
+    dashboard: '/contracts/dashboard',
+  },
   documents: {
     list: (entityType: string, entityId: string) => `/documents?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`,
     upload: '/documents',

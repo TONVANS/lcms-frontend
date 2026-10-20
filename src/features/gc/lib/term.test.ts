@@ -7,5 +7,6 @@ describe('suggestTermText', () => {
     expect(suggestTermText('2026-01-01', '2027-04-01')).toBe('1 ປີ 3 ເດືອນ');
     expect(suggestTermText('2026-01-01', '2026-01-21')).toBe('20 ມື້');
     expect(suggestTermText('2026-01-01', '2026-03-01')).toBe('2 ເດືອນ');
+    expect(suggestTermText('2024-02-29', '2025-02-28')).toBe('1 ປີ');
   });
 });

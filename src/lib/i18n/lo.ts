@@ -262,6 +262,16 @@ export const lo = {
     openEnded: 'ບໍ່ມີກຳນົດ',
     term: { years: (n: number) => `${n} ປີ`, months: (n: number) => `${n} ເດືອນ`, days: (n: number) => `${n} ມື້` },
     wizard: { step1:'ຂໍ້ມູນທົ່ວໄປ', step2:'ວັນທີ', step3:'ມູນຄ່າ ແລະ ຫຸ້ນ', step4:'ເອກະສານ ແລະ ກວດສອບ' },
+    validation: {
+      required: 'ກະລຸນາປ້ອນຂໍ້ມູນນີ້',
+      titleMax: 'ຊື່ສັນຍາຕ້ອງບໍ່ເກີນ 300 ຕົວອັກສອນ',
+      notesMax: 'ລາຍລະອຽດຕ້ອງບໍ່ເກີນ 2000 ຕົວອັກສອນ',
+      endAfterEffective: 'ມື້ສິ້ນສຸດຕ້ອງຢູ່ຫຼັງມື້ມີຜົນບັງຄັບໃຊ້',
+      amountPositive: 'ຈຳນວນເງິນຕ້ອງຫຼາຍກວ່າ 0',
+      percentRange: 'ສັດສ່ວນຕ້ອງຢູ່ລະຫວ່າງ 0 ຫາ 100 (ຫຼາຍກວ່າ 0)',
+      currency: 'ສະກຸນເງິນບໍ່ຖືກຕ້ອງ',
+    },
+    errors: { duplicateNo: 'ເລກທີສັນຍານີ້ມີຢູ່ແລ້ວ' },
     equityKind: { percent:'ສັດສ່ວນຫຸ້ນ (%)', amount:'ຈຳນວນເງິນປະກອບທຶນ' },
   },
 } as const;
