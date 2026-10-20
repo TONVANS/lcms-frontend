@@ -12,6 +12,7 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-1',
     departmentName: 'ກົມບໍລິຫານທົ່ວໄປ',
     modules: ['ppa', 'gc', 'legal'],
+    moduleRoles: {},
   },
   {
     id: 'u-2',
@@ -22,6 +23,7 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-2',
     departmentName: 'ກົມສັນຍາຊື້ຂາຍໄຟຟ້າ',
     modules: ['ppa'],
+    moduleRoles: { ppa: 'main' },
   },
   {
     id: 'u-3',
@@ -32,6 +34,7 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-3',
     departmentName: 'ກົມສັນຍາສຳປະທານ',
     modules: ['gc'],
+    moduleRoles: { gc: 'main' },
   },
   {
     id: 'u-4',
@@ -42,6 +45,7 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-4',
     departmentName: 'ກົມກົດໝາຍ',
     modules: ['legal'],
+    moduleRoles: { legal: 'main' },
   },
   {
     id: 'u-5',
@@ -52,6 +56,7 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-2',
     departmentName: 'ກົມສັນຍາຊື້ຂາຍໄຟຟ້າ',
     modules: ['ppa', 'gc'],
+    moduleRoles: { ppa: 'viewer', gc: 'editor' },
   },
   {
     id: 'u-6',
@@ -62,5 +67,28 @@ export const MOCK_USERS: User[] = [
     departmentId: 'd-1',
     departmentName: 'ກົມບໍລິຫານທົ່ວໄປ',
     modules: [],
+    moduleRoles: {},
+  },
+  {
+    id: 'u-7',
+    fullName: 'ທ້າວ ໄຊສົມບັດ ລາວຫຼວງ',
+    username: 'gc.editor',
+    email: 'xaysombath.l@lcms.la',
+    role: 'user',
+    departmentId: 'd-3',
+    departmentName: 'ກົມສັນຍາສຳປະທານ',
+    modules: ['gc'],
+    moduleRoles: { gc: 'editor' },
+  },
+  {
+    id: 'u-8',
+    fullName: 'ນາງ ພອນສະຫວັນ ທອງດີ',
+    username: 'gc.viewer',
+    email: 'phonsavanh.t@lcms.la',
+    role: 'user',
+    departmentId: 'd-3',
+    departmentName: 'ກົມສັນຍາສຳປະທານ',
+    modules: ['gc'],
+    moduleRoles: { gc: 'viewer' },
   },
 ];

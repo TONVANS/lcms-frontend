@@ -1,6 +1,7 @@
 export type ModuleKey = 'ppa' | 'gc' | 'legal';
 export type Role = 'admin' | 'user';
-export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'approve';
+export type ModuleRole = 'viewer' | 'editor' | 'main';
+export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download';
 
 export interface User {
   id: string;
@@ -11,7 +12,7 @@ export interface User {
   departmentId: string;
   departmentName: string;
   modules: ModuleKey[]; // admin = all
-  permissions?: Partial<Record<ModuleKey, Permission[]>>;
+  moduleRoles: Partial<Record<ModuleKey, ModuleRole>>;
 }
 
 export interface Department {
@@ -32,7 +33,7 @@ export type ContractStatus =
 
 export interface Money {
   amount: number;
-  currency: 'LAK' | 'USD' | 'THB';
+  currency: 'LAK' | 'USD' | 'THB' | 'CNY';
 }
 
 export interface KeyEvent {

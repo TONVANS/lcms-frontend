@@ -17,6 +17,7 @@ export const lo = {
     gc: 'ສັນຍາທົ່ວໄປ',
     legal: 'ນິຕິກຳ, ຈັດຊື້-ຈັດຈ້າງ ແລະ ຄະດີ',
   },
+  roles: { viewer: 'ດູຢ່າງດຽວ', editor: 'ຜູ້ແກ້ໄຂ', main: 'User ຫຼັກ' },
   status: {
     active: 'ມີຜົນບັງຄັບໃຊ້',
     negotiating: 'ກຳລັງເຈລະຈາ',

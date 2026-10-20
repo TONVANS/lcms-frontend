@@ -1,4 +1,5 @@
-import type { ModuleKey, Permission, User } from '@/types/domain';
+import type { ModuleKey, ModuleRole, Permission, User } from '@/types/domain';
+import { ROLE_PERMISSIONS } from './roles';
 
 const ALL_MODULES: ModuleKey[] = ['ppa', 'gc', 'legal'];
 
@@ -23,9 +24,15 @@ export function getLandingRoute(u: User): string {
   return '/forbidden';
 }
 
+export function getModuleRole(u: User, m: ModuleKey): ModuleRole | null {
+  if (u.role === 'admin') return 'main';
+  if (!canAccessModule(u, m)) return null;
+  return u.moduleRoles[m] ?? 'viewer';
+}
+
 export function hasPermission(u: User, m: ModuleKey, p: Permission): boolean {
+  const role = getModuleRole(u, m);
+  if (role === null) return false;
   if (u.role === 'admin') return true;
-  if (!canAccessModule(u, m)) return false;
-  if (u.permissions === undefined) return p === 'view';
-  return u.permissions[m]?.includes(p) ?? false;
+  return ROLE_PERMISSIONS[role].includes(p);
 }

@@ -30,6 +30,7 @@ const user = (modules: ModuleKey[], role: User['role'] = 'user'): User => ({
   departmentId: 'd',
   departmentName: 'd',
   modules,
+  moduleRoles: {},
 });
 
 const summary: HomeSummary = {
