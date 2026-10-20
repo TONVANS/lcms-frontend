@@ -55,6 +55,8 @@ describe('permissions', () => {
     expect(hasPermission({ ...gcViewer, moduleRoles: {} }, 'gc', 'view')).toBe(true);
     expect(hasPermission({ ...gcViewer, moduleRoles: {} }, 'gc', 'edit')).toBe(false);
     expect(hasPermission(admin, 'legal', 'download')).toBe(true);
+    expect(hasPermission(admin, 'gc', 'approve')).toBe(true);
+    expect(hasPermission(gcMain, 'gc', 'approve')).toBe(false);
     expect(getModuleRole(multiRoles, 'gc')).toBe('editor');
     expect(getModuleRole(multiRoles, 'legal')).toBeNull();
     expect(getModuleRole(admin, 'gc')).toBe('main');

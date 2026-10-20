@@ -1,7 +1,7 @@
 export type ModuleKey = 'ppa' | 'gc' | 'legal';
 export type Role = 'admin' | 'user';
 export type ModuleRole = 'viewer' | 'editor' | 'main';
-export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download';
+export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download' | 'approve';
 
 export interface User {
   id: string;

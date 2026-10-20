@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import type { ModuleKey, Permission } from '@/types/domain';
 import { useCan } from './can';
 
+// Assumes it is rendered under AuthGate, which never mounts children while auth is loading.
 export function PermissionGuard({
   module,
   permission,

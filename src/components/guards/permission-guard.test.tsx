@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
@@ -34,5 +34,18 @@ describe('PermissionGuard', () => {
     );
     expect(screen.getByText('ok')).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('hides children and redirects on logout', () => {
+    useAuthStore.setState({ user: byName('gc.editor'), status: 'authenticated' });
+    render(
+      <PermissionGuard module="gc" permission="create">
+        ok
+      </PermissionGuard>,
+    );
+    expect(screen.getByText('ok')).toBeInTheDocument();
+    act(() => useAuthStore.setState({ user: null, status: 'unauthenticated' }));
+    expect(screen.queryByText('ok')).toBeNull();
+    expect(replace).toHaveBeenCalledWith('/forbidden');
   });
 });

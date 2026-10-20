@@ -23,9 +23,9 @@ test.describe('PPA Module (Phase 2)', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.title);
     // Table should contain mock contract
     await expect(page.getByText('PPA-EDL-2010-001')).toBeVisible();
-    // Filter chips (radio role) are rendered
-    await expect(page.getByRole('radio', { name: lo.table.all }).first()).toBeVisible();
-    await expect(page.getByRole('radio', { name: lo.status.active })).toBeVisible();
+    // Filter chips (toggle buttons with aria-pressed) are rendered
+    await expect(page.getByRole('button', { name: lo.table.all }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: lo.status.active })).toBeVisible();
   });
 
   test('opens contract detail page and verifies milestone timeline and documents', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('PPA Module (Phase 2)', () => {
   test('views PPA alerts and filters', async ({ page }) => {
     await page.goto('/ppa/alerts');
     await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.alertsTitle);
-    await expect(page.getByRole('radio', { name: lo.table.all })).toBeVisible();
+    await expect(page.getByRole('button', { name: lo.table.all })).toBeVisible();
   });
 
   test('views PPA documents repository', async ({ page }) => {
