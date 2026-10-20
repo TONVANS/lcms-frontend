@@ -8,6 +8,7 @@ export const lo = {
     search: 'ຄົ້ນຫາ...',
     underConstruction: 'ໜ້ານີ້ກຳລັງພັດທະນາ',
     backHome: 'ກັບໄປໜ້າຫຼັກ',
+    retry: 'ລອງໃໝ່',
     showing: (x: number, y: number) => `ສະແດງ ${x} ຈາກ ${y}`,
   },
   modules: {
