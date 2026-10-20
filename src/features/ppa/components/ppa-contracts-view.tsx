@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
-import { DataTable, type ColumnDef } from '@/components/shared/data-table';
+import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
 import { FilterChips } from '@/components/shared/filter-chips';
 import { SearchInput } from '@/components/shared/search-input';
 import { ContractStatusBadge } from '@/components/shared/status-badge';
@@ -74,78 +74,78 @@ export function PpaContractsView() {
     { value: 'biomass', label: lo.energy.biomass },
   ];
 
-  const columns: ColumnDef<PpaContract, unknown>[] = [
+  const columns: DataTableColumn<PpaContract>[] = [
     {
-      accessorKey: 'contractNo',
+      id: 'contractNo',
       header: lo.ppa.fields.contractNo,
-      cell: ({ row }) => (
+      cell: (row) => (
         <Link
-          href={`/ppa/contracts/${row.original.id}`}
+          href={`/ppa/contracts/${row.id}`}
           className="font-medium text-[var(--ppa)] hover:underline tabular-nums"
         >
-          {row.original.contractNo}
+          {row.contractNo}
         </Link>
       ),
     },
     {
-      accessorKey: 'projectName',
+      id: 'projectName',
       header: lo.ppa.fields.projectName,
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="font-semibold text-[var(--text-strong)]">
-          {row.original.projectName}
+          {row.projectName}
         </span>
       ),
     },
     {
-      accessorKey: 'developer.name',
+      id: 'developer',
       header: lo.ppa.fields.developer,
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="text-xs text-[var(--text-secondary)]">
-          {row.original.developer.name}
+          {row.developer.name}
         </span>
       ),
     },
     {
-      accessorKey: 'energyType',
+      id: 'energyType',
       header: lo.ppa.fields.energyType,
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="inline-flex rounded-full bg-white/5 px-2 py-0.5 text-xs font-medium text-[var(--text-secondary)] border border-[var(--border-subtle)]">
-          {lo.energy[row.original.energyType as keyof typeof lo.energy] ?? row.original.energyType}
+          {lo.energy[row.energyType as keyof typeof lo.energy] ?? row.energyType}
         </span>
       ),
     },
     {
-      accessorKey: 'capacityMw',
+      id: 'capacityMw',
       header: lo.ppa.fields.capacityMw,
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="font-medium tabular-nums text-[var(--text)]">
-          {formatNumber(row.original.capacityMw)} MW
+          {formatNumber(row.capacityMw)} MW
         </span>
       ),
     },
     {
-      accessorKey: 'tariffUsCentPerKwh',
+      id: 'tariffUsCentPerKwh',
       header: lo.ppa.fields.tariff,
-      cell: ({ row }) => (
+      cell: (row) => (
         <span className="font-medium tabular-nums text-[var(--text)]">
-          {row.original.tariffUsCentPerKwh} ¢
+          {row.tariffUsCentPerKwh} ¢
         </span>
       ),
     },
     {
-      accessorKey: 'status',
+      id: 'status',
       header: lo.ppa.fields.status,
-      cell: ({ row }) => <ContractStatusBadge status={row.original.status} />,
+      cell: (row) => <ContractStatusBadge status={row.status} />,
     },
     {
-      accessorKey: 'endDate',
+      id: 'endDate',
       header: lo.ppa.fields.endDate,
-      cell: ({ row }) => (
+      cell: (row) => (
         <div className="flex flex-col gap-1">
           <span className="tabular-nums text-xs text-[var(--text-secondary)]">
-            {formatDate(row.original.endDate)}
+            {formatDate(row.endDate)}
           </span>
-          {row.original.status === 'expiring' && (
+          {row.status === 'expiring' && (
             <CountdownBadge days={30} />
           )}
         </div>
@@ -154,13 +154,13 @@ export function PpaContractsView() {
     {
       id: 'actions',
       header: lo.table.actions,
-      cell: ({ row }) => (
+      cell: (row) => (
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             aria-label={lo.ppa.actions.view}
-            onClick={() => router.push(`/ppa/contracts/${row.original.id}`)}
+            onClick={() => router.push(`/ppa/contracts/${row.id}`)}
             className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text)]"
           >
             <Eye className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function PpaContractsView() {
             variant="ghost"
             size="icon"
             aria-label={lo.ppa.actions.delete}
-            onClick={() => setContractToDelete(row.original)}
+            onClick={() => setContractToDelete(row)}
             className="h-8 w-8 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
           >
             <Trash2 className="h-4 w-4" />
@@ -238,6 +238,8 @@ export function PpaContractsView() {
 
       {/* Contracts Table */}
       <DataTable
+        caption={lo.modules.ppa}
+        getRowId={(r) => r.id}
         columns={columns}
         data={items}
         total={total}

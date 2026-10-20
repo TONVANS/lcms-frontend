@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { lo } from '@/lib/i18n/lo';
-import { DataTable, type ColumnDef } from './data-table';
+import { DataTable, type DataTableColumn } from './data-table';
 
 interface TestItem {
   id: string;
@@ -10,15 +11,9 @@ interface TestItem {
   status: string;
 }
 
-const columns: ColumnDef<TestItem>[] = [
-  {
-    accessorKey: 'name',
-    header: 'ຊື່',
-  },
-  {
-    accessorKey: 'status',
-    header: 'ສະຖານະ',
-  },
+const columns: DataTableColumn<TestItem>[] = [
+  { id: 'name', header: 'ຊື່', cell: (r) => r.name, sortable: true },
+  { id: 'status', header: 'ສະຖານະ', cell: (r) => r.status },
 ];
 
 const mockData: TestItem[] = [
@@ -26,36 +21,76 @@ const mockData: TestItem[] = [
   { id: '2', name: 'ໂຄງການ 2', status: 'draft' },
 ];
 
+const base = {
+  caption: 'c',
+  getRowId: (r: TestItem) => r.id,
+  columns,
+  data: mockData,
+  total: 2,
+  page: 1,
+  pageSize: 10,
+  onPageChange: () => {},
+  emptyTitle: 'e',
+};
+
 describe('DataTable', () => {
-  it('renders table headers and rows', () => {
-    render(<DataTable columns={columns} data={mockData} />);
+  it('renders headers, rows and caption', () => {
+    render(<DataTable {...base} />);
     expect(screen.getByText('ຊື່')).toBeInTheDocument();
-    expect(screen.getByText('ສະຖານະ')).toBeInTheDocument();
-    expect(screen.getByText('ໂຄງການ 1')).toBeInTheDocument();
     expect(screen.getByText('ໂຄງການ 2')).toBeInTheDocument();
+    expect(screen.getByText('c')).toHaveClass('sr-only');
   });
 
   it('renders empty state when data is empty', () => {
-    render(<DataTable columns={columns} data={[]} emptyTitle="ບໍ່ມີຂໍ້ມູນ" />);
+    render(<DataTable {...base} data={[]} total={0} emptyTitle="ບໍ່ມີຂໍ້ມູນ" />);
     expect(screen.getByText('ບໍ່ມີຂໍ້ມູນ')).toBeInTheDocument();
   });
 
-  it('calls onPageChange when pagination buttons are clicked', async () => {
+  it('renders owned columns and sorts via aria-sort header', async () => {
     const user = userEvent.setup();
-    const onPageChange = vi.fn();
+    const onSortChange = vi.fn();
     render(
       <DataTable
-        columns={columns}
-        data={mockData}
-        total={20}
-        page={1}
-        pageSize={10}
-        onPageChange={onPageChange}
+        {...base}
+        data={[{ id: '1', name: 'A', status: 's' }]}
+        total={1}
+        sort={{ id: 'name', order: 'asc' }}
+        onSortChange={onSortChange}
       />,
     );
+    expect(screen.getByRole('columnheader', { name: /ຊື່/ })).toHaveAttribute('aria-sort', 'ascending');
+    await user.click(screen.getByRole('button', { name: /ຊື່/ }));
+    expect(onSortChange).toHaveBeenCalledWith({ id: 'name', order: 'desc' });
+  });
 
-    const nextBtn = screen.getByRole('button', { name: lo.table.next });
-    await user.click(nextBtn);
-    expect(onPageChange).toHaveBeenCalledWith(2);
+  it('toggles desc back to asc and leaves non-sortable headers without a button', async () => {
+    const user = userEvent.setup();
+    const onSortChange = vi.fn();
+    render(<DataTable {...base} sort={{ id: 'name', order: 'desc' }} onSortChange={onSortChange} />);
+    expect(screen.getByRole('columnheader', { name: /ຊື່/ })).toHaveAttribute('aria-sort', 'descending');
+    await user.click(screen.getByRole('button', { name: /ຊື່/ }));
+    expect(onSortChange).toHaveBeenCalledWith({ id: 'name', order: 'asc' });
+    expect(within(screen.getByRole('columnheader', { name: 'ສະຖານະ' })).queryByRole('button')).toBeNull();
+  });
+
+  it('shows range and total in the footer', () => {
+    render(<DataTable {...base} total={25} page={2} pageSize={10} />);
+    expect(screen.getByText(lo.common.showing('11–20', 25))).toBeInTheDocument();
+  });
+
+  it('pagination buttons meet 44px and are labelled', async () => {
+    const user = userEvent.setup();
+    const onPageChange = vi.fn();
+    render(<DataTable {...base} total={25} page={2} onPageChange={onPageChange} />);
+    const next = screen.getByRole('button', { name: lo.table.next });
+    expect(next).toHaveClass('size-11');
+    expect(screen.getByRole('button', { name: lo.table.prev })).toHaveClass('size-11');
+    await user.click(next);
+    expect(onPageChange).toHaveBeenCalledWith(3);
+  });
+
+  it('does not import legacy TanStack APIs', () => {
+    const src = readFileSync('src/components/shared/data-table.tsx', 'utf8');
+    expect(src).not.toMatch(/Legacy/);
   });
 });

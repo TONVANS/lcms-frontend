@@ -103,7 +103,6 @@ export const lo = {
     moduleSwitcher: 'ສະຫຼັບໂມດູນ',
   },
   table: {
-    showing: (x: number | string, y: number) => `ສະແດງ ${x} ຈາກ ${y} ລາຍການ`,
     prev: 'ກ່ອນໜ້າ',
     next: 'ຕໍ່ໄປ',
     density: 'ຄວາມໜາແໜ້ນ',
