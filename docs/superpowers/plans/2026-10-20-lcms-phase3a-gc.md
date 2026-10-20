@@ -254,7 +254,7 @@ export interface DataTableProps<T> {
   - Pagination and sorting are **manual**: the server does them.
 - Behaviour:
   - A sortable header is a `<button>` inside `<th aria-sort="ascending|descending|none">`. Clicking toggles asc → desc → asc.
-  - The footer reads `lo.common.showing(from–to, total)`, using the generic key. Delete the duplicate `table.showing` and update its users.
+  - The footer reads `lo.common.showing(from–to, total)`, using the generic key. Widen its first parameter to `number | string` so a range can be passed, then delete the duplicate `table.showing` and update its users.
   - Pagination buttons are `size-11`, with Lao aria-labels.
   - Rows hover with `hover:bg-(--surface-inset)`.
   - The first 10 rows on initial load get `FadeIn variant="up-sm" index={i}`.
