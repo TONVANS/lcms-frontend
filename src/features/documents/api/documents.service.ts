@@ -20,4 +20,9 @@ export const documentsService = {
 
   delete: (id: string): Promise<void> =>
     api.delete<void>(endpoints.documents.detail(id)).then((r) => r.data),
+
+  download: (id: string): Promise<Blob> =>
+    api
+      .get<Blob>(endpoints.documents.download(id), { responseType: 'blob' })
+      .then((r) => r.data),
 };

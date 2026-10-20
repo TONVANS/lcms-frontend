@@ -30,32 +30,32 @@ function getFileTile(name: string, mime?: string) {
     return {
       icon: FileText,
       label: 'PDF',
-      className: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
+      className: 'border-transparent bg-[#FFE4E6] text-[#BE123C] dark:border-[rgba(251,113,133,0.30)] dark:bg-[rgba(251,113,133,0.12)] dark:text-[#FDA4AF]',
     };
   }
   if (['doc', 'docx'].includes(ext ?? '') || mime?.includes('word')) {
     return {
       icon: FileText,
       label: 'DOC',
-      className: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+      className: 'border-transparent bg-[#DBEAFE] text-[#1E40AF] dark:border-[rgba(96,165,250,0.30)] dark:bg-[rgba(96,165,250,0.12)] dark:text-[#93C5FD]',
     };
   }
   if (['xls', 'xlsx'].includes(ext ?? '') || mime?.includes('sheet')) {
     return {
       icon: FileSpreadsheet,
       label: 'XLS',
-      className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+      className: 'border-transparent bg-[#D1FAE5] text-[#047857] dark:border-[rgba(52,211,153,0.30)] dark:bg-[rgba(52,211,153,0.12)] dark:text-[#6EE7B7]',
     };
   }
   return {
     icon: File,
     label: ext?.toUpperCase() ?? 'FILE',
-    className: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
+    className: 'border-transparent bg-[#F1F5F9] text-[#334155] dark:border-[rgba(148,163,184,0.30)] dark:bg-[rgba(148,163,184,0.14)] dark:text-[#CBD5E1]',
   };
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -112,9 +112,9 @@ export function FileList({ files, onDownload, onDelete, className }: FileListPro
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={lo.dropzone.download}
+                  aria-label={lo.dropzone.downloadFile(file.name)}
                   onClick={() => onDownload(file)}
-                  className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text)]"
+                  className="size-11 text-[var(--text-secondary)] hover:text-[var(--text)]"
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -124,9 +124,9 @@ export function FileList({ files, onDownload, onDelete, className }: FileListPro
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={lo.dropzone.remove}
+                  aria-label={lo.dropzone.deleteFile(file.name)}
                   onClick={() => onDelete(file)}
-                  className="h-8 w-8 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                  className="size-11 text-[#BE123C] hover:bg-rose-500/10 dark:text-[#FDA4AF]"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

@@ -49,6 +49,8 @@ export interface DocumentFile {
   version: string;
   uploadedAt: string;
   uploadedBy: string;
+  entityType: string;
+  entityId: string;
 }
 
 export interface Alert {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FileDropzone } from './file-dropzone';
-import { FileList } from './file-list';
+import { lo } from '@/lib/i18n/lo';
 
 describe('FileDropzone & FileList', () => {
   it('renders dropzone prompt', () => {
@@ -10,19 +10,33 @@ describe('FileDropzone & FileList', () => {
     expect(screen.getByText(/ຄລິກເພື່ອເລືອກໄຟລ໌/)).toBeInTheDocument();
   });
 
-  it('renders files in FileList and handles delete', async () => {
-    const user = userEvent.setup();
-    const onDelete = vi.fn();
-    const files = [
-      { id: 'f-1', name: 'ppa-contract.pdf', size: 1024 * 500, uploadedAt: '2026-03-01' },
-    ];
+  it('has a single focusable control and no nested interactive', () => {
+    render(<FileDropzone onFilesSelected={vi.fn()} />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(document.querySelectorAll('input[type=file]')).toHaveLength(1);
+  });
 
-    render(<FileList files={files} onDelete={onDelete} />);
-    expect(screen.getByText('ppa-contract.pdf')).toBeInTheDocument();
-    expect(screen.getByText('PDF')).toBeInTheDocument();
+  it('rejects oversize and wrong-type files', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const onFiles = vi.fn();
+    const onReject = vi.fn();
+    render(<FileDropzone maxSizeMb={1} onFilesSelected={onFiles} onReject={onReject} />);
+    const big = new File([new Uint8Array(2 * 1024 * 1024)], 'big.pdf', { type: 'application/pdf' });
+    const exe = new File(['x'], 'a.exe');
+    await user.upload(screen.getByLabelText(lo.dropzone.prompt), [big, exe]);
+    expect(onFiles).not.toHaveBeenCalled();
+    expect(onReject).toHaveBeenCalledWith([lo.dropzone.tooLarge('big.pdf', 1), lo.dropzone.badType('a.exe')]);
+  });
 
-    const deleteBtn = screen.getByRole('button', { name: 'ລຶບອອກ' });
-    await user.click(deleteBtn);
-    expect(onDelete).toHaveBeenCalledWith(files[0]);
+  it('passes valid files and reports only the rejected ones', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const onFiles = vi.fn();
+    const onReject = vi.fn();
+    render(<FileDropzone onFilesSelected={onFiles} onReject={onReject} />);
+    const ok = new File(['x'], 'ok.pdf', { type: 'application/pdf' });
+    const exe = new File(['x'], 'a.exe');
+    await user.upload(screen.getByLabelText(lo.dropzone.prompt), [ok, exe]);
+    expect(onFiles).toHaveBeenCalledWith([ok]);
+    expect(onReject).toHaveBeenCalledWith([lo.dropzone.badType('a.exe')]);
   });
 });

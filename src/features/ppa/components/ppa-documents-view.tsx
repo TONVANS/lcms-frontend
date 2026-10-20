@@ -16,7 +16,7 @@ export function PpaDocumentsView() {
       />
 
       <GlassCard accent="ppa" className="p-6">
-        <DocumentManager entityType="ppa" entityId="all" />
+        <DocumentManager entityType="ppa" entityId="all" canUpload canDownload canDelete />
       </GlassCard>
     </div>
   );

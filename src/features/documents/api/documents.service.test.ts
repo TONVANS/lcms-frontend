@@ -24,4 +24,15 @@ describe('documentsService', () => {
   it('deletes a document', async () => {
     await expect(documentsService.delete('doc-1')).resolves.not.toThrow();
   });
+
+  it('routes list, download and delete to distinct mock handlers', async () => {
+    const docs = await documentsService.list('ppa', 'ppa-1');
+    expect(docs.every((d) => d.entityId === 'ppa-1')).toBe(true);
+    const blob = await documentsService.download('doc-3');
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toContain('wordprocessingml');
+    await documentsService.delete('doc-2');
+    const after = await documentsService.list('ppa', 'ppa-1');
+    expect(after.find((d) => d.id === 'doc-2')).toBeUndefined();
+  });
 });

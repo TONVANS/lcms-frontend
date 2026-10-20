@@ -6,7 +6,7 @@ let documents = [...MOCK_DOCUMENTS];
 
 export function register(mock: MockAdapter) {
   // GET /documents?entityType=&entityId=
-  mock.onGet(/\/documents/).reply((config) => {
+  mock.onGet(/^\/documents(\?.*)?$/).reply((config) => {
     const params = new URLSearchParams(config.url?.split('?')[1] ?? '');
     const entityType = params.get('entityType');
     const entityId = params.get('entityId');
@@ -19,6 +19,14 @@ export function register(mock: MockAdapter) {
       filtered = filtered.filter((d) => d.entityId === entityId);
     }
     return [200, filtered];
+  });
+
+  // GET /documents/:id/download
+  mock.onGet(/^\/documents\/[^/]+\/download$/).reply((config) => {
+    const id = config.url?.split('/')[2];
+    const doc = documents.find((d) => d.id === id);
+    if (!doc) return [404, { code: 'NOT_FOUND', message: '' }];
+    return [200, new Blob([`Mock content of ${doc.name}`], { type: doc.mime })];
   });
 
   // POST /documents
@@ -50,7 +58,7 @@ export function register(mock: MockAdapter) {
   });
 
   // DELETE /documents/:id
-  mock.onDelete(/\/documents\/[^/]+$/).reply((config) => {
+  mock.onDelete(/^\/documents\/[^/]+$/).reply((config) => {
     const id = config.url?.split('/').pop();
     documents = documents.filter((d) => d.id !== id);
     return [204];

@@ -132,6 +132,13 @@ export const lo = {
     empty: 'ຍັງບໍ່ມີເອກະສານ',
     fileUploaded: 'ອັບໂຫຼດເອກະສານສຳເລັດ',
     fileDeleted: 'ລຶບເອກະສານສຳເລັດ',
+    tooLarge: (name: string, maxMb: number) => `ໄຟລ໌ ${name} ໃຫຍ່ເກີນ ${maxMb}MB`,
+    badType: (name: string) => `ໄຟລ໌ ${name} ບໍ່ຮອງຮັບປະເພດນີ້`,
+    downloadFile: (name: string) => `ດາວໂຫຼດ ${name}`,
+    deleteFile: (name: string) => `ລຶບ ${name}`,
+  },
+  documents: {
+    loadError: 'ບໍ່ສາມາດໂຫຼດເອກະສານໄດ້',
   },
   charts: {
     items: 'ລາຍການ',

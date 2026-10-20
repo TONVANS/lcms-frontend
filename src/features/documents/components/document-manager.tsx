@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { AlertBanner } from '@/components/shared/alert-banner';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FileDropzone } from '@/components/shared/file-dropzone';
 import { FileList } from '@/components/shared/file-list';
+import { Button } from '@/components/ui/button';
+import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { documentsService } from '../api/documents.service';
 import type { DocumentFile } from '../types';
@@ -12,7 +16,9 @@ export interface DocumentManagerProps {
   entityType: string;
   entityId: string;
   initialDocuments?: DocumentFile[];
-  readonly?: boolean;
+  canUpload: boolean;
+  canDownload: boolean;
+  canDelete: boolean;
   className?: string;
 }
 
@@ -20,13 +26,18 @@ export function DocumentManager({
   entityType,
   entityId,
   initialDocuments,
-  readonly = false,
+  canUpload,
+  canDownload,
+  canDelete,
   className,
 }: DocumentManagerProps) {
   const [documents, setDocuments] = useState<DocumentFile[]>(initialDocuments ?? []);
   const [prevInitial, setPrevInitial] = useState(initialDocuments);
   const [isLoading, setIsLoading] = useState(!initialDocuments);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<DocumentFile | null>(null);
 
   if (initialDocuments !== prevInitial) {
     setPrevInitial(initialDocuments);
@@ -45,12 +56,13 @@ export function DocumentManager({
       .then((docs) => {
         if (active) {
           setDocuments(docs);
+          setLoadError(null);
           setIsLoading(false);
         }
       })
       .catch((err) => {
         if (active) {
-          console.error('Failed to load documents:', err);
+          setLoadError(toUserMessage(normalizeError(err)) || lo.errors.unknown);
           setIsLoading(false);
         }
       });
@@ -58,7 +70,13 @@ export function DocumentManager({
     return () => {
       active = false;
     };
-  }, [entityType, entityId, initialDocuments]);
+  }, [entityType, entityId, initialDocuments, reloadKey]);
+
+  const retry = useCallback(() => {
+    setLoadError(null);
+    setIsLoading(true);
+    setReloadKey((k) => k + 1);
+  }, []);
 
   const handleFilesSelected = async (files: File[]) => {
     setIsUploading(true);
@@ -68,46 +86,92 @@ export function DocumentManager({
         setDocuments((prev) => [uploaded, ...prev]);
       }
       toast.success(lo.dropzone.fileUploaded);
-    } catch {
-      toast.error(lo.errors.unknown);
+    } catch (err) {
+      toast.error(toUserMessage(normalizeError(err)) || lo.errors.unknown);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDelete = async (file: { id: string }) => {
-    try {
-      await documentsService.delete(file.id);
-      setDocuments((prev) => prev.filter((d) => d.id !== file.id));
-      toast.success(lo.dropzone.fileDeleted);
-    } catch {
-      toast.error(lo.errors.unknown);
-    }
+  const handleReject = (messages: string[]) => {
+    for (const m of messages) toast.error(m);
   };
 
-  const handleDownload = (file: { name: string }) => {
-    toast.info(`${lo.dropzone.download}: ${file.name}`);
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const file = pendingDelete;
+    try {
+      await documentsService.delete(file.id);
+    } catch (err) {
+      toast.error(toUserMessage(normalizeError(err)) || lo.errors.unknown);
+      throw err; // keep the dialog open
+    }
+    setDocuments((prev) => prev.filter((d) => d.id !== file.id));
+    toast.success(lo.dropzone.fileDeleted);
+  };
+
+  const handleDownload = async (file: { id: string; name: string }) => {
+    try {
+      const blob = await documentsService.download(file.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(toUserMessage(normalizeError(err)) || lo.errors.unknown);
+    }
   };
 
   return (
     <div className={className}>
-      {!readonly && (
+      {canUpload && (
         <div className="mb-5">
-          <FileDropzone onFilesSelected={handleFilesSelected} disabled={isUploading} />
+          <FileDropzone
+            onFilesSelected={handleFilesSelected}
+            onReject={handleReject}
+            disabled={isUploading}
+          />
         </div>
       )}
 
       {isLoading ? (
-        <div className="py-6 text-center text-xs text-[var(--text-muted)]">
-          {lo.common.loading}
+        <div className="flex flex-col gap-2" aria-busy="true" aria-label={lo.common.loading}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-[var(--surface-inset)]" />
+          ))}
         </div>
+      ) : loadError ? (
+        <AlertBanner
+          tone="rose"
+          title={lo.documents.loadError}
+          description={loadError}
+          action={
+            <Button type="button" variant="ghost" onClick={retry}>
+              {lo.common.retry}
+            </Button>
+          }
+        />
       ) : (
         <FileList
           files={documents}
-          onDownload={handleDownload}
-          onDelete={readonly ? undefined : handleDelete}
+          onDownload={canDownload ? handleDownload : undefined}
+          onDelete={canDelete ? (f) => setPendingDelete(documents.find((d) => d.id === f.id) ?? null) : undefined}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title={lo.confirm.deleteTitle}
+        description={lo.confirm.deleteDesc}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

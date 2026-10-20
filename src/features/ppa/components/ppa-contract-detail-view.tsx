@@ -313,7 +313,7 @@ export function PpaContractDetailView({ id }: PpaContractDetailViewProps) {
                 {lo.ppa.documentsTitle}
               </h3>
             </div>
-            <DocumentManager entityType="ppa" entityId={contract.id} />
+            <DocumentManager entityType="ppa" entityId={contract.id} canUpload canDownload canDelete />
           </GlassCard>
         </div>
 
