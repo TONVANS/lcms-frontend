@@ -23,9 +23,14 @@ Don't skim the whole codebase. Use §4 to find what already exists.
 
 ## 2. Where the project stands
 
-**Phase 1 (Foundation) is complete** on branch `phase-1-foundation`. Status: 142 unit tests, 46 e2e tests and axe all pass.
+| Phase | Status |
+|---|---|
+| 1 Foundation | Done (`phase-1-foundation`) |
+| 3a GC (General Contracts) | Done on `phase-3a-gc`. This is the reference template (§4.4). |
+| 2 PPA | Waiting on PPA team confirmation. Its WIP is on `phase-2-ppa-wip` and is **not** a template. |
+| 3b Admin user management | Next |
 
-What exists:
+Phase 1 delivered (Phase 3a adds the GC pages, `DataTable`, permissions and the mock enforcement described in §4):
 
 - Scaffold. Design tokens for the dark and light themes, fonts, the theme toggle and motion utilities.
 - Lao dictionary, date, number and money formatters.
@@ -36,9 +41,9 @@ What exists:
 - Home module launcher, plus an alerts store.
 - Playwright e2e covering auth, RBAC, theme, responsive layout and axe.
 
-**Not built yet:** module dashboards are placeholders ("ໜ້ານີ້ກຳລັງພັດທະນາ"). There are no list, detail or wizard pages, and no charts. The notifications centre, search and admin pages are also missing.
+**Not built yet:** the Legal module pages, the notifications centre, search and admin pages (users, roles, departments).
 
-**Next:** Phase 2, the PPA module. See §6.
+**Next:** Phase 3b, Admin user management. Phase 2 PPA resumes once the PPA team confirms scope; see §6.
 
 ---
 
@@ -104,8 +109,10 @@ When the plan and the code disagree, the controller decides. It records the deci
 | Errors | Interceptors already reject with a normalized `ApiError`. Use `toUserMessage(err)` for Lao text and `normalizeError(e)` for unknown throws. |
 | Mocks | Add `src/lib/api/mock/handlers/<feature>.ts` exporting `register(mock)`, then append it to the `handlers` array in `src/lib/api/mock/index.ts`. Keep mock data in `src/features/<x>/mocks/`. |
 | Current user | `useAuthStore(s => s.user)`. Status values: `idle`, `loading`, `authenticated`, `unauthenticated`, `error`. |
-| Access checks | `canAccessModule(u, m)`, `hasPermission(u, m, p)`, `getAccessibleModules(u)`, `getLandingRoute(u)` |
-| Guards | `ModuleGuard` already wraps every module `layout.tsx`. Use `RoleGate role="admin"` for admin-only UI. |
+| Access checks | `canAccessModule(u, m)`, `hasPermission(u, m, p)`, `getModuleRole(u, m)`, `getAccessibleModules(u)`, `getLandingRoute(u)` (`@/lib/auth/permissions`). `ROLE_PERMISSIONS` (`@/lib/auth/roles`) maps `viewer` (view), `editor` (view, create, edit, delete) and `main` (editor plus download). Admin has every permission. |
+| Guards | `ModuleGuard` already wraps every module `layout.tsx`. Use `RoleGate role="admin"` for admin-only UI. For module permissions use `useCan(module, permission)` (hook), `<Can module permission fallback>` (inline UI) and `<PermissionGuard module permission>` (whole routes; redirects to `/forbidden`), all from `@/components/guards`. Gate UI by permission, never by role name. |
+| Mock enforcement | Mock handlers enforce permissions the way the server will: 401 with no session, 403 without the permission, 409 on conflicts. Read the user with `getMockSessionUser()` (`@/lib/api/mock/session`). Gate the UI **and** make the handler refuse. |
+| Nav items | `NavItem.permission?` hides an item unless the user holds it (for example the `create` items). |
 
 ### 4.3 Components
 
@@ -121,7 +128,24 @@ When the plan and the code disagree, the controller decides. It records the deci
 | `FadeIn` | `variant: 'in'\|'up'\|'up-sm'\|'scale'\|'down'\|'hero'`, `index?` | `index` adds a 60ms stagger, capped at 8 items |
 | `PageHeader` (`layout/page-header`) | `eyebrow?`, `title`, `meta?`, `actions?`, `accent?` | Use it on every page |
 | `Button` (`ui/button`) | variant `primary` (default), `secondary`, `ghost`, `gold`; size `default`, `lg`, `icon` | `gold` is for the Legal module primary action only |
+| `DataTable` (`shared/data-table`) | `columns: DataTableColumn<T>[]`, `data`, `getRowId`, `total`, `page`, `pageSize`, `onPageChange`, `sort?`, `onSortChange?`, `isLoading?`, `emptyTitle`, `emptyDescription?`, `emptyAction?`, `caption` | Owned API over TanStack v9, manual (server-side) sorting and pagination. `DataTableColumn` is `{id, header, cell(row), sortable?, align?, className?}`. `className` lands on the header, body **and skeleton** cells, so it drives responsive hiding (`hidden 2xl:table-cell`); move hidden data into sublines of a visible column. |
+| `DocumentManager` (`features/documents`) | `entityType`, `entityId`, `canUpload`, `canDownload`, `canDelete` | Pass `useCan(module, 'create' / 'download' / 'delete')`. Never hard-code `true`: the mock server enforces them. |
+| `DatePicker`, `MoneyInput` (`shared/`) | form-field controls | Use them in forms instead of raw inputs. |
+| `useReturnFocus` (`@/hooks/use-return-focus`) | `(open) => onCloseAutoFocus` | Returns focus to the trigger when a dialog closes. |
+| `SupportDialog`, `SUPPORT_CONTACTS` | `layout/support-dialog`, `@/config/support` | The help dialog and its contact data. |
 | Layout | `AppShell`, `AppSidebar`, `Topbar`, `ModuleSwitcher`, `Breadcrumbs`, `BackgroundGlows`, `ThemeToggle` | Sidebar nav comes from `MODULE_NAV` in `src/config/navigation.ts` |
+
+### 4.4 Tokens added in Phase 3a
+
+| Token | Use |
+|---|---|
+| `--row-hover` | Table row hover background (`hover:bg-(--row-hover)`) |
+| `--text-error` | AA-contrast error text in both themes (`text-(--text-error)`) |
+| `--destructive-soft` | Soft destructive fill; the `destructive` Button variant is `bg-(--destructive-soft) text-(--text-error)` |
+
+### 4.5 The GC feature is the reference template
+
+`src/features/gc/` is the pattern for every later module: a list store plus URL sync (`gc-list.store.ts`, `use-gc-list-url-sync.ts`), a form dialog (`gc-contract-form-dialog.tsx`), a wizard, a detail view with documents, a dashboard and an alerts page. Copy its structure, not the PPA WIP branch.
 
 shadcn primitives are in `src/components/ui/`. After `pnpm dlx shadcn@latest add <x>`:
 
@@ -162,7 +186,7 @@ Then:
 ### 5.3 Pages
 
 - Every screen needs a loading state (skeleton), an empty state (`EmptyState`), an error state (`AlertBanner` rose plus a retry) and a forbidden state (handled by `ModuleGuard`).
-- Tables use the shared `DataTable`, which Phase 2 creates (`@tanstack/react-table`). Wrap it in `overflow-x-auto`. The footer reads `lo.common.showing(x, y)` and sits next to the pagination.
+- Tables use the shared `DataTable` (`src/components/shared/data-table.tsx`), which already exists: a thin wrapper over `@tanstack/react-table` v9 with the owned `DataTableColumn` API (§4.3). It scrolls inside its own `overflow-x-auto` container. Keep every spec column visible at 2xl (1536px) and below that move secondary data into sublines using `className`. The footer reads `lo.common.showing(x, y)` and sits next to the pagination.
 - Charts must follow `dataviz` and Design.md §7. Use module-accent gradients; status colours are only for status charts.
 
 ---
@@ -232,14 +256,18 @@ From `Frontend_LCMS_Project.md` §12:
 
 The password for every account is `password`.
 
-| Username | Modules | Lands on |
-|---|---|---|
-| `admin` | all | `/` |
-| `multi.user` | ppa, gc | `/` |
-| `ppa.user` | ppa | `/ppa` |
-| `gc.user` | gc | `/contracts` |
-| `legal.user` | legal | `/legal` |
-| `none.user` | none | `/forbidden` |
+| Username | Modules | Module role | Lands on |
+|---|---|---|---|
+| `admin` | all | admin (all permissions) | `/` |
+| `multi.user` | ppa, gc | ppa viewer, gc editor | `/` |
+| `ppa.user` | ppa | ppa main | `/ppa` |
+| `gc.user` | gc | gc main | `/contracts` |
+| `gc.editor` | gc | gc editor | `/contracts` |
+| `gc.viewer` | gc | gc viewer | `/contracts` |
+| `legal.user` | legal | legal main | `/legal` |
+| `none.user` | none | none | `/forbidden` |
+
+Roles are `viewer` (view only), `editor` (view, create, edit, delete) and `main` (editor plus download), as in `src/lib/auth/roles.ts`.
 
 Run `pnpm dev` and open http://localhost:3000. E2E tests use a production build on port 3100.
 
@@ -250,5 +278,5 @@ Run `pnpm dev` and open http://localhost:3000. E2E tests use a production build 
 - Token strategy (httpOnly cookie or bearer), the refresh endpoint and the cookie names, which depend on the backend (Phase 5).
 - Whether `daysLeft` comes from the server or the client, and the time zone (Asia/Vientiane is assumed).
 - The label for the `terminated` status (currently `ຍົກເລີກ`).
-- Lao copy quality. All strings are in `lo.ts`, so one native-speaker review covers them. Phase 1 keys pending review: `auth.brandHeading`, `auth.brandIntro`, `auth.forgotIntro`, `auth.forgotSubmit`, `topbar.searchLabel`, `topbar.unread`, `topbar.breadcrumb`, `nav.mainMenu`, `nav.moduleSwitcher`, `common.retry`, `home.stats.*`, `home.buckets.*`, `home.loadError`.
+- Lao copy quality. All strings are in `lo.ts`, so one native-speaker review covers them. Phase 1 keys pending review: `auth.brandHeading`, `auth.brandIntro`, `auth.forgotIntro`, `auth.forgotSubmit`, `topbar.searchLabel`, `topbar.unread`, `topbar.breadcrumb`, `nav.mainMenu`, `nav.moduleSwitcher`, `common.retry`, `home.stats.*`, `home.buckets.*`, `home.loadError`. Phase 3a keys pending review: `roles.main` ('User ຫຼັກ', a mixed Latin/Lao label) and `datePicker.open`, which is identical to `datePicker.placeholder` ('ເລືອກວັນທີ'); the trigger's accessible name may need a distinct "open calendar" wording. All `lo.gc.*` strings are also unreviewed.
 - Anything that changes Design.md tokens, fonts or the glassmorphism style.
