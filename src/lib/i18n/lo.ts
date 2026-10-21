@@ -307,5 +307,12 @@ export const lo = {
       pageSize: 'ຈຳນວນຕໍ່ໜ້າ',
       countdown: 'ເຫຼືອເວລາ',
     },
+    detail: {
+      keyDates: 'ວັນທີສຳຄັນ',
+      info: 'ຂໍ້ມູນສັນຍາ',
+      notFound: 'ບໍ່ພົບສັນຍານີ້',
+      backToList: 'ກັບໄປລາຍການສັນຍາ',
+      alertAt: (n: number) => `ກ່ອນສິ້ນສຸດ ${n} ມື້`,
+    },
   },
 } as const;
