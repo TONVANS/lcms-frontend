@@ -1,8 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { lo } from '../src/lib/i18n/lo';
 import { loginAs, setTheme } from './helpers';
 
-const pages = [
+type Ready = 'list' | 'detail' | 'detail-editor' | 'not-found';
+
+const pages: readonly { name: string; path: string; user: string | null; ready?: Ready }[] = [
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
   { name: 'ppa', path: '/ppa', user: 'admin' },
@@ -10,7 +13,26 @@ const pages = [
   { name: 'gc-list', path: '/contracts/list', user: 'admin' },
   { name: 'gc-wizard', path: '/contracts/new', user: 'admin' },
   { name: 'gc-alerts', path: '/contracts/alerts', user: 'admin' },
-] as const;
+  // Detail: the id is read from the list (first row link), never hard-coded. gc.editor sees the FileDropzone.
+  { name: 'gc-detail', path: '/contracts/list', user: 'admin', ready: 'detail' },
+  { name: 'gc-detail-editor', path: '/contracts/list', user: 'gc.editor', ready: 'detail-editor' },
+  { name: 'gc-not-found', path: '/contracts/nope', user: 'admin', ready: 'not-found' },
+];
+
+/** Waits until the route has real content, not a skeleton. */
+async function waitForReady(page: Page, ready: Ready | undefined, path: string): Promise<void> {
+  if (path === '/contracts/list' && ready === undefined) {
+    await page.getByRole('link', { name: /^GC-2026-/ }).first().waitFor();
+  }
+  if (ready === 'detail' || ready === 'detail-editor') {
+    await page.getByRole('link', { name: /^GC-2026-/ }).first().click();
+    await expect(page.getByRole('heading', { name: lo.gc.detail.info })).toBeVisible();
+    // document list finished loading
+    await expect(page.getByLabel(lo.common.loading)).toHaveCount(0);
+    if (ready === 'detail-editor') await expect(page.getByLabel(lo.dropzone.prompt)).toBeAttached();
+  }
+  if (ready === 'not-found') await expect(page.getByText(lo.gc.detail.notFound)).toBeVisible();
+}
 
 for (const theme of ['dark', 'light'] as const) {
   for (const p of pages) {
@@ -21,9 +43,7 @@ for (const theme of ['dark', 'light'] as const) {
         await page.goto(p.path);
         await page.waitForLoadState('networkidle');
         // Table routes: wait for real rows, then let finite animations settle (axe samples colours mid-fade).
-        if (p.path === '/contracts/list') {
-          await page.getByRole('link', { name: /^GC-2026-/ }).first().waitFor();
-        }
+        await waitForReady(page, p.ready, p.path);
         await page.evaluate(async () => {
           const settle = Promise.all(
             document
@@ -52,3 +72,14 @@ for (const theme of ['dark', 'light'] as const) {
     });
   }
 }
+
+test.describe('gc detail layout', () => {
+  test('info list is a single column at 360px and two columns on desktop', async ({ page }, testInfo) => {
+    await loginAs(page, 'admin');
+    await page.goto('/contracts/list');
+    await waitForReady(page, 'detail', '/contracts/list');
+    const dl = page.getByRole('region', { name: lo.gc.detail.info }).locator('dl');
+    const tracks = await dl.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(tracks).toBe(testInfo.project.name === 'mobile' ? 1 : 2);
+  });
+});
