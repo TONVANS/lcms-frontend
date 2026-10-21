@@ -4,6 +4,7 @@ import { buildHomeView } from '@/features/home/lib/build-home-view';
 import type { HomeSummary } from '@/features/home/types';
 import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
+import { deriveGcStatus } from '@/features/gc/lib/derive-status';
 import { gcMockDb } from '@/features/gc/mocks/gc.mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 
@@ -35,6 +36,21 @@ describe('home summary handler', () => {
       within7: 6,
       within30: 4,
       within90: 4,
+    });
+  });
+
+  it('reports gc active as active only (expiring is its own count), matching the gc dashboard', async () => {
+    setMockSession('admin', false);
+    const { data } = await api.get<HomeSummary>(endpoints.home.summary);
+    const gc = data.modules.find((m) => m.module === 'gc')!;
+    const statuses = gcMockDb.all().map((c) => deriveGcStatus(c, new Date()));
+    const count = (s: string) => statuses.filter((x) => x === s).length;
+    expect(count('expiring')).toBeGreaterThan(0);
+    expect(gc).toEqual({
+      module: 'gc',
+      total: statuses.length,
+      active: count('active'),
+      expiring: count('expiring'),
     });
   });
 

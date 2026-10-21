@@ -16,7 +16,7 @@ function gcStats(): HomeSummary['modules'][number] {
   return {
     module: 'gc',
     total: statuses.length,
-    active: count('active') + count('expiring'),
+    active: count('active'),
     expiring: count('expiring'),
   };
 }

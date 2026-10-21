@@ -234,7 +234,7 @@ describe('alerts and home integration', () => {
     expect(gc).toEqual({
       module: 'gc',
       total: 42,
-      active: statuses.filter((s) => s === 'active').length + expiring,
+      active: statuses.filter((s) => s === 'active').length, // matches the gc dashboard: expiring is separate
       expiring,
     });
   });
