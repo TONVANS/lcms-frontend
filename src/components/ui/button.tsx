@@ -17,7 +17,7 @@ const buttonVariants = cva(
         gold:
           "bg-(image:--gold-gradient) font-bold text-[#0A1630]",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:border-destructive/40 dark:bg-destructive/20",
+          "border border-[rgba(225,29,72,0.35)] bg-(--destructive-soft) text-(--text-error) hover:opacity-90 dark:border-transparent",
         outline:
           "border-border bg-background text-foreground aria-expanded:bg-muted dark:border-input",
         link: "text-primary underline-offset-4 hover:underline",

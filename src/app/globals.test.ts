@@ -59,6 +59,13 @@ describe('globals.css tokens', () => {
     expect(darkBody).not.toMatch(/--series-/);
   });
 
+  it('defines --destructive-soft per theme, scoped to each block', () => {
+    expect(rootBody).toMatch(/--destructive-soft:\s*#ffe4e6/i);
+    expect(darkBody).toMatch(/--destructive-soft:\s*rgba\(251,\s*113,\s*133,\s*0\.2\)/);
+    expect(rootBody).not.toMatch(/--destructive-soft:\s*rgba/);
+    expect(darkBody).not.toMatch(/--destructive-soft:\s*#ffe4e6/i);
+  });
+
   it('defines --row-hover per theme', () => {
     expect(rootBody).toMatch(/--row-hover:\s*rgba\(11,\s*27,\s*58,\s*0\.05\)/);
     expect(darkBody).toMatch(/--row-hover:\s*rgba\(255,\s*255,\s*255,\s*0\.045\)/);

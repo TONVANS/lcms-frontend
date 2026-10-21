@@ -53,6 +53,7 @@
   --accent: #b08a4a;
   --accent-foreground: #0b1b3a;
   --destructive: #e11d48;
+  --destructive-soft: #ffe4e6;
   --text-error: #be123c;
   --border: rgba(11, 27, 58, 0.12);
   --input: rgba(11, 27, 58, 0.16);
@@ -133,6 +134,7 @@
   --accent: #d4b37a;
   --accent-foreground: #0a1630;
   --destructive: #fb7185;
+  --destructive-soft: rgba(251, 113, 133, 0.2);
   --text-error: #fda4af;
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.14);
