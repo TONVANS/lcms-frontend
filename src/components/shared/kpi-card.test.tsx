@@ -15,3 +15,29 @@ describe('KpiCard', () => {
     expect(card.className).toContain('dark:[--glass-border:rgba(96,165,250');
   });
 });
+
+describe('KpiCard delta tone and interactive', () => {
+  it('neutral delta (positive undefined) is muted, not green or red', () => {
+    render(<KpiCard label="L" value="1" delta={{ text: 'n' }} />);
+    const el = screen.getByText('n');
+    expect(el.className).toContain('text-(--text-muted)');
+    expect(el.className).not.toContain('#047857');
+    expect(el.className).not.toContain('#BE123C');
+  });
+
+  it('positive and negative deltas keep their colours', () => {
+    render(
+      <>
+        <KpiCard label="A" value="1" delta={{ text: 'up', positive: true }} />
+        <KpiCard label="B" value="1" delta={{ text: 'down', positive: false }} />
+      </>,
+    );
+    expect(screen.getByText('up').className).toContain('#047857');
+    expect(screen.getByText('down').className).toContain('#BE123C');
+  });
+
+  it('interactive adds the hover lift', () => {
+    const { container } = render(<KpiCard label="L" value="1" interactive />);
+    expect(container.querySelector('.glass')!.className).toContain('hover:-translate-y');
+  });
+});

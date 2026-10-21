@@ -22,7 +22,7 @@ function session(username: string) {
 
 const payload = (over: Partial<GcDashboard> = {}): GcDashboard => ({
   total: 42,
-  byStatus: { pending: 3, active: 25, expiring: 7, expired: 7 },
+  byStatus: { pending: 4, active: 25, expiring: 7, expired: 6 },
   byType: [
     { type: 'moa', count: 2 },
     { type: 'epc', count: 9 },
@@ -48,42 +48,63 @@ describe('GcDashboardView', () => {
     session('gc.viewer');
     vi.spyOn(gcService, 'dashboard').mockResolvedValue(payload());
     render(<GcDashboardView />);
-    const link = (label: string) => screen.findByRole('link', { name: new RegExp(label) });
-
-    const total = await link(lo.gc.dashboard.kpiTotal);
-    expect(total).toHaveTextContent('42');
-    expect(total).toHaveAttribute('href', '/contracts/list');
-    const active = await link(lo.gc.dashboard.kpiActive);
-    expect(active).toHaveTextContent('25');
-    expect(active).toHaveAttribute('href', '/contracts/list?status=active');
-    const expiring = await link(lo.gc.dashboard.kpiExpiring.replace(/[()]/g, '\\$&'));
-    expect(expiring).toHaveTextContent('7');
-    expect(expiring).toHaveAttribute('href', '/contracts/list?status=expiring');
-    const expired = await link(lo.gc.dashboard.kpiExpired);
-    expect(expired).toHaveTextContent('7');
-    expect(expired).toHaveAttribute('href', '/contracts/list?status=expired');
+    const cases: [string, string, string][] = [
+      [lo.gc.dashboard.kpiTotal, '42', '/contracts/list'],
+      [lo.gc.dashboard.kpiActive, '25', '/contracts/list?status=active'],
+      [lo.gc.dashboard.kpiExpiring, '7', '/contracts/list?status=expiring'],
+      [lo.gc.dashboard.kpiExpired, '6', '/contracts/list?status=expired'],
+    ];
+    for (const [label, value, href] of cases) {
+      await screen.findAllByText(label);
+      const link = screen
+        .getAllByText(label)
+        .map((e) => e.closest('a'))
+        .find((x) => x !== null)!;
+      expect(link).toHaveAttribute('href', href);
+      expect(within(link).getByText(value, { exact: true })).toBeInTheDocument();
+      // The link holds the label and the value only.
+      expect(link.textContent).toBe(`${label}${value}`);
+    }
   });
 
-  it('shows per-currency totals without conversion', async () => {
+  it('shows per-currency totals and counts exactly, without conversion', async () => {
     session('gc.viewer');
     vi.spyOn(gcService, 'dashboard').mockResolvedValue(payload());
     render(<GcDashboardView />);
     const card = async (cur: 'LAK' | 'USD' | 'CNY') =>
       (await screen.findByText(lo.gc.dashboard.valueTotal(lo.currency[cur]))).parentElement!;
-
-    const lak = await card('LAK');
-    expect(lak).toHaveTextContent('1,200,000');
-    expect(lak).toHaveTextContent(lo.gc.dashboard.contractsCount(4));
-    expect(await card('USD')).toHaveTextContent('0');
-    expect(await card('CNY')).toHaveTextContent('50,000');
+    const expectCard = async (cur: 'LAK' | 'USD' | 'CNY', value: string, count: number) => {
+      const el = await card(cur);
+      expect(within(el).getByText(value, { exact: true })).toBeInTheDocument();
+      expect(
+        within(el).getByText(lo.gc.dashboard.contractsCount(count), { exact: true }),
+      ).toBeInTheDocument();
+    };
+    await expectCard('LAK', '1,200,000', 4);
+    await expectCard('USD', '0', 0);
+    await expectCard('CNY', '50,000', 1);
 
     const labels = (['LAK', 'USD', 'CNY'] as const).map((c) =>
       lo.gc.dashboard.valueTotal(lo.currency[c]),
     );
-    const order = screen
-      .getAllByText((t) => labels.includes(t))
-      .map((e) => e.textContent);
+    const order = screen.getAllByText((t) => labels.includes(t)).map((e) => e.textContent);
     expect(order).toEqual(labels);
+  });
+
+  it('a currency missing from the payload shows 0 and zero contracts', async () => {
+    session('gc.viewer');
+    vi.spyOn(gcService, 'dashboard').mockResolvedValue(
+      payload({ valueTotals: [{ currency: 'LAK', amount: 900, count: 2 }] }),
+    );
+    render(<GcDashboardView />);
+    const usd = (await screen.findByText(lo.gc.dashboard.valueTotal(lo.currency.USD)))
+      .parentElement!;
+    expect(within(usd).getByText('0', { exact: true })).toBeInTheDocument();
+    expect(
+      within(usd).getByText(lo.gc.dashboard.contractsCount(0), { exact: true }),
+    ).toBeInTheDocument();
+    const delta = within(usd).getByText(lo.gc.dashboard.contractsCount(0));
+    expect(delta.className).toContain('text-(--text-muted)');
   });
 
   it('by-type chart uses Lao type labels sorted by count', async () => {
@@ -104,7 +125,9 @@ describe('GcDashboardView', () => {
     vi.spyOn(gcService, 'dashboard').mockResolvedValue(payload());
     render(<GcDashboardView />);
     expect(
-      await screen.findByRole('img', { name: new RegExp(`${lo.gc.status.expiring} 7`) }),
+      await screen.findByRole('img', {
+        name: new RegExp(`${lo.gc.status.expiring} 7, ${lo.gc.status.expired} 6`),
+      }),
     ).toBeInTheDocument();
   });
 

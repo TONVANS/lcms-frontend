@@ -17,26 +17,38 @@ const VARIANT_CLASS: Record<KpiVariant, string> = {
 interface KpiCardProps {
   label: string;
   value: ReactNode;
-  delta?: { text: string; positive: boolean };
+  /** `positive` undefined renders a neutral (muted) delta, for counts that are not a trend. */
+  delta?: { text: string; positive?: boolean };
   variant?: KpiVariant;
   index?: number;
+  /** Lift on hover; use when the card sits inside a link. */
+  interactive?: boolean;
 }
 
-export function KpiCard({ label, value, delta, variant = 'default', index }: KpiCardProps) {
+export function KpiCard({
+  label,
+  value,
+  delta,
+  variant = 'default',
+  index,
+  interactive,
+}: KpiCardProps) {
   return (
     <FadeIn variant="up" index={index}>
-      <GlassCard className={cn('p-5', VARIANT_CLASS[variant])}>
-        <p className="text-[13px] text-muted-foreground">{label}</p>
-        <p className="mt-1 text-[34px] leading-tight font-semibold text-text-strong tabular-nums">
+      <GlassCard interactive={interactive} className={cn('p-5', VARIANT_CLASS[variant])}>
+        <p className="text-muted-foreground text-[13px]">{label}</p>
+        <p className="text-text-strong mt-1 text-[34px] leading-tight font-semibold tabular-nums">
           {value}
         </p>
         {delta ? (
           <p
             className={cn(
               'mt-1 text-xs tabular-nums',
-              delta.positive
-                ? 'text-[#047857] dark:text-[#6EE7B7]'
-                : 'text-[#BE123C] dark:text-[#FDA4AF]',
+              delta.positive === undefined
+                ? 'text-(--text-muted)'
+                : delta.positive
+                  ? 'text-[#047857] dark:text-[#6EE7B7]'
+                  : 'text-[#BE123C] dark:text-[#FDA4AF]',
             )}
           >
             {delta.text}

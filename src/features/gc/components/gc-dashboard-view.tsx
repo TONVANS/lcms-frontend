@@ -27,6 +27,7 @@ import { SupportCard } from './support-card';
 
 const FOCUS =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
+// Defensive: the handler already caps upcoming at 10.
 const UPCOMING_MAX = 10;
 const CURRENCY_ORDER = ['LAK', 'USD', 'CNY'] as const;
 
@@ -165,10 +166,16 @@ export function GcDashboardView() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiLink href="/contracts/list">
-          <KpiCard label={lo.gc.dashboard.kpiTotal} value={formatNumber(data.total)} index={0} />
+          <KpiCard
+            interactive
+            label={lo.gc.dashboard.kpiTotal}
+            value={formatNumber(data.total)}
+            index={0}
+          />
         </KpiLink>
         <KpiLink href="/contracts/list?status=active">
           <KpiCard
+            interactive
             label={lo.gc.dashboard.kpiActive}
             value={formatNumber(data.byStatus.active)}
             index={1}
@@ -176,6 +183,7 @@ export function GcDashboardView() {
         </KpiLink>
         <KpiLink href="/contracts/list?status=expiring">
           <KpiCard
+            interactive
             label={lo.gc.dashboard.kpiExpiring}
             value={formatNumber(data.byStatus.expiring)}
             variant="warning"
@@ -184,6 +192,7 @@ export function GcDashboardView() {
         </KpiLink>
         <KpiLink href="/contracts/list?status=expired">
           <KpiCard
+            interactive
             label={lo.gc.dashboard.kpiExpired}
             value={formatNumber(data.byStatus.expired)}
             variant="danger"
@@ -198,7 +207,7 @@ export function GcDashboardView() {
             key={v.currency}
             label={lo.gc.dashboard.valueTotal(lo.currency[v.currency])}
             value={formatNumber(v.amount)}
-            delta={{ text: lo.gc.dashboard.contractsCount(v.count), positive: true }}
+            delta={{ text: lo.gc.dashboard.contractsCount(v.count) }}
             index={4 + i}
           />
         ))}
@@ -240,7 +249,7 @@ export function GcDashboardView() {
                       <Link
                         href={`/contracts/${c.id}`}
                         className={cn(
-                          'block min-h-6 truncate rounded-sm text-sm font-medium text-[var(--text-strong)] underline-offset-2 hover:underline',
+                          'flex min-h-11 items-center truncate rounded-sm text-sm font-medium text-[var(--text-strong)] underline-offset-2 hover:underline',
                           FOCUS,
                         )}
                       >

@@ -182,6 +182,26 @@ describe('gc handlers', () => {
     }
   });
 
+  it('dashboard upcoming is the first 10 qualifying contracts by endDate ascending', async () => {
+    setMockSession('gc.user', false);
+    const base = gcMockDb.all()[0]!;
+    for (let i = 0; i < 6; i += 1) {
+      await gcService.create({ ...toInput(base), contractNo: `ORD-${i}`, endDate: base.endDate });
+    }
+    const today = new Date();
+    const expected = gcMockDb
+      .all()
+      .filter((c) => {
+        const left = daysLeft(c.endDate, today);
+        return left !== null && left >= 0 && left <= 90;
+      })
+      .map((c) => c.endDate!)
+      .sort()
+      .slice(0, 10);
+    const { upcoming } = await gcService.dashboard();
+    expect(upcoming.map((c) => c.endDate)).toEqual(expected);
+  });
+
   it('dashboard upcoming is capped at 10 even when more qualify', async () => {
     setMockSession('gc.user', false);
     const base = gcMockDb.all()[0]!;

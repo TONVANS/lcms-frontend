@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/features/auth';
@@ -58,5 +58,41 @@ describe('UserMenu support item', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(document.body.style.pointerEvents).not.toBe('none');
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  describe('does not open without choosing the support item', () => {
+    it('Escape closes the menu with no dialog and focus on the trigger', async () => {
+      const user = userEvent.setup();
+      render(<UserMenu />);
+      const trigger = screen.getByRole('button', { name: lo.topbar.userMenu });
+      await user.click(trigger);
+      await screen.findByRole('menu');
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('clicking outside closes the menu with no dialog', async () => {
+      const user = userEvent.setup();
+      render(<UserMenu />);
+      await user.click(screen.getByRole('button', { name: lo.topbar.userMenu }));
+      await screen.findByRole('menu');
+      fireEvent.pointerDown(document.body);
+      await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('choosing logout opens no dialog', async () => {
+      const logout = vi.fn().mockResolvedValue(undefined);
+      useAuthStore.setState({ logout });
+      const user = userEvent.setup();
+      render(<UserMenu />);
+      await user.click(screen.getByRole('button', { name: lo.topbar.userMenu }));
+      await user.click(await screen.findByRole('menuitem', { name: lo.auth.logout }));
+      await waitFor(() => expect(logout).toHaveBeenCalled());
+      await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
   });
 });
