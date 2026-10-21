@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useCan } from '@/components/guards/can';
 import { PageHeader } from '@/components/layout/page-header';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
@@ -29,6 +30,9 @@ export interface PpaContractDetailViewProps {
 
 export function PpaContractDetailView({ id }: PpaContractDetailViewProps) {
   const router = useRouter();
+  const canUpload = useCan('ppa', 'create');
+  const canDownload = useCan('ppa', 'download');
+  const canDelete = useCan('ppa', 'delete');
   const [contract, setContract] = useState<PpaContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -313,7 +317,13 @@ export function PpaContractDetailView({ id }: PpaContractDetailViewProps) {
                 {lo.ppa.documentsTitle}
               </h3>
             </div>
-            <DocumentManager entityType="ppa" entityId={contract.id} canUpload canDownload canDelete />
+            <DocumentManager
+              entityType="ppa"
+              entityId={contract.id}
+              canUpload={canUpload}
+              canDownload={canDownload}
+              canDelete={canDelete}
+            />
           </GlassCard>
         </div>
 

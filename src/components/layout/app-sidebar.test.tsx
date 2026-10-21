@@ -37,6 +37,18 @@ describe('AppSidebar', () => {
     expect(screen.queryByText(lo.modules.legal)).toBeNull();
   });
 
+  it('hides the create item from a gc viewer and shows it to a gc editor', () => {
+    useAuthStore.setState({ user: byName('gc.viewer'), status: 'authenticated' });
+    const { unmount } = render(<AppSidebar module="gc" />);
+    expect(screen.queryByRole('link', { name: lo.nav.create })).toBeNull();
+    expect(screen.getByRole('link', { name: lo.nav.contracts })).toBeInTheDocument();
+    unmount();
+
+    useAuthStore.setState({ user: byName('gc.editor'), status: 'authenticated' });
+    render(<AppSidebar module="gc" />);
+    expect(screen.getByRole('link', { name: lo.nav.create })).toBeInTheDocument();
+  });
+
   it('shows the module switcher for multi-module users', () => {
     useAuthStore.setState({ user: byName('multi.user'), status: 'authenticated' });
     render(<AppSidebar module="ppa" />);

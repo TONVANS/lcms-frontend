@@ -57,6 +57,7 @@ test.describe('permissions', () => {
     await expect(page.getByRole('heading', { level: 1, name: lo.gc.list.title })).toBeVisible();
     await expect(page.getByRole('button', { name: lo.gc.list.create, exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: lo.gc.list.openWizard })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: lo.nav.create })).toHaveCount(0);
     await expect(page.getByRole('button', { name: new RegExp(`^${lo.gc.list.edit} `) })).toHaveCount(0);
     await expect(page.getByRole('button', { name: new RegExp(`^${lo.gc.list.delete} `) })).toHaveCount(0);
 

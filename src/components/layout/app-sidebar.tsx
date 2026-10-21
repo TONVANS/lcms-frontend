@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MODULE_NAV, isNavItemActive } from '@/config/navigation';
 import { useAuthStore } from '@/features/auth';
+import { hasPermission } from '@/lib/auth/permissions';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import type { ModuleKey } from '@/types/domain';
@@ -43,7 +44,9 @@ export function AppSidebar({ module }: { module: ModuleKey }) {
         <p className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-[#8396b6]">
           {lo.nav.modulesSection}
         </p>
-        {MODULE_NAV[module].map((item) => {
+        {MODULE_NAV[module]
+          .filter((i) => !i.permission || (user !== null && hasPermission(user, module, i.permission)))
+          .map((item) => {
           const active = isNavItemActive(pathname, item.href);
           const Icon = item.icon;
           return (

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
-import type { ModuleKey } from '@/types/domain';
+import type { ModuleKey, Permission } from '@/types/domain';
 
 export interface NavItem {
   key: string;
@@ -20,20 +20,22 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   countKey?: string;
+  /** Item is rendered only when the user holds this permission in the module. */
+  permission?: Permission;
 }
 
 export const MODULE_NAV: Record<ModuleKey, NavItem[]> = {
   ppa: [
     { key: 'dashboard', label: lo.nav.dashboard, href: '/ppa', icon: LayoutDashboard },
     { key: 'contracts', label: lo.nav.contracts, href: '/ppa/contracts', icon: FileText },
-    { key: 'create', label: lo.nav.create, href: '/ppa/new', icon: FilePlus2 },
+    { key: 'create', label: lo.nav.create, href: '/ppa/new', icon: FilePlus2, permission: 'create' },
     { key: 'alerts', label: lo.nav.alerts, href: '/ppa/alerts', icon: Bell, countKey: 'alerts' },
     { key: 'documents', label: lo.nav.documents, href: '/ppa/documents', icon: Library },
   ],
   gc: [
     { key: 'dashboard', label: lo.nav.dashboard, href: '/contracts', icon: LayoutDashboard },
     { key: 'contracts', label: lo.nav.contracts, href: '/contracts/list', icon: FileText },
-    { key: 'create', label: lo.nav.create, href: '/contracts/new', icon: FilePlus2 },
+    { key: 'create', label: lo.nav.create, href: '/contracts/new', icon: FilePlus2, permission: 'create' },
     { key: 'alerts', label: lo.nav.alerts, href: '/contracts/alerts', icon: Bell, countKey: 'alerts' },
   ],
   legal: [
