@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -173,11 +173,90 @@ describe('GcContractsView', () => {
     expect(list.mock.calls.map((c) => c[0]?.page)).toEqual([99, 5]);
   });
 
-  it('shows the empty state with a filter suggestion', async () => {
-    session('gc.viewer');
+  it('shows the filter suggestion only when filters are active', async () => {
+    session('gc.editor');
     nav.search = 'q=zzzz-no-such-contract';
     render(<GcContractsView />);
     expect(await screen.findByText(lo.gc.list.emptyHint)).toBeInTheDocument();
+    // header create only: no create action inside the empty state
+    expect(screen.getAllByRole('button', { name: lo.gc.list.create })).toHaveLength(1);
+  });
+
+  it('empty register: plain title, create action only for users who can create', async () => {
+    const empty = { items: [], page: 1, pageSize: 10, total: 0 };
+    session('gc.editor');
+    vi.spyOn(gcService, 'list').mockResolvedValue(empty);
+    const { unmount } = render(<GcContractsView />);
+    expect(await screen.findByText(lo.table.noData)).toBeInTheDocument();
+    expect(screen.queryByText(lo.gc.list.emptyHint)).toBeNull();
+    expect(screen.getAllByRole('button', { name: lo.gc.list.create })).toHaveLength(2);
+    unmount();
+
+    useGcListStore.getState().reset();
+    session('gc.viewer');
+    render(<GcContractsView />);
+    expect(await screen.findByText(lo.table.noData)).toBeInTheDocument();
+    expect(screen.queryByText(lo.gc.list.emptyHint)).toBeNull();
+    expect(screen.queryByRole('button', { name: lo.gc.list.create })).toBeNull();
+  });
+
+  it('labels the type and page-size selects visibly', async () => {
+    session('gc.viewer');
+    render(<GcContractsView />);
+    await loadedRows();
+    expect(screen.getByRole('combobox', { name: lo.gc.list.typeFilter })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: lo.gc.list.pageSize })).toBeInTheDocument();
+    expect(screen.getByText(lo.gc.list.pageSize)).toBeVisible();
+  });
+
+  it('uses the status field label for the column header', async () => {
+    session('gc.viewer');
+    render(<GcContractsView />);
+    await loadedRows();
+    expect(screen.getByRole('columnheader', { name: lo.gc.fields.status })).toBeInTheDocument();
+  });
+
+  describe('search debounce', () => {
+    const qWrites = () =>
+      nav.replace.mock.calls.map((c) => String(c[0])).filter((u) => u.includes('q='));
+
+    it('writes q once for a burst of typing', async () => {
+      session('gc.viewer');
+      render(<GcContractsView />);
+      await loadedRows();
+      vi.useFakeTimers();
+      try {
+        for (const v of ['a', 'ab', 'abc']) fireEvent.change(searchBox(), { target: { value: v } });
+        act(() => {
+          vi.advanceTimersByTime(299);
+        });
+        expect(qWrites()).toHaveLength(0);
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(qWrites()).toEqual(['/contracts/list?q=abc']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('writes nothing when unmounted mid-debounce', async () => {
+      session('gc.viewer');
+      const { unmount } = render(<GcContractsView />);
+      await loadedRows();
+      vi.useFakeTimers();
+      try {
+        fireEvent.change(searchBox(), { target: { value: 'abc' } });
+        unmount();
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+        expect(qWrites()).toHaveLength(0);
+        expect(useGcListStore.getState().query.q).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('edit saves and refreshes the row with the new title', async () => {
@@ -205,6 +284,8 @@ describe('GcContractsView', () => {
     await user.click(within(first).getByRole('button', { name: `${lo.gc.list.delete} ${no}` }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(lo.gc.list.deleteDesc(no))).toBeInTheDocument();
+    // danger tone: rose gradient on the confirm button
+    expect(within(dialog).getByRole('button', { name: lo.confirm.confirm })).toHaveClass('to-rose-700');
     await user.click(within(dialog).getByRole('button', { name: lo.confirm.confirm }));
     await waitFor(() => expect(screen.queryByRole('link', { name: no })).toBeNull());
     expect(toast.success).toHaveBeenCalledWith(lo.gc.list.deleted);

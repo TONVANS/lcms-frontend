@@ -18,6 +18,7 @@ import { FilterChips } from '@/components/shared/filter-chips';
 import { SearchInput } from '@/components/shared/search-input';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -231,7 +232,7 @@ export function GcContractsView() {
       },
       {
         id: 'status',
-        header: lo.table.filterByStatus,
+        header: lo.gc.fields.status,
         cell: (c) => {
           const s = deriveGcStatus(c);
           return <StatusBadge tone={GC_STATUS_TONE[s]} label={lo.gc.status[s]} />;
@@ -287,6 +288,7 @@ export function GcContractsView() {
     await useGcListStore.getState().afterDelete();
   };
 
+  const hasFilters = Boolean(query.q || query.type || query.status);
   const dialogOpen = createOpen || editing !== null;
 
   return (
@@ -313,13 +315,17 @@ export function GcContractsView() {
 
       <div className="flex flex-wrap items-center gap-3">
         <GcSearch />
+        <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor="gc-type-filter" className="text-xs text-(--text-muted)">
+          {lo.gc.list.typeFilter}
+        </Label>
         <Select
           value={query.type ?? ALL}
           onValueChange={(v) =>
             setQuery({ type: v === ALL ? undefined : (v as GcContractType) })
           }
         >
-          <SelectTrigger aria-label={lo.gc.list.typeFilter} className="w-full sm:w-64">
+          <SelectTrigger id="gc-type-filter" className="w-full sm:w-64">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -331,6 +337,7 @@ export function GcContractsView() {
             ))}
           </SelectContent>
         </Select>
+        </div>
         <FilterChips
           accent="gc"
           ariaLabel={lo.table.filterByStatus}
@@ -340,11 +347,15 @@ export function GcContractsView() {
             setQuery({ status: v === ALL ? undefined : (v as (typeof GC_STATUSES)[number]) })
           }
         />
+        <div className="flex min-w-0 flex-col gap-1.5">
+        <Label htmlFor="gc-page-size" className="text-xs text-(--text-muted)">
+          {lo.gc.list.pageSize}
+        </Label>
         <Select
           value={String(pageSize)}
           onValueChange={(v) => setQuery({ pageSize: Number(v) })}
         >
-          <SelectTrigger aria-label={lo.gc.list.pageSize} className="w-24">
+          <SelectTrigger id="gc-page-size" className="w-24">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -355,6 +366,7 @@ export function GcContractsView() {
             ))}
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {status === 'error' && error ? (
@@ -380,7 +392,15 @@ export function GcContractsView() {
           onSortChange={onSortChange}
           isLoading={status === 'idle' || status === 'loading'}
           emptyTitle={lo.table.noData}
-          emptyDescription={lo.gc.list.emptyHint}
+          emptyDescription={hasFilters ? lo.gc.list.emptyHint : undefined}
+          emptyAction={
+            !hasFilters && canCreate ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus aria-hidden="true" />
+                {lo.gc.list.create}
+              </Button>
+            ) : undefined
+          }
           caption={lo.gc.list.caption}
         />
       )}

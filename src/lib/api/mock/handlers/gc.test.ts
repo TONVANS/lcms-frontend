@@ -87,9 +87,9 @@ describe('gc handlers', () => {
   it('sorts titles with Lao collation, not code-point order', async () => {
     setMockSession('gc.editor', false);
     // A leading vowel (U+0EC0) sorts after every consonant by code point, but collates by the consonant that follows it.
-    const lead = await gcService.create({ ...input, contractNo: 'LAO-1', title: 'ເກ' });
-    const plain = await gcService.create({ ...input, contractNo: 'LAO-2', title: 'ຂ' });
-    expect('ເກ' < 'ຂ').toBe(false);
+    const lead = await gcService.create({ ...input, contractNo: 'LAO-1', title: '\u0EC0\u0E81' });
+    const plain = await gcService.create({ ...input, contractNo: 'LAO-2', title: '\u0E82' });
+    expect('\u0EC0\u0E81' < '\u0E82').toBe(false);
     const r = await gcService.list({ sort: 'title', order: 'asc', pageSize: 50 });
     const ids = r.items.map((c) => c.id);
     expect(ids.indexOf(lead.id)).toBeLessThan(ids.indexOf(plain.id));

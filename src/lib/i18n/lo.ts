@@ -258,7 +258,7 @@ export const lo = {
   },
   gc: {
     types: { om_service:'ສັນຍາ ບໍລິການ O&M', equipment_lease:'ສັນຍາ ເຊົ່າອຸປະກອນພາກສະຖານີ-ສາຍສົ່ງ', land_lease:'ສັນຍາ ເຊົ່າພື້ນທີ່ດິນ', epc:'ສັນຍາ ຮັບເໝົາກໍ່ສ້າງ (EPC)', pole_attachment:'ສັນຍາ ບໍລິການເກາະຫ້ອຍ', bill_collection:'ສັນຍາບໍລິການ ຮັບຊຳລະຄ່າກະແສໄຟຟ້າ', opgw_lease:'ສັນຍາ ບໍລິການເຊົ່າສາຍ OPGW', current_deposit:'ສັນຍາ ບໍລິການເງິນຝາກກະແສລາຍວັນ', edl_app_payment:'ສັນຍາບໍລິການນຳໃຊ້ຜະລິດຕະພັນຊຳລະເງິນ ຂອງ ທະນາຄານ ໃນ EDL App', cooperation:'ສັນຍາຮ່ວມມື ແລະ ສັນຍາຮ່ວມທຸລະກິດ', shareholding:'ສັນຍາຮ່ວມຫຸ້ນ', pta:'ສັນຍາບໍລິການຜ່ານສາຍສົ່ງ (PTA)', moa:'ບົດບັນທຶກຂໍ້ຕົກລົງ (MOA)', other_assigned:'ສັນຍາອື່ນໆ ທີ່ຖືກມອບໝາຍໂດຍກົງ' },
-    fields: { title:'ຊື່ສັນຍາ', type:'ປະເພດສັນຍາ', contractNo:'ເລກທີ', counterparty:'ຄູ່ສັນຍາ', termText:'ອາຍຸສັນຍາ', signedDate:'ມື້ລົງລາຍເຊັນ', effectiveDate:'ມື້ມີຜົນບັງຄັບໃຊ້', endDate:'ມື້ສິ້ນສຸດ', value:'ມູນຄ່າ', equity:'ສັດສ່ວນຫຸ້ນ ຫຼື ຈຳນວນເງິນປະກອບທຶນ', implementer:'ຜູ້ຈັດຕັ້ງປະຕິບັດ', notes:'ລາຍລະອຽດເພີ່ມເຕີມ', documents:'ເອກະສານແນບ' },
+    fields: { title:'ຊື່ສັນຍາ', type:'ປະເພດສັນຍາ', contractNo:'ເລກທີ', counterparty:'ຄູ່ສັນຍາ', termText:'ອາຍຸສັນຍາ', signedDate:'ມື້ລົງລາຍເຊັນ', effectiveDate:'ມື້ມີຜົນບັງຄັບໃຊ້', endDate:'ມື້ສິ້ນສຸດ', value:'ມູນຄ່າ', equity:'ສັດສ່ວນຫຸ້ນ ຫຼື ຈຳນວນເງິນປະກອບທຶນ', implementer:'ຜູ້ຈັດຕັ້ງປະຕິບັດ', notes:'ລາຍລະອຽດເພີ່ມເຕີມ', documents:'ເອກະສານແນບ', status:'ສະຖານະ' },
     status: { pending:'ລໍຖ້າມີຜົນ', active:'ມີຜົນບັງຄັບໃຊ້', expiring:'ໃກ້ໝົດອາຍຸ', expired:'ໝົດອາຍຸ' },
     openEnded: 'ບໍ່ມີກຳນົດ',
     term: { years: (n: number) => `${n} ປີ`, months: (n: number) => `${n} ເດືອນ`, days: (n: number) => `${n} ມື້` },
