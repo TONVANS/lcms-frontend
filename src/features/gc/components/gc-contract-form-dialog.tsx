@@ -27,12 +27,8 @@ import {
   type GcFormValues,
 } from '../schemas/gc.schema';
 import type { GeneralContract } from '../types';
-import {
-  GC_FIELD_ORDER,
-  GcFormFieldGroup,
-  firstInvalidFieldId,
-  type GcFormFieldName,
-} from './gc-contract-form-fields';
+import { GcFormFieldGroup, firstInvalidFieldId } from './gc-contract-form-fields';
+import { applyGcServerErrors } from './gc-server-errors';
 
 export interface GcContractFormDialogProps {
   open: boolean;
@@ -40,8 +36,6 @@ export interface GcContractFormDialogProps {
   contract?: GeneralContract;
   onSaved: (c: GeneralContract) => void;
 }
-
-const FIELD_NAMES: ReadonlySet<string> = new Set(GC_FIELD_ORDER);
 
 function focusById(id: string | null): void {
   if (id) document.getElementById(id)?.focus();
@@ -62,7 +56,7 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
     defaultValues: contract ? fromGcContract(contract) : emptyGcForm(),
     shouldFocusError: false,
   });
-  const { handleSubmit, setError, formState } = form;
+  const { handleSubmit, formState } = form;
   const [banner, setBanner] = useState<string | null>(null);
   const alive = useRef(true);
 
@@ -96,25 +90,9 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
     } catch (e) {
       if (!alive.current) return;
       const err = normalizeError(e);
-      let unmatched = false;
-      const serverErrors: FieldErrors<GcFormValues> = {};
-      let matchedAny = false;
-      for (const [key, message] of Object.entries(err.fieldErrors ?? {})) {
-        if (!FIELD_NAMES.has(key)) {
-          unmatched = true;
-          continue;
-        }
-        const name = key as GcFormFieldName;
-        const text =
-          name === 'contractNo' && message === 'DUPLICATE_CONTRACT_NO'
-            ? lo.gc.errors.duplicateNo
-            : message;
-        setError(name, { type: 'server', message: text });
-        (serverErrors as Record<string, unknown>)[name] = { type: 'server', message: text };
-        matchedAny = true;
-      }
-      if (matchedAny) focusById(firstInvalidFieldId(serverErrors));
-      if (!matchedAny || unmatched) {
+      const { matched, unmatched, focusId } = applyGcServerErrors(form, err);
+      focusById(focusId);
+      if (matched.length === 0 || unmatched) {
         const text = toUserMessage(err);
         if (text) setBanner(text);
       }

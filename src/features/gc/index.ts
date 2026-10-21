@@ -22,3 +22,4 @@ export { gcService, type GcListQuery, type GcDashboard } from './api/gc.service'
 export { GcContractsView } from './components/gc-contracts-view';
 export { GcContractDetailView } from './components/gc-contract-detail-view';
 export { buildGcKeyDates, type GcKeyDate } from './lib/key-dates';
+export { GcWizardView } from './components/gc-wizard-view';
