@@ -9,6 +9,7 @@ const pages = [
   { name: 'gc-dashboard', path: '/contracts', user: 'admin' },
   { name: 'gc-list', path: '/contracts/list', user: 'admin' },
   { name: 'gc-wizard', path: '/contracts/new', user: 'admin' },
+  { name: 'gc-alerts', path: '/contracts/alerts', user: 'admin' },
 ] as const;
 
 for (const theme of ['dark', 'light'] as const) {

@@ -24,3 +24,5 @@ export { GcContractDetailView } from './components/gc-contract-detail-view';
 export { buildGcKeyDates, type GcKeyDate } from './lib/key-dates';
 export { GcWizardView } from './components/gc-wizard-view';
 export { GcDashboardView } from './components/gc-dashboard-view';
+export { GcAlertsView } from './components/gc-alerts-view';
+export { groupGcAlerts, type GcAlertGroup, type GcAlertGroupKey } from './lib/group-alerts';
