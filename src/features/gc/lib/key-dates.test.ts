@@ -65,4 +65,15 @@ describe('buildGcKeyDates', () => {
     const items = buildGcKeyDates(mk('2026-01-01', '2026-01-10', '2026-10-20'), today);
     expect(items.at(-1)).toMatchObject({ key: 'end', status: 'current' });
   });
+
+  it('sorts a backdated contract (signed after effective) chronologically', () => {
+    const items = buildGcKeyDates(mk('2026-02-01', '2026-01-10', '2027-01-10'), today);
+    expect(keys(items).slice(0, 2)).toEqual(['effective', 'signed']);
+    expect(items.map((i) => i.date)).toEqual([...items.map((i) => i.date)].sort());
+  });
+
+  it('marks every item sharing the current date as current', () => {
+    const items = buildGcKeyDates(mk('2026-10-20', '2026-10-20', '2027-10-20'), today);
+    expect(statuses(items).slice(0, 3)).toEqual(['current', 'current', 'future']);
+  });
 });

@@ -121,6 +121,7 @@ describe('GcContractDetailView', () => {
     await screen.findByText('GC-2026-001-Contract-Signed.pdf');
     expect(downloadBtns()).toHaveLength(0);
     expect(screen.queryByRole('button', { name: lo.dropzone.deleteFile('GC-2026-001-Contract-Signed.pdf') })).toBeNull();
+    expect(screen.queryByText(lo.dropzone.prompt)).toBeNull();
     expect(screen.queryByRole('button', { name: lo.gc.list.edit })).toBeNull();
     expect(screen.queryByRole('button', { name: lo.gc.list.delete })).toBeNull();
   });
@@ -226,6 +227,48 @@ describe('GcContractDetailView', () => {
     const dialog = await screen.findByRole('dialog');
     return { c, user, dialog };
   }
+
+  it('returns focus to the Delete button when the dialog is cancelled', async () => {
+    const { user, dialog } = await openDelete();
+    await user.click(within(dialog).getByRole('button', { name: lo.confirm.cancel }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: lo.gc.list.delete })).toHaveFocus();
+  });
+
+  it('returns focus to the Edit button when the edit dialog is cancelled', async () => {
+    session('gc.user');
+    const user = userEvent.setup();
+    render(<GcContractDetailView id="gc-001" />);
+    await heading(gcMockDb.get('gc-001')!);
+    const edit = screen.getByRole('button', { name: lo.gc.list.edit });
+    await user.click(edit);
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: lo.gc.form.cancel }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(edit).toHaveFocus();
+  });
+
+  it('every state has an h1', async () => {
+    session('gc.viewer');
+    const { unmount } = render(<GcContractDetailView id="nope" />);
+    await screen.findByText(lo.gc.detail.notFound);
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    unmount();
+    vi.spyOn(gcService, 'get').mockRejectedValue({ status: 500, code: 'HTTP_500', message: '' });
+    render(<GcContractDetailView id="gc-001" />);
+    await screen.findByRole('alert');
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  });
+
+  it('shows record fields', async () => {
+    session('gc.viewer');
+    const c = gcMockDb.get('gc-001')!;
+    render(<GcContractDetailView id="gc-001" />);
+    await heading(c);
+    expect(valueOf(F.createdAt)).toHaveTextContent(formatDate(c.createdAt));
+    expect(valueOf(F.updatedAt)).toHaveTextContent(formatDate(c.updatedAt));
+    expect(valueOf(F.createdBy)).toHaveTextContent(c.createdBy);
+  });
 
   it('delete confirms, removes, toasts and navigates to the list', async () => {
     const { c, user, dialog } = await openDelete();

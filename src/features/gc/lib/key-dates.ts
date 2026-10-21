@@ -17,7 +17,7 @@ export interface GcKeyDate {
 /**
  * Chronological key dates of a contract: signed, effective, the alert points (endDate minus
  * 60/30/7 days), then the end. Alert points dated before the effective date, or on a date
- * already listed, are dropped. `current` is the first item on or after today; if every date
+ * already listed, are dropped. `current` is every item on the first date on or after today; if every date
  * is past nothing is current. Open-ended contracts list only signed and effective.
  */
 export function buildGcKeyDates(
@@ -51,15 +51,10 @@ export function buildGcKeyDates(
     return true;
   });
 
-  let currentFound = false;
+  const nextDate = kept.find((item) => (daysLeft(item.date, today) ?? -1) >= 0)?.date;
   return kept.map(({ key, label, date }) => {
-    const left = daysLeft(date, today);
-    let status: GcKeyDateStatus;
-    if (left !== null && left < 0) status = 'done';
-    else if (!currentFound) {
-      currentFound = true;
-      status = 'current';
-    } else status = 'future';
+    const status: GcKeyDateStatus =
+      nextDate === undefined || date < nextDate ? 'done' : date === nextDate ? 'current' : 'future';
     return { key, label, date, status };
   });
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -104,5 +105,24 @@ describe('ConfirmDialog', () => {
     const cls = screen.getByRole('dialog').className;
     expect(cls).toContain('sm:max-w-[440px]');
     expect(cls).not.toContain('sm:max-w-sm');
+  });
+
+  it('returns focus to the opening button after cancel', async () => {
+    const user = userEvent.setup();
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>opener</button>
+          <ConfirmDialog open={open} onOpenChange={setOpen} title="t" onConfirm={() => {}} />
+        </>
+      );
+    }
+    render(<Harness />);
+    const opener = screen.getByRole('button', { name: 'opener' });
+    await user.click(opener);
+    await user.click(await screen.findByRole('button', { name: lo.confirm.cancel }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(opener).toHaveFocus();
   });
 });

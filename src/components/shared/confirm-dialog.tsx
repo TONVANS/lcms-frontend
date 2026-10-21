@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useReturnFocus } from '@/hooks/use-return-focus';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 
@@ -25,6 +26,8 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<void>;
   isLoading?: boolean;
   icon?: ReactNode;
+  /** Overrides the default return-focus-to-opener behaviour. */
+  onCloseAutoFocus?: (e: Event) => void;
 }
 
 export function ConfirmDialog({
@@ -38,7 +41,9 @@ export function ConfirmDialog({
   onConfirm,
   isLoading = false,
   icon,
+  onCloseAutoFocus,
 }: ConfirmDialogProps) {
+  const returnFocus = useReturnFocus(open);
   const [pending, setPending] = useState(false);
   const busy = isLoading || pending;
 
@@ -64,7 +69,7 @@ export function ConfirmDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent showCloseButton={!busy} className="max-w-[calc(100%-2rem)] sm:max-w-[440px] rounded-[26px] border border-[var(--border-glass)] bg-(image:--surface-modal) p-6 shadow-2xl backdrop-blur-[28px]">
+      <DialogContent showCloseButton={!busy} onCloseAutoFocus={onCloseAutoFocus ?? returnFocus} className="max-w-[calc(100%-2rem)] sm:max-w-[440px] rounded-[26px] border border-[var(--border-glass)] bg-(image:--surface-modal) p-6 shadow-2xl backdrop-blur-[28px]">
         <DialogHeader className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             {icon ?? (

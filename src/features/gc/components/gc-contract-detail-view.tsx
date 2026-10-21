@@ -72,6 +72,7 @@ function InfoItem({ label, children }: { label: string; children: ReactNode }) {
 function DetailSkeleton() {
   return (
     <div data-testid="gc-detail-skeleton" className="flex flex-col gap-6">
+      <h1 className="sr-only">{lo.gc.list.title}</h1>
       <Skeleton className="h-14 w-2/3 rounded-xl" />
       <Skeleton className="h-64 w-full rounded-2xl" />
       <Skeleton className="h-64 w-full rounded-2xl" />
@@ -94,8 +95,9 @@ function LoadedDetail({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const status = deriveGcStatus(contract);
-  const keyDates = buildGcKeyDates(contract);
+  const today = new Date();
+  const status = deriveGcStatus(contract, today);
+  const keyDates = buildGcKeyDates(contract, today);
 
   const onConfirmDelete = async () => {
     try {
@@ -135,6 +137,9 @@ function LoadedDetail({
     { label: lo.gc.fields.equity, value: <span className="tabular-nums">{formatEquity(contract.equity)}</span> },
     { label: lo.gc.fields.implementer, value: contract.implementer ?? EMPTY },
     { label: lo.gc.fields.notes, value: contract.notes ?? EMPTY },
+    { label: lo.gc.fields.createdAt, value: <span className="tabular-nums">{formatDate(contract.createdAt)}</span> },
+    { label: lo.gc.fields.updatedAt, value: <span className="tabular-nums">{formatDate(contract.updatedAt)}</span> },
+    { label: lo.gc.fields.createdBy, value: contract.createdBy },
   ];
 
   return (
@@ -147,7 +152,7 @@ function LoadedDetail({
         meta={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge tone={GC_STATUS_TONE[status]} label={lo.gc.status[status]} />
-            {contract.endDate ? <CountdownBadge days={daysLeft(contract.endDate)} /> : null}
+            {contract.endDate ? <CountdownBadge days={daysLeft(contract.endDate, today)} /> : null}
           </span>
         }
         actions={
@@ -267,6 +272,7 @@ function GcContractDetail({ id }: { id: string }) {
   if (state.kind === 'notFound') {
     return (
       <div className="flex flex-col gap-6">
+        <PageHeader eyebrow={MODULES.gc.code} title={lo.gc.list.title} accent="gc" />
         <EmptyState
           title={lo.gc.detail.notFound}
           action={
@@ -286,6 +292,7 @@ function GcContractDetail({ id }: { id: string }) {
     return (
       <div className="flex flex-col gap-6">
         <BackLink />
+        <PageHeader eyebrow={MODULES.gc.code} title={lo.gc.list.title} accent="gc" />
         <AlertBanner
           tone="rose"
           title={toUserMessage(state.error)}

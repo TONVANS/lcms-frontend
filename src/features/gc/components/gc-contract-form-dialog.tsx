@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { gcService } from '../api/gc.service';
@@ -154,6 +155,7 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
 export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: GcContractFormDialogProps) {
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
+  const returnFocus = useReturnFocus(open);
 
   // A request in flight cannot be abandoned: closing is ignored until it settles.
   const handleOpenChange = (next: boolean) => {
@@ -165,6 +167,7 @@ export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={!busy}
+        onCloseAutoFocus={returnFocus}
         className="max-h-[90vh] max-w-[calc(100%-2rem)] gap-5 overflow-y-auto rounded-[26px] bg-(image:--surface-modal) p-6 sm:max-w-[780px] sm:p-8"
       >
         <DialogHeader className="flex-row items-center gap-3 border-b border-(--border-subtle) pb-4">

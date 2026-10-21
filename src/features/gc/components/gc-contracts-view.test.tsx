@@ -292,6 +292,20 @@ describe('GcContractsView', () => {
     expect(all().some((c) => c.contractNo === no)).toBe(false);
   });
 
+  it('returns focus to the row delete button when the delete dialog is cancelled', async () => {
+    session('gc.editor');
+    const user = userEvent.setup();
+    render(<GcContractsView />);
+    const first = (await loadedRows())[1]!;
+    const no = within(first).getByRole('link').textContent!;
+    const del = within(first).getByRole('button', { name: `${lo.gc.list.delete} ${no}` });
+    await user.click(del);
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: lo.confirm.cancel }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(del).toHaveFocus();
+  });
+
   it('keeps the dialog open and toasts the error when delete is rejected', async () => {
     session('gc.editor');
     const user = userEvent.setup();
