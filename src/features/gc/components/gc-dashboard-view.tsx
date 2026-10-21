@@ -41,7 +41,7 @@ function KpiLink({ href, children }: { href: string; children: ReactNode }) {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 className="font-serif text-base font-semibold text-[var(--text-strong)]">{children}</h3>
+    <h2 className="font-serif text-base font-semibold text-[var(--text-strong)]">{children}</h2>
   );
 }
 
@@ -213,7 +213,7 @@ export function GcDashboardView() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5 lg:items-start">
         <FadeIn variant="up" index={7} className="lg:col-span-3">
           <GlassCard accent="gc" className="flex h-full flex-col gap-5 p-6">
             <SectionTitle>{lo.gc.dashboard.byType}</SectionTitle>

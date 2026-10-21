@@ -56,7 +56,8 @@ export function FileDropzone({
     const rejected: string[] = [];
     for (const file of files) {
       if (!matchesAccept(file, accept)) rejected.push(lo.dropzone.badType(file.name));
-      else if (file.size > maxSizeMb * 1024 * 1024) rejected.push(lo.dropzone.tooLarge(file.name, maxSizeMb));
+      else if (file.size > maxSizeMb * 1024 * 1024)
+        rejected.push(lo.dropzone.tooLarge(file.name, maxSizeMb));
       else valid.push(file);
     }
     if (rejected.length > 0) onReject?.(rejected);
@@ -93,10 +94,10 @@ export function FileDropzone({
       onDrop={handleDrop}
       aria-disabled={disabled || undefined}
       className={cn(
-        'group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer select-none',
-        'border-[rgba(212,179,122,0.45)] bg-[rgba(212,179,122,0.03)] hover:bg-[rgba(212,179,122,0.06)] hover:border-[#d4b37a]',
-        'focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus-ring)',
-        isDragOver && 'border-[#d4b37a] bg-[rgba(212,179,122,0.1)] scale-[1.01]',
+        'group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center select-none',
+        'border-[rgba(212,179,122,0.45)] bg-[rgba(212,179,122,0.03)] hover:border-[#d4b37a] hover:bg-[rgba(212,179,122,0.06)]',
+        'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus-ring) focus-within:outline-solid',
+        isDragOver && 'scale-[1.01] border-[#d4b37a] bg-[rgba(212,179,122,0.1)]',
         disabled && 'cursor-not-allowed opacity-50',
         className,
       )}

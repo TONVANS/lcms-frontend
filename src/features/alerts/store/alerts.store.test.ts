@@ -43,6 +43,24 @@ describe('alerts store', () => {
     expect(useAlertsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
   });
 
+  it('keeps the newest fetch when an older one resolves last', async () => {
+    let resolveFirst!: (v: Alert[]) => void;
+    let resolveSecond!: (v: Alert[]) => void;
+    vi.spyOn(alertsService, 'list')
+      .mockReturnValueOnce(new Promise<Alert[]>((r) => (resolveFirst = r)))
+      .mockReturnValueOnce(new Promise<Alert[]>((r) => (resolveSecond = r)));
+    const first = useAlertsStore.getState().fetch();
+    const second = useAlertsStore.getState().fetch();
+    resolveSecond([mk('new', 'gc', false)]);
+    await second;
+    resolveFirst([mk('old1', 'ppa', false), mk('old2', 'ppa', false)]);
+    await first;
+    const s = useAlertsStore.getState();
+    expect(s.items.map((a) => a.id)).toEqual(['new']);
+    expect(s.unreadCount).toBe(1);
+    expect(s.status).toBe('ready');
+  });
+
   it('drops a fetch result that resolves after reset', async () => {
     let resolve!: (v: Alert[]) => void;
     vi.spyOn(alertsService, 'list').mockReturnValue(new Promise<Alert[]>((r) => (resolve = r)));

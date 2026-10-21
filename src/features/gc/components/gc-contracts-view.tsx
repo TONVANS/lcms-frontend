@@ -154,8 +154,13 @@ export function GcContractsView() {
   const canEdit = useCan('gc', 'edit');
   const canDelete = useCan('gc', 'delete');
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<GeneralContract | null>(null);
+  // `contract` is kept after close so the dialog title and body do not flip to "create" mid exit-animation.
+  // Opening replaces it (null for create); the body is keyed by contract id inside the dialog.
+  const [dialog, setDialog] = useState<{ open: boolean; contract: GeneralContract | null }>({
+    open: false,
+    contract: null,
+  });
+  const openCreate = () => setDialog({ open: true, contract: null });
   const [toDelete, setToDelete] = useState<GeneralContract | null>(null);
 
   const page = query.page ?? 1;
@@ -178,7 +183,7 @@ export function GcContractsView() {
           <Link
             href={`/contracts/${c.id}`}
             className={cn(
-              'rounded-sm font-medium text-(--text-strong) underline underline-offset-4 tabular-nums hover:text-(--gc)',
+              'rounded-sm font-medium text-(--text-strong) tabular-nums underline underline-offset-4 hover:text-(--gc)',
               FOCUS_RING,
             )}
           >
@@ -239,9 +244,7 @@ export function GcContractsView() {
         id: 'value',
         header: lo.gc.fields.value,
         align: 'end',
-        cell: (c) => (
-          <span className="tabular-nums">{c.value ? formatMoney(c.value) : '—'}</span>
-        ),
+        cell: (c) => <span className="tabular-nums">{c.value ? formatMoney(c.value) : '—'}</span>,
       },
       {
         id: 'status',
@@ -267,7 +270,7 @@ export function GcContractsView() {
             contract={c}
             canEdit={canEdit}
             canDelete={canDelete}
-            onEdit={setEditing}
+            onEdit={(row) => setDialog({ open: true, contract: row })}
             onDelete={setToDelete}
           />
         ),
@@ -303,7 +306,6 @@ export function GcContractsView() {
   };
 
   const hasFilters = Boolean(query.q || query.type || query.status);
-  const dialogOpen = createOpen || editing !== null;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -318,7 +320,7 @@ export function GcContractsView() {
                 <FilePlus2 aria-hidden="true" />
                 {lo.gc.list.openWizard}
               </Link>
-              <Button onClick={() => setCreateOpen(true)}>
+              <Button onClick={openCreate}>
                 <Plus aria-hidden="true" />
                 {lo.gc.list.create}
               </Button>
@@ -330,27 +332,25 @@ export function GcContractsView() {
       <div className="flex flex-wrap items-center gap-3">
         <GcSearch />
         <div className="flex min-w-0 flex-col gap-1.5">
-        <Label htmlFor="gc-type-filter" className="text-xs text-(--text-muted)">
-          {lo.gc.list.typeFilter}
-        </Label>
-        <Select
-          value={query.type ?? ALL}
-          onValueChange={(v) =>
-            setQuery({ type: v === ALL ? undefined : (v as GcContractType) })
-          }
-        >
-          <SelectTrigger id="gc-type-filter" className="w-full sm:w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{lo.gc.list.allTypes}</SelectItem>
-            {GC_CONTRACT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {lo.gc.types[t]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Label htmlFor="gc-type-filter" className="text-xs text-(--text-muted)">
+            {lo.gc.list.typeFilter}
+          </Label>
+          <Select
+            value={query.type ?? ALL}
+            onValueChange={(v) => setQuery({ type: v === ALL ? undefined : (v as GcContractType) })}
+          >
+            <SelectTrigger id="gc-type-filter" className="w-full sm:w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>{lo.gc.list.allTypes}</SelectItem>
+              {GC_CONTRACT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {lo.gc.types[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <FilterChips
           accent="gc"
@@ -362,24 +362,21 @@ export function GcContractsView() {
           }
         />
         <div className="flex min-w-0 flex-col gap-1.5">
-        <Label htmlFor="gc-page-size" className="text-xs text-(--text-muted)">
-          {lo.gc.list.pageSize}
-        </Label>
-        <Select
-          value={String(pageSize)}
-          onValueChange={(v) => setQuery({ pageSize: Number(v) })}
-        >
-          <SelectTrigger id="gc-page-size" className="w-24">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {GC_PAGE_SIZES.map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                {n}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Label htmlFor="gc-page-size" className="text-xs text-(--text-muted)">
+            {lo.gc.list.pageSize}
+          </Label>
+          <Select value={String(pageSize)} onValueChange={(v) => setQuery({ pageSize: Number(v) })}>
+            <SelectTrigger id="gc-page-size" className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GC_PAGE_SIZES.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -409,7 +406,7 @@ export function GcContractsView() {
           emptyDescription={hasFilters ? lo.gc.list.emptyHint : undefined}
           emptyAction={
             !hasFilters && canCreate ? (
-              <Button onClick={() => setCreateOpen(true)}>
+              <Button onClick={openCreate}>
                 <Plus aria-hidden="true" />
                 {lo.gc.list.create}
               </Button>
@@ -420,14 +417,11 @@ export function GcContractsView() {
       )}
 
       <GcContractFormDialog
-        open={dialogOpen}
+        open={dialog.open}
         onOpenChange={(open) => {
-          if (!open) {
-            setCreateOpen(false);
-            setEditing(null);
-          }
+          if (!open) setDialog((d) => ({ ...d, open: false }));
         }}
-        contract={editing ?? undefined}
+        contract={dialog.contract ?? undefined}
         onSaved={() => {
           void useGcListStore.getState().fetch();
         }}

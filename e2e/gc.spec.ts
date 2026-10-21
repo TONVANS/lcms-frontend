@@ -120,7 +120,9 @@ test.describe('crud', () => {
     await expect(editDialog).toBeHidden();
     await expect(page.getByText(editedTitle)).toBeVisible();
 
-    // delete
+    // delete. A hovered toast never auto-dismisses and can sit over the row actions on narrow screens,
+    // so move the pointer away first.
+    await page.mouse.move(0, 0);
     await page.getByRole('button', { name: `${lo.gc.list.delete} ${no}` }).click();
     const confirm = page.getByRole('dialog', { name: lo.gc.list.deleteTitle });
     await confirm.getByRole('button', { name: lo.confirm.confirm, exact: true }).click();

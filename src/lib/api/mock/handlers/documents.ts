@@ -6,6 +6,8 @@ import type { ModuleKey, Permission, User } from '@/types/domain';
 import { getMockSessionUser } from '../session';
 
 let documents = [...MOCK_DOCUMENTS];
+/** Real File objects for documents uploaded in this session; seeded documents have none. */
+const uploaded = new Map<string, File>();
 
 /** entityType -> owning module. Unknown types map to null and are always refused. */
 function moduleOf(entityType: string): ModuleKey | null {
@@ -54,7 +56,8 @@ export function register(mock: MockAdapter) {
     const doc = documents.find((d) => d.id === id);
     if (!doc) return [404, { code: 'NOT_FOUND', message: '' }];
     if (!can(user, doc.entityType, 'download')) return FORBIDDEN;
-    return [200, new Blob([`Mock content of ${doc.name}`], { type: doc.mime })];
+    const stored = uploaded.get(doc.id);
+    return [200, stored ?? new Blob([`Mock content of ${doc.name}`], { type: doc.mime })];
   });
 
   // POST /documents
@@ -62,12 +65,19 @@ export function register(mock: MockAdapter) {
     const user = getMockSessionUser();
     if (!user) return UNAUTHENTICATED;
     let name = 'Uploaded-Document.pdf';
+    let mime = 'application/pdf';
+    let size = 1024 * 1024 * 2.5;
     let entityType = 'ppa';
     let entityId = 'ppa-1';
+    let file: File | null = null;
 
     if (config.data instanceof FormData) {
-      const file = config.data.get('file') as File | null;
-      if (file) name = file.name;
+      file = config.data.get('file') as File | null;
+      if (file) {
+        name = file.name;
+        mime = file.type || 'application/octet-stream';
+        size = file.size;
+      }
       entityType = (config.data.get('entityType') as string) || entityType;
       entityId = (config.data.get('entityId') as string) || entityId;
     }
@@ -76,14 +86,15 @@ export function register(mock: MockAdapter) {
     const newDoc: DocumentFile = {
       id: `doc-${Date.now()}`,
       name,
-      mime: 'application/pdf',
-      size: 1024 * 1024 * 2.5,
+      mime,
+      size,
       version: '1.0',
       uploadedAt: new Date().toISOString(),
       uploadedBy: user.username,
       entityType,
       entityId,
     };
+    if (file) uploaded.set(newDoc.id, file);
     documents.unshift(newDoc);
     return [201, newDoc];
   });
@@ -94,8 +105,10 @@ export function register(mock: MockAdapter) {
     if (!user) return UNAUTHENTICATED;
     const id = config.url?.split('/').pop();
     const doc = documents.find((d) => d.id === id);
-    if (doc && !can(user, doc.entityType, 'delete')) return FORBIDDEN;
+    if (!doc) return [404, { code: 'NOT_FOUND', message: '' }];
+    if (!can(user, doc.entityType, 'delete')) return FORBIDDEN;
     documents = documents.filter((d) => d.id !== id);
+    uploaded.delete(doc.id);
     return [204];
   });
 }

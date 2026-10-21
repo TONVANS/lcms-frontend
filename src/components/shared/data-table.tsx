@@ -60,7 +60,7 @@ export interface DataTableProps<T extends object> {
 const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 
 const STAGGER_ROWS = 10;
-const ROW_CLASS = 'border-b border-[var(--border-subtle)] transition-colors hover:bg-(--row-hover)';
+const ROW_CLASS = 'border-b border-[var(--border-subtle)] hover:bg-(--row-hover)';
 const cellPadding = 'px-4 py-3.5';
 
 export function DataTable<T extends object>({
@@ -126,7 +126,10 @@ export function DataTable<T extends object>({
           <TableCaption className="sr-only">{caption}</TableCaption>
           <TableHeader className="bg-[var(--surface-inset)]">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b border-[var(--border-subtle)] hover:bg-transparent">
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-[var(--border-subtle)] hover:bg-transparent"
+              >
                 {headerGroup.headers.map((header) => {
                   const def = columns.find((c) => c.id === header.column.id);
                   const sorted = header.column.getIsSorted();
@@ -144,7 +147,7 @@ export function DataTable<T extends object>({
                           : undefined
                       }
                       className={cn(
-                        'text-xs font-semibold text-[var(--text-muted)] tracking-wider',
+                        'text-xs font-semibold tracking-wider text-[var(--text-muted)]',
                         cellPadding,
                         def?.align === 'end' && 'text-end',
                         def?.className,
@@ -154,9 +157,12 @@ export function DataTable<T extends object>({
                         <button
                           type="button"
                           onClick={() =>
-                            onSortChange({ id: header.column.id, order: sorted === 'asc' ? 'desc' : 'asc' })
+                            onSortChange({
+                              id: header.column.id,
+                              order: sorted === 'asc' ? 'desc' : 'asc',
+                            })
                           }
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md hover:text-[var(--text)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring) focus-visible:outline-solid"
                         >
                           {title}
                           {sorted === 'asc' ? (
@@ -219,7 +225,11 @@ export function DataTable<T extends object>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-48 text-center">
-                  <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
+                  <EmptyState
+                    title={emptyTitle}
+                    description={emptyDescription}
+                    action={emptyAction}
+                  />
                 </TableCell>
               </TableRow>
             )}
@@ -229,7 +239,12 @@ export function DataTable<T extends object>({
 
       {total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4 px-1 py-1 text-xs text-[var(--text-muted)]">
-          <div>{lo.common.showing(startItem === endItem ? startItem : `${startItem}–${endItem}`, total)}</div>
+          <div>
+            {lo.common.showing(
+              startItem === endItem ? startItem : `${startItem}–${endItem}`,
+              total,
+            )}
+          </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-1.5">
               <Button
@@ -242,7 +257,7 @@ export function DataTable<T extends object>({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="px-2 font-medium tabular-nums text-[var(--text)]">
+              <span className="px-2 font-medium text-[var(--text)] tabular-nums">
                 {page} / {totalPages}
               </span>
               <Button

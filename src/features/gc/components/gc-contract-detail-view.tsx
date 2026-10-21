@@ -109,10 +109,16 @@ function LoadedDetail({
   const info: { label: string; value: ReactNode }[] = [
     { label: lo.gc.fields.title, value: contract.title },
     { label: lo.gc.fields.type, value: lo.gc.types[contract.type] },
-    { label: lo.gc.fields.contractNo, value: <span className="tabular-nums">{contract.contractNo}</span> },
+    {
+      label: lo.gc.fields.contractNo,
+      value: <span className="tabular-nums">{contract.contractNo}</span>,
+    },
     { label: lo.gc.fields.counterparty, value: contract.counterparty ?? EMPTY },
     { label: lo.gc.fields.termText, value: contract.termText ?? EMPTY },
-    { label: lo.gc.fields.signedDate, value: <span className="tabular-nums">{formatDate(contract.signedDate)}</span> },
+    {
+      label: lo.gc.fields.signedDate,
+      value: <span className="tabular-nums">{formatDate(contract.signedDate)}</span>,
+    },
     {
       label: lo.gc.fields.effectiveDate,
       value: <span className="tabular-nums">{formatDate(contract.effectiveDate)}</span>,
@@ -127,13 +133,29 @@ function LoadedDetail({
     },
     {
       label: lo.gc.fields.value,
-      value: contract.value ? <span className="tabular-nums">{formatMoney(contract.value)}</span> : EMPTY,
+      value: contract.value ? (
+        <span className="tabular-nums">{formatMoney(contract.value)}</span>
+      ) : (
+        EMPTY
+      ),
     },
-    { label: lo.gc.fields.equity, value: <span className="tabular-nums">{formatEquity(contract.equity)}</span> },
+    {
+      label: lo.gc.fields.equity,
+      value: <span className="tabular-nums">{formatEquity(contract.equity)}</span>,
+    },
     { label: lo.gc.fields.implementer, value: contract.implementer ?? EMPTY },
-    { label: lo.gc.fields.notes, value: contract.notes ?? EMPTY },
-    { label: lo.gc.fields.createdAt, value: <span className="tabular-nums">{formatDate(contract.createdAt)}</span> },
-    { label: lo.gc.fields.updatedAt, value: <span className="tabular-nums">{formatDate(contract.updatedAt)}</span> },
+    {
+      label: lo.gc.fields.notes,
+      value: contract.notes ? <span className="whitespace-pre-wrap">{contract.notes}</span> : EMPTY,
+    },
+    {
+      label: lo.gc.fields.createdAt,
+      value: <span className="tabular-nums">{formatDate(contract.createdAt)}</span>,
+    },
+    {
+      label: lo.gc.fields.updatedAt,
+      value: <span className="tabular-nums">{formatDate(contract.updatedAt)}</span>,
+    },
     { label: lo.gc.fields.createdBy, value: contract.createdBy },
   ];
 
@@ -177,7 +199,10 @@ function LoadedDetail({
           aria-labelledby="gc-info-heading"
           className="min-w-0 lg:col-span-2"
         >
-          <h2 id="gc-info-heading" className="mb-4 font-serif text-lg font-semibold text-(--text-strong)">
+          <h2
+            id="gc-info-heading"
+            className="mb-4 font-serif text-lg font-semibold text-(--text-strong)"
+          >
             {lo.gc.detail.info}
           </h2>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -190,7 +215,10 @@ function LoadedDetail({
         </GlassCard>
 
         <GlassCard as="section" aria-labelledby="gc-dates-heading" className="min-w-0">
-          <h2 id="gc-dates-heading" className="mb-4 font-serif text-lg font-semibold text-(--text-strong)">
+          <h2
+            id="gc-dates-heading"
+            className="mb-4 font-serif text-lg font-semibold text-(--text-strong)"
+          >
             {lo.gc.detail.keyDates}
           </h2>
           <Timeline
@@ -205,7 +233,10 @@ function LoadedDetail({
       </div>
 
       <GlassCard as="section" aria-labelledby="gc-docs-heading" className="min-w-0">
-        <h2 id="gc-docs-heading" className="mb-4 font-serif text-lg font-semibold text-(--text-strong)">
+        <h2
+          id="gc-docs-heading"
+          className="mb-4 font-serif text-lg font-semibold text-(--text-strong)"
+        >
           {lo.gc.fields.documents}
         </h2>
         <DocumentManager
@@ -273,7 +304,10 @@ function GcContractDetail({ id }: { id: string }) {
           action={
             <Link
               href="/contracts/list"
-              className={cn('rounded-sm text-sm text-(--text-strong) underline underline-offset-4', FOCUS_RING)}
+              className={cn(
+                'rounded-sm text-sm text-(--text-strong) underline underline-offset-4',
+                FOCUS_RING,
+              )}
             >
               {lo.gc.detail.backToList}
             </Link>

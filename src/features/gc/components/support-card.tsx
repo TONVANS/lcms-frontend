@@ -8,7 +8,7 @@ export function SupportCard({ index }: { index?: number }) {
     <FadeIn variant="up" index={index}>
       <GlassCard highlight className="flex flex-col gap-4 p-6">
         <div>
-          <h3 className="font-serif text-base font-semibold">{lo.support.title}</h3>
+          <h2 className="font-serif text-base font-semibold">{lo.support.title}</h2>
           <p className="mt-1 text-xs opacity-80">{lo.support.intro}</p>
         </div>
         <SupportContactList onDark />
