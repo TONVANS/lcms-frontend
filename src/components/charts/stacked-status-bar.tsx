@@ -1,25 +1,44 @@
 'use client';
 
 import { DOT_TONE_CLASS } from '@/components/shared/status-badge';
-import { STATUS_META } from '@/lib/constants/status';
+import { STATUS_META, type StatusTone } from '@/lib/constants/status';
 import { formatNumber } from '@/lib/utils/number';
 import { cn } from '@/lib/utils/cn';
 import type { ContractStatus } from '@/types/domain';
 
-export interface StatusSegment {
-  status: ContractStatus;
+export interface StatusSegment<S extends string = ContractStatus> {
+  status: S;
   count: number;
 }
 
-export interface StackedStatusBarProps {
-  data: StatusSegment[];
+export interface StackedStatusBarProps<S extends string = ContractStatus> {
+  data: StatusSegment<S>[];
   total?: number;
   className?: string;
+  /** Defaults to the shared contract STATUS_META label. */
+  getLabel?: (status: S) => string;
+  /** Defaults to the shared contract STATUS_META tone. */
+  getTone?: (status: S) => StatusTone;
 }
 
 const TONE_COLOR = DOT_TONE_CLASS;
 
-export function StackedStatusBar({ data, total, className }: StackedStatusBarProps) {
+export function StackedStatusBar<S extends string = ContractStatus>({
+  data,
+  total,
+  className,
+  getLabel,
+  getTone,
+}: StackedStatusBarProps<S>) {
+  const metaOf = (status: S): { label: string; tone: StatusTone } => {
+    const meta = (STATUS_META as Record<string, { label: string; tone: StatusTone } | undefined>)[
+      status
+    ];
+    return {
+      label: getLabel ? getLabel(status) : (meta?.label ?? status),
+      tone: getTone ? getTone(status) : (meta?.tone ?? 'slate'),
+    };
+  };
   const sum = total ?? data.reduce((acc, curr) => acc + curr.count, 0);
 
   if (sum === 0) {
@@ -32,7 +51,7 @@ export function StackedStatusBar({ data, total, className }: StackedStatusBarPro
   const activeSegments = data.filter((d) => d.count > 0);
 
   const summary = activeSegments
-    .map((seg) => `${(STATUS_META[seg.status] ?? { label: seg.status }).label} ${formatNumber(seg.count)}`)
+    .map((seg) => `${metaOf(seg.status).label} ${formatNumber(seg.count)}`)
     .join(', ');
 
   return (
@@ -44,7 +63,7 @@ export function StackedStatusBar({ data, total, className }: StackedStatusBarPro
         className="flex h-3.5 w-full gap-[2px] overflow-hidden rounded-md bg-[var(--surface-inset)] p-[1px]">
         {activeSegments.map((seg) => {
           const percent = (seg.count / sum) * 100;
-          const meta = STATUS_META[seg.status] ?? { tone: 'slate', label: seg.status };
+          const meta = metaOf(seg.status);
           const colorClass = TONE_COLOR[meta.tone] ?? TONE_COLOR.slate;
 
           return (
@@ -64,7 +83,7 @@ export function StackedStatusBar({ data, total, className }: StackedStatusBarPro
       {/* Legend with status dot, label, count, and percent */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
         {data.map((seg) => {
-          const meta = STATUS_META[seg.status] ?? { tone: 'slate', label: seg.status };
+          const meta = metaOf(seg.status);
           const dotClass = TONE_COLOR[meta.tone] ?? TONE_COLOR.slate;
           const percent = sum > 0 ? (seg.count / sum) * 100 : 0;
 

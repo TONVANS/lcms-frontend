@@ -10,6 +10,7 @@ import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
+import { daysLeft } from '@/lib/utils/date';
 
 const toInput = (c: GeneralContract): GcContractInput => ({
   title: c.title,
@@ -153,6 +154,42 @@ describe('gc handlers', () => {
     expect(d.total).toBe(42);
     expect(d.byType).toHaveLength(14);
     expect(Object.values(d.byStatus).reduce((a, b) => a + b, 0)).toBe(42);
+  });
+
+  it('dashboard byStatus equals the list endpoint count per status', async () => {
+    setMockSession('gc.viewer', false);
+    const d = await gcService.dashboard();
+    for (const status of ['pending', 'active', 'expiring', 'expired'] as const) {
+      const listed = await gcService.list({ status, pageSize: 10 });
+      expect(d.byStatus[status], status).toBe(listed.total);
+    }
+  });
+
+  it('dashboard upcoming is 0..90 days, ascending, capped at 10, no expired or open-ended', async () => {
+    setMockSession('gc.viewer', false);
+    const { upcoming } = await gcService.dashboard();
+    expect(upcoming.length).toBeGreaterThan(0);
+    expect(upcoming.length).toBeLessThanOrEqual(10);
+    const ends = upcoming.map((c) => c.endDate);
+    expect(ends.every((e) => e !== null)).toBe(true);
+    expect([...ends].sort()).toEqual(ends);
+    const today = new Date();
+    for (const c of upcoming) {
+      const left = daysLeft(c.endDate, today)!;
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(left).toBeLessThanOrEqual(90);
+      expect(deriveGcStatus(c, today)).not.toBe('expired');
+    }
+  });
+
+  it('dashboard upcoming is capped at 10 even when more qualify', async () => {
+    setMockSession('gc.user', false);
+    const base = gcMockDb.all()[0]!;
+    for (let i = 0; i < 6; i += 1) {
+      await gcService.create({ ...toInput(base), contractNo: `CAP-${i}` });
+    }
+    const { upcoming } = await gcService.dashboard();
+    expect(upcoming).toHaveLength(10);
   });
 });
 

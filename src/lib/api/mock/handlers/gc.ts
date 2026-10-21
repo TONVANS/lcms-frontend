@@ -104,7 +104,8 @@ export function register(mock: MockAdapter): void {
         const left = daysLeft(c.endDate, today);
         return left !== null && left >= 0 && left <= 90;
       })
-      .sort((a, b) => compareNullsLast(a.endDate, b.endDate, 1));
+      .sort((a, b) => compareNullsLast(a.endDate, b.endDate, 1))
+      .slice(0, 10);
     return [200, { total: all.length, byStatus, byType, valueTotals, upcoming }];
   });
 

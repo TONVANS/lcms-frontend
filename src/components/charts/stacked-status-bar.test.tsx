@@ -41,3 +41,38 @@ describe('StackedStatusBar a11y and motion', () => {
     expect(container.innerHTML).not.toContain('transition');
   });
 });
+
+describe('StackedStatusBar custom label and tone', () => {
+  const gc = [
+    { status: 'expiring', count: 2 },
+    { status: 'expired', count: 1 },
+  ];
+
+  it('uses getLabel for legend, summary and tooltip', () => {
+    render(
+      <StackedStatusBar
+        data={gc}
+        getLabel={(s) => `custom-${s}`}
+        getTone={() => 'rose'}
+      />,
+    );
+    expect(screen.getByText('custom-expiring')).toBeInTheDocument();
+    expect(screen.getByRole('img')).toHaveAccessibleName(
+      expect.stringContaining('custom-expired 1'),
+    );
+    expect(screen.getByTitle(/^custom-expired: 1/)).toBeInTheDocument();
+  });
+
+  it('uses getTone for the segment and dot colours', () => {
+    const { container } = render(
+      <StackedStatusBar data={gc} getLabel={(s) => s} getTone={() => 'violet'} />,
+    );
+    expect(container.innerHTML).not.toContain('bg-[#059669]');
+    expect(container.querySelectorAll('[class*="bg-[#7C3AED]"], [class*="bg-violet"]').length).toBeGreaterThan(0);
+  });
+
+  it('keeps STATUS_META defaults when no props are given', () => {
+    render(<StackedStatusBar data={[{ status: 'active', count: 3 }]} />);
+    expect(screen.getByText(lo.status.active)).toBeInTheDocument();
+  });
+});

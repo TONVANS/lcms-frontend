@@ -109,6 +109,13 @@ export const lo = {
     buckets: { within7: 'ພາຍໃນ 7 ມື້', within30: '8–30 ມື້', within90: '31–90 ມື້' },
     loadError: 'ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໜ້າຫຼັກໄດ້',
   },
+  support: {
+    title: 'ຕິດຕໍ່ຝ່າຍສະໜັບສະໜູນ',
+    menu: 'ຕິດຕໍ່ຝ່າຍສະໜັບສະໜູນ',
+    phone: 'ເບີໂທ',
+    email: 'ອີເມວ',
+    intro: 'ຕິດຕໍ່ທີມສະໜັບສະໜູນລະບົບ ເມື່ອພົບບັນຫາໃນການໃຊ້ງານ',
+  },
   forbidden: { title: 'ບໍ່ມີສິດເຂົ້າເຖິງ' },
   nav: {
     dashboard: 'ພາບລວມ',
@@ -325,6 +332,19 @@ export const lo = {
       emptyHint: 'ລອງປ່ຽນຕົວກອງ ຫຼື ຄຳຄົ້ນຫາ',
       pageSize: 'ຈຳນວນຕໍ່ໜ້າ',
       countdown: 'ເຫຼືອເວລາ',
+    },
+    dashboard: {
+      kpiTotal: 'ສັນຍາທັງໝົດ',
+      kpiActive: 'ມີຜົນບັງຄັບໃຊ້',
+      kpiExpiring: 'ໃກ້ໝົດອາຍຸ (ພາຍໃນ 60 ມື້)',
+      kpiExpired: 'ໝົດອາຍຸແລ້ວ',
+      valueTotal: (currency: string) => `ມູນຄ່າລວມ (${currency})`,
+      contractsCount: (n: number) => `${n} ສັນຍາ`,
+      byType: 'ສັນຍາແຍກຕາມປະເພດ',
+      byStatus: 'ສະຖານະສັນຍາ',
+      upcoming90: 'ສັນຍາໝົດອາຍຸພາຍໃນ 90 ມື້',
+      noUpcoming: 'ບໍ່ມີສັນຍາໝົດອາຍຸພາຍໃນ 90 ມື້ຂ້າງໜ້າ',
+      emptyRegister: 'ຍັງບໍ່ມີສັນຍາໃນລະບົບ',
     },
     detail: {
       keyDates: 'ວັນທີສຳຄັນ',

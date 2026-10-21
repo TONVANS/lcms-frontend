@@ -6,6 +6,7 @@ const pages = [
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
   { name: 'ppa', path: '/ppa', user: 'admin' },
+  { name: 'gc-dashboard', path: '/contracts', user: 'admin' },
   { name: 'gc-list', path: '/contracts/list', user: 'admin' },
   { name: 'gc-wizard', path: '/contracts/new', user: 'admin' },
 ] as const;
