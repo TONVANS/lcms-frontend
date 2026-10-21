@@ -181,7 +181,7 @@ export function DataTable<T extends object>({
               Array.from({ length: Math.min(pageSize, 5) }).map((_, i) => (
                 <TableRow key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)]">
                   {columns.map((col) => (
-                    <TableCell key={col.id} className={cellPadding}>
+                    <TableCell key={col.id} className={cn(cellPadding, col.className)}>
                       <Skeleton className="h-5 w-full max-w-[140px]" />
                     </TableCell>
                   ))}

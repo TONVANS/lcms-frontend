@@ -190,25 +190,33 @@ export function GcContractsView() {
         id: 'title',
         header: lo.gc.fields.title,
         sortable: true,
-        className: 'min-w-56 whitespace-normal',
-        cell: (c) => <span className="font-semibold text-(--text-strong)">{c.title}</span>,
+        className: 'min-w-48 whitespace-normal',
+        cell: (c) => (
+          <>
+            <span className="font-semibold text-(--text-strong)">{c.title}</span>
+            <span className="mt-0.5 block text-xs text-(--text-secondary) 2xl:hidden">
+              {lo.gc.types[c.type]}
+            </span>
+          </>
+        ),
       },
       {
         id: 'type',
         header: lo.gc.fields.type,
-        className: 'min-w-48 whitespace-normal',
+        className: 'hidden 2xl:table-cell min-w-48 whitespace-normal',
         cell: (c) => <span className="text-xs text-(--text-secondary)">{lo.gc.types[c.type]}</span>,
       },
       {
         id: 'counterparty',
         header: lo.gc.fields.counterparty,
-        className: 'min-w-40 whitespace-normal',
+        className: 'hidden 2xl:table-cell min-w-40 whitespace-normal',
         cell: (c) => c.counterparty ?? '—',
       },
       {
         id: 'signedDate',
         header: lo.gc.fields.signedDate,
         sortable: true,
+        className: 'hidden 2xl:table-cell',
         cell: (c) => <span className="tabular-nums">{formatDate(c.signedDate)}</span>,
       },
       {
@@ -217,7 +225,12 @@ export function GcContractsView() {
         sortable: true,
         cell: (c) =>
           c.endDate ? (
-            <span className="tabular-nums">{formatDate(c.endDate)}</span>
+            <>
+              <span className="tabular-nums">{formatDate(c.endDate)}</span>
+              <span className="mt-1 block 2xl:hidden">
+                <CountdownBadge days={daysLeft(c.endDate)} />
+              </span>
+            </>
           ) : (
             lo.gc.openEnded
           ),
@@ -241,6 +254,7 @@ export function GcContractsView() {
       {
         id: 'countdown',
         header: lo.gc.list.countdown,
+        className: 'hidden 2xl:table-cell',
         cell: (c) => (c.endDate ? <CountdownBadge days={daysLeft(c.endDate)} /> : null),
       },
     ];

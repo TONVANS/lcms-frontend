@@ -73,6 +73,17 @@ describe('GcContractsView', () => {
     expect(screen.getByRole('columnheader', { name: lo.table.actions })).toBeInTheDocument();
   });
 
+  it('renders type and countdown both in the title/end sublines and in their own columns', async () => {
+    session('gc.viewer');
+    render(<GcContractsView />);
+    const first = (await loadedRows())[1]!;
+    const c = all().find((x) => x.contractNo === within(first).getByRole('link').textContent)!;
+    // jsdom has no CSS: the 2xl:hidden subline and the 2xl:table-cell column both render.
+    expect(within(first).getAllByText(lo.gc.types[c.type])).toHaveLength(2);
+    expect(screen.getByRole('columnheader', { name: lo.gc.fields.type })).toHaveClass('hidden', '2xl:table-cell');
+    expect(screen.getByRole('columnheader', { name: lo.gc.list.countdown })).toHaveClass('hidden', '2xl:table-cell');
+  });
+
   it('links the contract number to the detail page', async () => {
     session('gc.viewer');
     render(<GcContractsView />);
