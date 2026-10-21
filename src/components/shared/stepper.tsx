@@ -14,16 +14,18 @@ export interface StepperProps {
   steps: StepItem[];
   currentStep: number;
   onStepClick?: (step: number) => void;
+  /** Highest step already reached; steps up to it stay done and clickable. Defaults to `currentStep`. */
+  maxReachedStep?: number;
   className?: string;
 }
 
-export function Stepper({ steps, currentStep, onStepClick, className }: StepperProps) {
+export function Stepper({ steps, currentStep, onStepClick, maxReachedStep = currentStep, className }: StepperProps) {
   return (
     <nav aria-label={lo.stepper.nav} className={cn('w-full', className)}>
       <ol role="list" className="flex items-center justify-between">
         {steps.map((step, idx) => {
-          const isDone = currentStep > step.id;
           const isCurrent = currentStep === step.id;
+          const isDone = !isCurrent && (currentStep > step.id || maxReachedStep >= step.id);
           const state = isDone ? 'done' : isCurrent ? 'current' : 'todo';
           const isClickable = Boolean(onStepClick && isDone);
 

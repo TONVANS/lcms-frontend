@@ -26,11 +26,11 @@ import { formatMoney } from '@/lib/utils/money';
 import type { ApiError } from '@/types/api';
 import { gcService } from '../api/gc.service';
 import { deriveGcStatus, GC_STATUS_TONE } from '../lib/derive-status';
+import { EMPTY, formatEquity } from '../lib/format';
 import { buildGcKeyDates } from '../lib/key-dates';
-import type { GcEquity, GeneralContract } from '../types';
+import type { GeneralContract } from '../types';
 import { GcContractFormDialog } from './gc-contract-form-dialog';
 
-const EMPTY = '—';
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 
@@ -39,11 +39,6 @@ type LoadState =
   | { kind: 'ready'; contract: GeneralContract }
   | { kind: 'notFound' }
   | { kind: 'error'; error: ApiError };
-
-function formatEquity(e: GcEquity | null): string {
-  if (!e) return EMPTY;
-  return e.kind === 'percent' ? `${e.percent}%` : formatMoney(e.money);
-}
 
 function BackLink() {
   return (

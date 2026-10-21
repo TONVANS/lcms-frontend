@@ -43,4 +43,14 @@ describe('Stepper', () => {
     await user.click(buttons[0]);
     expect(onStepClick).toHaveBeenCalledWith(1);
   });
+
+  it('maxReachedStep keeps later reached steps done and clickable, current stays current', async () => {
+    const user = userEvent.setup();
+    const onStepClick = vi.fn();
+    render(<Stepper steps={steps} currentStep={1} maxReachedStep={3} onStepClick={onStepClick} />);
+    expect(screen.getByRole('button', { name: lo.stepper.stepName(1, 'ຂັ້ນຕອນທີ 1', 'current') })).toHaveAttribute('aria-current', 'step');
+    await user.click(screen.getByRole('button', { name: lo.stepper.stepName(3, 'ຂັ້ນຕອນທີ 3', 'done') }));
+    expect(onStepClick).toHaveBeenCalledWith(3);
+    expect(screen.getByRole('button', { name: lo.stepper.stepName(4, 'ຂັ້ນຕອນທີ 4', 'todo') })).toBeDisabled();
+  });
 });

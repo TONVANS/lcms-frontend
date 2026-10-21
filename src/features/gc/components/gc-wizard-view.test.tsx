@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -191,6 +191,50 @@ describe('GcWizardView steps', () => {
   });
 });
 
+describe('GcWizardView revisiting reached steps', () => {
+  const stepperBtn = (n: number, label: string, state: 'done' | 'current' | 'todo') =>
+    within(screen.getByRole('navigation', { name: lo.stepper.nav })).getByRole('button', {
+      name: lo.stepper.stepName(n, label, state),
+    });
+
+  it('review edit link goes back to step 1 and the Stepper returns to review', async () => {
+    const user = userEvent.setup();
+    render(<GcWizardView />);
+    await toReview(user);
+    await user.click(screen.getByRole('button', { name: W.editSection(W.step1) }));
+    await heading(W.step1);
+    expect(stepperBtn(4, W.step4, 'done')).toBeEnabled();
+    await user.click(stepperBtn(4, W.step4, 'done'));
+    await heading(W.step4);
+    expect(screen.getByRole('heading', { level: 3, name: W.review })).toBeInTheDocument();
+  });
+
+  it('a forward jump stops at the first invalid intermediate step and focuses its field', async () => {
+    const user = userEvent.setup();
+    render(<GcWizardView />);
+    await toReview(user);
+    await user.click(screen.getByRole('button', { name: W.editSection(W.step1) }));
+    await heading(W.step1);
+    await user.click(nextBtn());
+    await heading(W.step2);
+    // End date becomes earlier than the effective date (10th).
+    await user.click(screen.getByRole('button', { name: lo.datePicker.clear }));
+    await pickDate(user, F.endDate, 7);
+    await user.click(stepperBtn(4, W.step4, 'done'));
+    const end = screen.getByRole('button', { name: new RegExp(F.endDate) });
+    await waitFor(() => expect(end).toHaveFocus());
+    expect(end).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('heading', { level: 2, name: W.step2 })).toBeInTheDocument();
+  });
+
+  it('progress on the review step counts all completed steps', async () => {
+    const user = userEvent.setup();
+    render(<GcWizardView />);
+    await toReview(user);
+    expect(screen.getByRole('progressbar', { name: W.progress })).toHaveAttribute('aria-valuenow', '3');
+  });
+});
+
 describe('GcWizardView review and submit', () => {
   it('review shows formatted values with lo labels and edit links that jump to the step', async () => {
     const user = userEvent.setup();
@@ -283,10 +327,50 @@ describe('GcWizardView review and submit', () => {
     await waitFor(() => expect(release).toBeTypeOf('function'));
     release();
     await waitFor(() => expect(nav.replace).toHaveBeenCalledTimes(1));
-    // Navigation did not unmount the view here; a further click must not create again.
+    // Navigation did not unmount the view here; the form stays locked and cannot create again.
+    expect(submitBtn()).toBeDisabled();
     await user.click(submitBtn());
-    await waitFor(() => expect(submitBtn()).toBeEnabled());
     expect(create).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: W.back })).toBeDisabled();
+    expect(screen.getByRole('link', { name: lo.gc.form.cancel })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: W.editSection(W.step1) })).toBeDisabled();
+    expect(
+      within(screen.getByRole('navigation', { name: lo.stepper.nav })).getByRole('button', {
+        name: lo.stepper.stepName(1, W.step1, 'done'),
+      }),
+    ).toBeDisabled();
+  });
+
+  it('two synchronous clicks on submit create exactly once', async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(gcService, 'create');
+    vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    render(<GcWizardView />);
+    await toReview(user);
+    const btn = submitBtn();
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    await waitFor(() => expect(nav.replace).toHaveBeenCalled());
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('after unmount mid-upload it does not navigate or toast success, but still reports failed files', async () => {
+    const user = userEvent.setup();
+    let fail!: () => void;
+    const upload = vi
+      .spyOn(documentsService, 'upload')
+      .mockImplementation(() => new Promise((_, rej) => (fail = () => rej(new Error('boom')))));
+    const { unmount } = render(<GcWizardView />);
+    await toReview(user);
+    await user.upload(fileInput(), [pdf('late.pdf')]);
+    await user.click(submitBtn());
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(1));
+    unmount();
+    fail();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(toast.error).mock.calls[0][0]).toContain('late.pdf');
+    expect(nav.replace).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('a staged file can be removed before submit', async () => {

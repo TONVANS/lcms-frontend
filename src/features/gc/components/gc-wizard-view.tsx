@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils/cn';
 import { formatDate } from '@/lib/utils/date';
 import { formatMoney } from '@/lib/utils/money';
 import { gcService } from '../api/gc.service';
+import { EMPTY, displayDate as date, displayText as text, formatEquity } from '../lib/format';
 import { emptyGcForm, gcFormSchema, toGcPayload, type GcFormValues } from '../schemas/gc.schema';
 import {
   GC_FIELD_ORDER,
@@ -32,7 +33,6 @@ import {
 } from './gc-contract-form-fields';
 import { applyGcServerErrors } from './gc-server-errors';
 
-const EMPTY = '—';
 const TOTAL_STEPS = 4;
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
@@ -82,13 +82,6 @@ interface StagedFile {
   id: string;
   file: File;
 }
-
-const text = (s: string | undefined): string => (s && s.trim() !== '' ? s.trim() : EMPTY);
-const date = (s: string | null | undefined): string => (s ? formatDate(s) : EMPTY);
-const equityText = (e: GcFormValues['equity'] | undefined): string => {
-  if (!e) return EMPTY;
-  return e.kind === 'percent' ? `${e.percent}%` : formatMoney(e.money);
-};
 
 function useFormValues(control: Control<GcFormValues>): GcFormValues {
   return useWatch({ control }) as GcFormValues;
@@ -155,10 +148,12 @@ function ReviewItem({ label, children }: { label: string; children: ReactNode })
 function ReviewSection({
   step,
   onEdit,
+  locked = false,
   children,
 }: {
   step: number;
   onEdit?: (step: number) => void;
+  locked?: boolean;
   children: ReactNode;
 }) {
   const headingId = useId();
@@ -174,6 +169,7 @@ function ReviewSection({
             type="button"
             variant="ghost"
             size="sm"
+            disabled={locked}
             aria-label={lo.gc.wizard.editSection(label)}
             onClick={() => onEdit(step)}
           >
@@ -190,10 +186,12 @@ function ReviewStep({
   control,
   staged,
   onEdit,
+  locked,
 }: {
   control: Control<GcFormValues>;
   staged: StagedFile[];
   onEdit: (step: number) => void;
+  locked: boolean;
 }) {
   const v = useFormValues(control);
   const f = lo.gc.fields;
@@ -203,7 +201,7 @@ function ReviewStep({
       <h3 id={headingId} className="text-base font-semibold text-(--text-strong)">
         {lo.gc.wizard.review}
       </h3>
-      <ReviewSection step={1} onEdit={onEdit}>
+      <ReviewSection step={1} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.title}>{text(v.title)}</ReviewItem>
         <ReviewItem label={f.type}>{v.type ? lo.gc.types[v.type] : EMPTY}</ReviewItem>
         <ReviewItem label={f.contractNo}>
@@ -212,7 +210,7 @@ function ReviewStep({
         <ReviewItem label={f.counterparty}>{text(v.counterparty)}</ReviewItem>
         <ReviewItem label={f.implementer}>{text(v.implementer)}</ReviewItem>
       </ReviewSection>
-      <ReviewSection step={2} onEdit={onEdit}>
+      <ReviewSection step={2} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.signedDate}>
           <span className="tabular-nums">{date(v.signedDate)}</span>
         </ReviewItem>
@@ -224,12 +222,12 @@ function ReviewStep({
         </ReviewItem>
         <ReviewItem label={f.termText}>{text(v.termText)}</ReviewItem>
       </ReviewSection>
-      <ReviewSection step={3} onEdit={onEdit}>
+      <ReviewSection step={3} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.value}>
           <span className="tabular-nums">{v.value ? formatMoney(v.value) : EMPTY}</span>
         </ReviewItem>
         <ReviewItem label={f.equity}>
-          <span className="tabular-nums">{equityText(v.equity)}</span>
+          <span className="tabular-nums">{formatEquity(v.equity)}</span>
         </ReviewItem>
       </ReviewSection>
       <ReviewSection step={4}>
@@ -255,6 +253,9 @@ export function GcWizardView() {
   const { control, handleSubmit, trigger } = form;
 
   const [step, setStep] = useState(1);
+  // Furthest step the user has reached, and how many steps from the start have passed validation.
+  const [maxReached, setMaxReached] = useState(1);
+  const [validated, setValidated] = useState(0);
   const [staged, setStaged] = useState<StagedFile[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -262,10 +263,18 @@ export function GcWizardView() {
   // Guards against a second create: the lock is synchronous, the id survives a failed upload.
   const busyRef = useRef(false);
   const createdIdRef = useRef<string | null>(null);
+  const mounted = useRef(true);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pendingFocus = useRef<string | null>(null);
   const prevStep = useRef(step);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   // After a step change, focus the requested field once it is mounted, else announce the heading.
   useEffect(() => {
@@ -284,17 +293,27 @@ export function GcWizardView() {
       return;
     }
     pendingFocus.current = focusId;
+    setMaxReached((m) => Math.max(m, target));
     setStep(target);
   };
 
-  const handleNext = async () => {
-    const fields = STEP_FIELDS[step];
-    const ok = await trigger([...fields]);
-    if (!ok) {
-      focusById(firstInvalidFieldId(pickErrors(form, fields)));
+  /** Going back is free; going forward validates every step from the current one up to the target. */
+  const goTo = async (target: number) => {
+    if (target <= step) {
+      goToStep(target);
       return;
     }
-    goToStep(Math.min(step + 1, TOTAL_STEPS));
+    for (let s = step; s < target; s++) {
+      const fields = STEP_FIELDS[s];
+      const ok = await trigger([...fields]);
+      if (!ok) {
+        setValidated((v) => Math.min(v, s - 1));
+        goToStep(s, firstInvalidFieldId(pickErrors(form, fields)));
+        return;
+      }
+    }
+    setValidated((v) => Math.max(v, target - 1));
+    goToStep(target);
   };
 
   const onInvalid = (errors: FieldErrors<GcFormValues>) => {
@@ -315,6 +334,7 @@ export function GcWizardView() {
           createdIdRef.current = created.id;
           justCreated = true;
         } catch (e) {
+          if (!mounted.current) return;
           const err = normalizeError(e);
           const { matched, unmatched, focusId } = applyGcServerErrors(form, err);
           if (matched.length > 0) goToStep(stepOfField(matched[0]), focusId);
@@ -331,21 +351,26 @@ export function GcWizardView() {
         staged.map((s) => documentsService.upload(s.file, 'gc', id)),
       );
       const failed = staged.filter((_, i) => results[i].status === 'rejected');
-      setStaged(failed);
-      if (justCreated) toast.success(lo.gc.wizard.created);
+      // The user should learn about failed files even if they already navigated away.
       if (failed.length > 0) {
         toast.error(lo.gc.wizard.uploadFailed(failed.map((s) => s.file.name).join(', ')));
       }
+      if (!mounted.current) return;
+      setStaged(failed);
+      if (justCreated) toast.success(lo.gc.wizard.created);
       router.replace(`/contracts/${id}`);
     } finally {
-      busyRef.current = false;
-      setSubmitting(false);
+      // Once the contract exists navigation always follows, so the form stays locked until unmount.
+      if (createdIdRef.current === null) {
+        busyRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (step < TOTAL_STEPS) void handleNext();
+    if (step < TOTAL_STEPS) void goTo(step + 1);
     else void handleSubmit(onValid, onInvalid)();
   };
 
@@ -360,13 +385,17 @@ export function GcWizardView() {
     mime: s.file.type,
   }));
 
-  const completed = step - 1;
   const stepLabel = STEP_LABELS[step - 1];
 
   return (
     <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6">
       <PageHeader eyebrow={MODULES.gc.code} title={lo.gc.wizard.title} accent="gc" />
-      <Stepper steps={STEPS} currentStep={step} onStepClick={(s) => goToStep(s)} />
+      <Stepper
+        steps={STEPS}
+        currentStep={step}
+        maxReachedStep={maxReached}
+        onStepClick={submitting ? undefined : (s) => void goTo(s)}
+      />
       <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <GlassCard accent="gc" className="min-w-0">
           <form noValidate aria-busy={submitting} onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -410,7 +439,7 @@ export function GcWizardView() {
                     />
                   ) : null}
                 </section>
-                <ReviewStep control={control} staged={staged} onEdit={(s) => goToStep(s)} />
+                <ReviewStep control={control} staged={staged} onEdit={(s) => void goTo(s)} locked={submitting} />
               </>
             ) : null}
 
@@ -419,13 +448,22 @@ export function GcWizardView() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--border-subtle) pt-4">
               <Link
                 href="/contracts/list"
-                className={cn(buttonVariants({ variant: 'ghost' }), FOCUS_RING)}
+                aria-disabled={submitting || undefined}
+                tabIndex={submitting ? -1 : undefined}
+                onClick={(e) => {
+                  if (submitting) e.preventDefault();
+                }}
+                className={cn(
+                  buttonVariants({ variant: 'ghost' }),
+                  FOCUS_RING,
+                  submitting && 'pointer-events-none opacity-50',
+                )}
               >
                 {lo.gc.form.cancel}
               </Link>
               <div className="flex flex-wrap items-center gap-3">
                 {step > 1 ? (
-                  <Button type="button" variant="secondary" disabled={submitting} onClick={() => goToStep(step - 1)}>
+                  <Button type="button" variant="secondary" disabled={submitting} onClick={() => void goTo(step - 1)}>
                     {lo.gc.wizard.back}
                   </Button>
                 ) : null}
@@ -440,7 +478,7 @@ export function GcWizardView() {
             </div>
           </form>
         </GlassCard>
-        <SummaryAside control={control} completed={completed} />
+        <SummaryAside control={control} completed={validated} />
       </div>
     </div>
   );
