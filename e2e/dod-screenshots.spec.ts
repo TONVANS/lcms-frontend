@@ -27,6 +27,18 @@ for (const theme of ['dark', 'light'] as const) {
       if (s.path === '/contracts/list') {
         await page.getByRole('link', { name: /^GC-2026-/ }).first().waitFor();
       }
+      if (s.path === '/contracts') {
+        await expect(page.getByRole('heading', { name: lo.gc.dashboard.byType })).toBeVisible();
+      }
+      if (s.path === '/contracts/alerts') {
+        await expect(
+          page.getByRole('heading', { level: 2 }).first().or(page.getByText(lo.gc.alerts.empty)),
+        ).toBeVisible();
+      }
+      if (s.path === '/ppa') {
+        // PPA dashboard section headings (h3) only render once the data has loaded.
+        await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
+      }
       if (s.detail) {
         // The id is read from the list: open the first row.
         await page.getByRole('link', { name: /^GC-2026-/ }).first().click();

@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { lo } from '../src/lib/i18n/lo';
 import { loginAs, setTheme } from './helpers';
 
-type Ready = 'list' | 'detail' | 'detail-editor' | 'not-found';
+type Ready = 'detail' | 'detail-editor' | 'not-found';
 
 const pages: readonly { name: string; path: string; user: string | null; ready?: Ready }[] = [
   { name: 'login', path: '/login', user: null },
@@ -29,7 +29,22 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
     await expect(page.getByRole('heading', { name: lo.gc.detail.info })).toBeVisible();
     // document list finished loading
     await expect(page.getByLabel(lo.common.loading)).toHaveCount(0);
-    if (ready === 'detail-editor') await expect(page.getByLabel(lo.dropzone.prompt)).toBeAttached();
+    if (ready === 'detail-editor') {
+      await expect(page.getByLabel(lo.dropzone.prompt)).toBeAttached();
+      await expect(page.getByText(lo.dropzone.prompt)).toBeVisible();
+    }
+  }
+  // Dashboard and alerts render skeletons first: wait for content that only exists once data has loaded.
+  if (path === '/contracts') {
+    await expect(page.getByRole('heading', { name: lo.gc.dashboard.byType })).toBeVisible();
+  }
+  if (path === '/ppa') {
+    await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
+  }
+  if (path === '/contracts/alerts') {
+    await expect(
+      page.getByRole('heading', { level: 2 }).first().or(page.getByText(lo.gc.alerts.empty)),
+    ).toBeVisible();
   }
   if (ready === 'not-found') await expect(page.getByText(lo.gc.detail.notFound)).toBeVisible();
 }
