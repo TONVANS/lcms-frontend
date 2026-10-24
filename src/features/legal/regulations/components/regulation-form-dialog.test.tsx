@@ -48,9 +48,9 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>, number = '
   await pickDate(user);
 }
 
-async function pickDate(user: ReturnType<typeof userEvent.setup>) {
+async function pickDate(user: ReturnType<typeof userEvent.setup>, dd = '15', month = new Date()) {
   await user.click(screen.getByRole('button', { name: new RegExp(F.issuedDate) }));
-  const day = format(new Date(), '15/MM/yyyy');
+  const day = format(month, `'${dd}'/MM/yyyy`);
   await user.click(await screen.findByRole('button', { name: new RegExp(`^${day}`) }));
 }
 
@@ -165,8 +165,30 @@ describe('RegulationFormDialog', () => {
     const year = label(F.year);
     await user.clear(year);
     await user.type(year, '2001');
-    await pickDate(user);
+    // a different day, so the picker really calls onChange
+    await pickDate(user, '16');
+    expect(screen.getByRole('button', { name: new RegExp(F.issuedDate) })).toHaveTextContent(
+      format(new Date(), '16/MM/yyyy'),
+    );
     expect(year).toHaveValue('2001');
+  });
+
+  it('edit: a stored year that differs from the issued date is not overwritten by a new date', async () => {
+    const user = userEvent.setup();
+    const reg = { ...regulationsMockDb.all()[0]!, issuedDate: '2020-03-10', year: 2015 };
+    setup(reg);
+    await pickDate(user, '15', new Date(2020, 2, 1)); // picker opens on the stored month
+    expect(label(F.year)).toHaveValue('2015');
+  });
+
+  it('edit: a stored year equal to the issued date year follows a new date', async () => {
+    const user = userEvent.setup();
+    const reg = { ...regulationsMockDb.all()[0]!, issuedDate: '2020-03-10', year: 2020 };
+    setup(reg);
+    await user.click(screen.getByRole('button', { name: new RegExp(F.issuedDate) }));
+    await user.selectOptions(await screen.findByRole('combobox', { name: lo.datePicker.year }), '2021');
+    await user.click(await screen.findByRole('button', { name: /^15\/03\/2021/ }));
+    expect(label(F.year)).toHaveValue('2021');
   });
 
   it('link rows can be removed with a Lao-labelled button', async () => {
