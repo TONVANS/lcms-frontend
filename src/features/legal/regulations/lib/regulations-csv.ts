@@ -5,19 +5,7 @@ import type { Regulation } from '../types';
 
 /** Spec §6.6 columns, in order. Dates are dd/mm/yyyy; the year stays a plain number. */
 export function buildRegulationsCsv(items: readonly Regulation[]): string {
-  const f = lo.legal.fields;
-  const headers = [
-    f.number,
-    f.issuedDate,
-    f.title,
-    f.type,
-    f.year,
-    f.purpose,
-    f.responsible,
-    f.unit,
-    f.status,
-    f.externalLinks,
-  ];
+  const headers = lo.legal.regulations.csv.headers;
   const rows = items.map((r) => [
     r.number,
     formatDate(r.issuedDate),

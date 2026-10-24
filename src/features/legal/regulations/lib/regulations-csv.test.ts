@@ -26,21 +26,14 @@ const lines = (csv: string) => csv.replace(/^﻿/, '').trimEnd().split('\r\n');
 describe('buildRegulationsCsv', () => {
   it('header row is the 10 spec columns', () => {
     const header = lines(buildRegulationsCsv([]))[0];
-    const f = lo.legal.fields;
-    const expected = [
-      f.number,
-      f.issuedDate,
-      f.title,
-      f.type,
-      f.year,
-      f.purpose,
-      f.responsible,
-      f.unit,
-      f.status,
-      f.externalLinks,
-    ];
-    expect(header).toBe(expected.map((h) => `"${h}"`).join(','));
+    const expected = lo.legal.regulations.csv.headers;
     expect(expected).toHaveLength(10);
+    expect(header).toBe(expected.map((h) => `"${h}"`).join(','));
+    // spec §6.6 uses shorter texts than the form field labels
+    expect(expected[3]).not.toBe(lo.legal.fields.type);
+    expect(expected[5]).not.toBe(lo.legal.fields.purpose);
+    expect(expected[7]).not.toBe(lo.legal.fields.unit);
+    expect(expected[9]).not.toBe(lo.legal.fields.externalLinks);
   });
 
   it("a row with two links joins them with '; '", () => {
