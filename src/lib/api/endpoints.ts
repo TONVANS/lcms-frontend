@@ -24,6 +24,13 @@ export const endpoints = {
     detail: (id: string) => `/contracts/${id}`,
     dashboard: '/contracts/dashboard',
   },
+  legal: {
+    regulations: '/legal/regulations',
+    regulation: (id: string) => `/legal/regulations/${encodeURIComponent(id)}`,
+    cases: '/legal/cases',
+    case: (id: string) => `/legal/cases/${encodeURIComponent(id)}`,
+    dashboard: '/legal/dashboard',
+  },
   documents: {
     list: (entityType: string, entityId: string) => `/documents?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`,
     upload: '/documents',
