@@ -51,7 +51,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>, number = '
 async function pickDate(user: ReturnType<typeof userEvent.setup>, dd = '15', month = new Date()) {
   await user.click(screen.getByRole('button', { name: new RegExp(F.issuedDate) }));
   const day = format(month, `'${dd}'/MM/yyyy`);
-  await user.click(await screen.findByRole('button', { name: new RegExp(`^${day}`) }));
+  await user.click(await screen.findByRole('button', { name: new RegExp(`(^|, )${day}`) }));
 }
 
 beforeEach(() => {
@@ -187,7 +187,7 @@ describe('RegulationFormDialog', () => {
     setup(reg);
     await user.click(screen.getByRole('button', { name: new RegExp(F.issuedDate) }));
     await user.selectOptions(await screen.findByRole('combobox', { name: lo.datePicker.year }), '2021');
-    await user.click(await screen.findByRole('button', { name: /^15\/03\/2021/ }));
+    await user.click(await screen.findByRole('button', { name: /(^|, )15\/03\/2021/ }));
     expect(label(F.year)).toHaveValue('2021');
   });
 
