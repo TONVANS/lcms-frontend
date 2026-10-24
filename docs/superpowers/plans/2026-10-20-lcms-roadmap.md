@@ -20,7 +20,7 @@ Escalation rule: if a Sonnet implementer fails the same verification twice, it s
 | 1 Foundation: bootstrap, tokens, fonts, theme, API layer + mocks, auth, RBAC, AppShell, shared components, Home | `2026-10-20-lcms-phase1-foundation.md` | now | Ready for review |
 | 2 PPA module | `…-lcms-phase2-ppa.md` | after Phase 1 merges | — |
 | 3 General Contract module | `…-lcms-phase3-gc.md` | after Phase 2 merges (reuses PPA list/detail/wizard patterns) | — |
-| 4a Legal: regulations + cases (the two systems the Legal team uses today) | `…-lcms-phase4a-legal.md` | after Phase 3 | scope set from the team's web app, 2026-10-24 |
+| 4a Legal: regulations + cases (the two systems the Legal team uses today) | `2026-10-24-lcms-phase4a-legal.md` | Complete (`phase-4a-legal`) | Passed full verification sets, 113 test files (695 tests), 48 responsive-a11y tests, 24 DoD screenshots |
 | 4b Legal: procurement, law library, hearings calendar | `…-lcms-phase4b-legal.md` | after 4a, and only once stakeholders confirm the scope (§4 Q8) | — |
 | 5 Backend integration | `…-lcms-phase5-backend.md` | when the OpenAPI spec exists | blocked on backend |
 | 6 Admin, notifications center, hardening, e2e | `…-lcms-phase6-admin.md` | after Phase 4 | — |

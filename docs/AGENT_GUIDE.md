@@ -27,7 +27,9 @@ Don't skim the whole codebase. Use §4 to find what already exists.
 |---|---|
 | 1 Foundation | Done (`phase-1-foundation`) |
 | 3a GC (General Contracts) | Done on `phase-3a-gc`. This is the reference template (§4.4). |
+| 4a Legal (Regulations + Cases) | Done on `phase-4a-legal`. Regulations register, case tracking, dashboard, wizards, modal CRUD, CSV export, print. |
 | 2 PPA | Waiting on PPA team confirmation. Its WIP is on `phase-2-ppa-wip` and is **not** a template. |
+| 4b Legal (Procurement, Laws, Hearings) | Deferred pending stakeholder confirmation. |
 | 3b Admin user management | Next |
 
 Phase 1 delivered (Phase 3a adds the GC pages, `DataTable`, permissions and the mock enforcement described in §4):
@@ -41,7 +43,7 @@ Phase 1 delivered (Phase 3a adds the GC pages, `DataTable`, permissions and the 
 - Home module launcher, plus an alerts store.
 - Playwright e2e covering auth, RBAC, theme, responsive layout and axe.
 
-**Not built yet:** the Legal module pages, the notifications centre, search and admin pages (users, roles, departments).
+**Not built yet:** 4b Legal (procurement, laws, hearings), the notifications centre, search and admin pages (users, roles, departments).
 
 **Next:** Phase 3b, Admin user management. Phase 2 PPA resumes once the PPA team confirms scope; see §6.
 
@@ -146,6 +148,15 @@ When the plan and the code disagree, the controller decides. It records the deci
 ### 4.5 The GC feature is the reference template
 
 `src/features/gc/` is the pattern for every later module: a list store plus URL sync (`gc-list.store.ts`, `use-gc-list-url-sync.ts`), a form dialog (`gc-contract-form-dialog.tsx`), a wizard, a detail view with documents, a dashboard and an alerts page. Copy its structure, not the PPA WIP branch.
+
+### 4.6 Generic list helpers in features/legal/lib
+
+Extracted in Phase 4a for reuse across Legal (and future modules):
+- `createListStore<T, F>`: unified Zustand store factory for paginated search/filter/sort with generation-counter optimistic deletes.
+- `createQueryCodec<F>`: generic bidirectional URL query parameter codec.
+- `useListUrlSync`: hook keeping store query state synchronized with URL search params.
+- `LegalSearch`: accessible debounced search input component.
+- `uploadStagedFiles`: helper uploading staged files sequentially with partial failure isolation.
 
 shadcn primitives are in `src/components/ui/`. After `pnpm dlx shadcn@latest add <x>`:
 
@@ -280,5 +291,5 @@ Run `pnpm dev` and open http://localhost:3000. E2E tests use a production build 
 - Token strategy (httpOnly cookie or bearer), the refresh endpoint and the cookie names, which depend on the backend (Phase 5).
 - Whether `daysLeft` comes from the server or the client, and the time zone (Asia/Vientiane is assumed).
 - The label for the `terminated` status (currently `ຍົກເລີກ`).
-- Lao copy quality. All strings are in `lo.ts`, so one native-speaker review covers them. Phase 1 keys pending review: `auth.brandHeading`, `auth.brandIntro`, `auth.forgotIntro`, `auth.forgotSubmit`, `topbar.searchLabel`, `topbar.unread`, `topbar.breadcrumb`, `nav.mainMenu`, `nav.moduleSwitcher`, `common.retry`, `home.stats.*`, `home.buckets.*`, `home.loadError`. Phase 3a keys pending review: `roles.main` ('User ຫຼັກ', a mixed Latin/Lao label) and `datePicker.open`, which is identical to `datePicker.placeholder` ('ເລືອກວັນທີ'); the trigger's accessible name may need a distinct "open calendar" wording. All `lo.gc.*` strings are also unreviewed.
+- Lao copy quality. All strings are in `lo.ts`, so one native-speaker review covers them. Phase 1 keys pending review: `auth.brandHeading`, `auth.brandIntro`, `auth.forgotIntro`, `auth.forgotSubmit`, `topbar.searchLabel`, `topbar.unread`, `topbar.breadcrumb`, `nav.mainMenu`, `nav.moduleSwitcher`, `common.retry`, `home.stats.*`, `home.buckets.*`, `home.loadError`. Phase 3a keys pending review: `roles.main` ('User ຫຼັກ', a mixed Latin/Lao label) and `datePicker.open`, which is identical to `datePicker.placeholder` ('ເລືອກວັນທີ'); the trigger's accessible name may need a distinct "open calendar" wording. All `lo.gc.*` strings are also unreviewed. All new `lo.legal.*` keys added in Phase 4a (regulations, cases, dashboard, wizard, case stages, case types) are also pending native-speaker review.
 - Anything that changes Design.md tokens, fonts or the glassmorphism style.

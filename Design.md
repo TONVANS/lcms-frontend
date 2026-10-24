@@ -323,10 +323,10 @@ Usage:
 | 06 PPA Detail | `/ppa/contracts/[id]` |
 | 03 General Contract Dashboard | `/contracts` |
 | 04 Legal Dashboard | `/legal` |
-| 07 Litigation list + hearing calendar | `/legal/cases`, `/legal/hearings` |
+| 07 Litigation list + hearing calendar | `/legal/cases` (4a; hearings calendar is 4b) |
 | 08 Create Wizard | `/[module]/new` (type preselected by module) |
 
-Not yet designed (reuse patterns above): GC list/detail, Regulation list/detail, Procurement list/detail, Law library, Notifications center, Forgot password, User/Role admin.
+Not yet designed (reuse patterns above): GC list/detail (built in 3a), Regulation list/detail (built in 4a), Procurement list/detail (4b), Law library (4b), Notifications center, Forgot password, User/Role admin.
 
 ## 13. Tailwind v4 / shadcn Theme Mapping
 

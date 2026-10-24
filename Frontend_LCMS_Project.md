@@ -307,10 +307,10 @@ export const ppaService = {
 | Home | `GET /home/summary` (per-module counts, upcoming 30 days, alert buckets) |
 | PPA | `GET/POST /ppa/contracts`, `GET/PATCH/DELETE /ppa/contracts/:id`, `GET /ppa/dashboard`, `GET /ppa/contracts/:id/history` |
 | General Contract | `GET/POST /contracts`, `GET/PATCH/DELETE /contracts/:id`, `GET /contracts/dashboard` |
-| Regulation | `GET/POST /legal/regulations`, `GET/PATCH/DELETE /legal/regulations/:id` |
-| Procurement | `GET/POST /legal/procurements`, `GET/PATCH/DELETE /legal/procurements/:id` |
-| Law library | `GET /legal/laws`, `GET /legal/laws/:id` |
-| Litigation | `GET/POST /legal/cases`, `GET/PATCH /legal/cases/:id`, `GET/POST /legal/cases/:id/hearings`, `GET /legal/hearings?from=&to=` |
+| Regulation | `GET/POST /legal/regulations`, `GET/PATCH/DELETE /legal/regulations/:id`, `GET /legal/regulations/export` |
+| Procurement (Phase 4b) | `GET/POST /legal/procurements`, `GET/PATCH/DELETE /legal/procurements/:id` |
+| Law library (Phase 4b) | `GET /legal/laws`, `GET /legal/laws/:id` |
+| Litigation | `GET/POST /legal/cases`, `GET/PATCH/DELETE /legal/cases/:id`, `GET /legal/cases/export` (Hearings in Phase 4b: `GET/POST /legal/cases/:id/hearings`, `GET /legal/hearings?from=&to=`) |
 | Legal dashboard | `GET /legal/dashboard` |
 | Documents | `POST /documents` (multipart, `entityType`, `entityId`), `GET /documents/:id/download`, `GET /:entity/:id/documents` |
 | Alerts | `GET /alerts?module=&window=`, `PATCH /alerts/:id/read`, `PUT /:entity/:id/alert-settings` |
@@ -339,23 +339,74 @@ export interface GeneralContract {
   startDate: string; endDate: string; autoRenew: boolean; status: ContractStatus; alertDays: number[];
 }
 
+export type RegulationType =
+  | 'law'
+  | 'decree'
+  | 'ministerial_decision'
+  | 'edl_regulation'
+  | 'instruction'
+  | 'guideline'
+  | 'agreement'
+  | 'other';
+
+export type RegulationStatus = 'in_force' | 'repealed';
+
+export interface ExternalLink {
+  title?: string;
+  url: string;
+}
+
 export interface Regulation {
-  id: string; number: string; type: 'law' | 'decree' | 'decision' | 'instruction' | 'notice' | 'internal_rule';
-  title: string; issuedBy: string; issuedDate: string; effectiveDate: string; status: 'in_force' | 'amended' | 'repealed';
+  id: string;
+  number: string;
+  type: RegulationType;
+  typeOther?: string | null;
+  title: string;
+  issuedDate: string;
+  year: number;
+  unit: string;
+  summary?: string | null;
+  status: RegulationStatus;
+  externalLinks: ExternalLink[];
+  documentCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
 }
 
-export interface ProcurementContract {
-  id: string; contractNo: string; title: string;
-  method: 'open_bidding' | 'limited_bidding' | 'price_quotation' | 'direct';
-  supplier: string; value: Money; deliveryDate?: string; status: ContractStatus;
+export type CaseType = 'civil' | 'criminal' | 'commercial';
+
+export type CaseStage =
+  | 'first_instance'
+  | 'appeal'
+  | 'supreme'
+  | 'completed'
+  | 'withdrawn';
+
+export interface DualAmount {
+  lak: number | null;
+  usd: number | null;
 }
 
-export type CaseStage = 'filed' | 'mediation' | 'first_instance' | 'appeal' | 'supreme' | 'closed';
 export interface LegalCase {
-  id: string; caseNo: string; title: string; counterparty: string;
-  ourRole: 'plaintiff' | 'defendant'; court: string; stage: CaseStage;
-  claimAmount?: Money; lawyer?: string; nextHearing?: Hearing;
+  id: string;
+  caseNo: string;
+  defendant: string;
+  allegation: string;
+  handlingUnit: string;
+  caseType: CaseType;
+  stage: CaseStage;
+  damage: DualAmount;
+  fine: DualAmount;
+  recovered: DualAmount;
+  disputeDate: string | null;
+  progress: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
+
+// Phase 4b (placeholder)
 export interface Hearing { id: string; caseId: string; dateTime: string; place: string; agenda?: string; lawyer?: string; }
 
 export interface KeyEvent { type: string; label: string; date: string; }
