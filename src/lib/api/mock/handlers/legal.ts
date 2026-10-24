@@ -1,5 +1,5 @@
 import type MockAdapter from 'axios-mock-adapter';
-import { isCaseFinished } from '@/features/legal/cases/lib/case-money';
+import { isCaseFinished, sumDual } from '@/features/legal/cases/lib/case-money';
 import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
 import {
   CASE_SORT_KEYS,
@@ -12,6 +12,7 @@ import {
   type LegalCase,
 } from '@/features/legal/cases/types';
 import { LEGAL_PAGE_SIZES, LEGAL_UNITS, type LegalUnit } from '@/features/legal/constants';
+import type { LegalDashboard } from '@/features/legal/dashboard/types';
 import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
 import type { RegulationInput } from '@/features/legal/regulations/schemas/regulation.schema';
 import {
@@ -254,7 +255,63 @@ function registerCases(mock: MockAdapter): void {
   });
 }
 
+function registerDashboard(mock: MockAdapter): void {
+  mock.onGet(endpoints.legal.dashboard).reply(() => {
+    const auth = authorize('view');
+    if ('reply' in auth) return auth.reply;
+
+    const allRegs = regulationsMockDb.all();
+    const byStatus = REGULATION_STATUSES.reduce((acc, s) => {
+      acc[s] = allRegs.filter((r) => r.status === s).length;
+      return acc;
+    }, {} as Record<RegulationStatus, number>);
+
+    const byType = REGULATION_TYPES.map((type) => ({
+      type,
+      count: allRegs.filter((r) => r.type === type).length,
+    }));
+
+    const byUnit = LEGAL_UNITS.map((unit) => ({
+      unit,
+      count: allRegs.filter((r) => r.unit === unit).length,
+    }))
+      .filter((u) => u.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const allCases = casesMockDb.all();
+    const finished = allCases.filter((c) => isCaseFinished(c.stage)).length;
+    const inProgress = allCases.length - finished;
+
+    const byStage = CASE_STAGES.map((stage) => ({
+      stage,
+      count: allCases.filter((c) => c.stage === stage).length,
+    }));
+
+    const dashboard: LegalDashboard = {
+      regulations: {
+        total: allRegs.length,
+        byStatus,
+        unitCount: byUnit.length,
+        byType,
+        byUnit,
+      },
+      cases: {
+        total: allCases.length,
+        inProgress,
+        finished,
+        byStage,
+        damage: sumDual(allCases.map((c) => c.damage)),
+        fine: sumDual(allCases.map((c) => c.fine)),
+        recovered: sumDual(allCases.map((c) => c.recovered)),
+      },
+    };
+
+    return [200, dashboard];
+  });
+}
+
 export function register(mock: MockAdapter): void {
+  registerDashboard(mock);
   registerRegulations(mock);
   registerCases(mock);
 }

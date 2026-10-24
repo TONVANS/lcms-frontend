@@ -1,15 +1,13 @@
-import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { MODULES } from '@/lib/constants/modules';
-import { lo } from '@/lib/i18n/lo';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { LegalDashboardView } from '@/features/legal';
 
 export const instant = false;
 
 export default function LegalDashboardPage() {
   return (
-    <>
-      <PageHeader eyebrow={MODULES.legal.code} title={MODULES.legal.name} accent="legal" />
-      <EmptyState title={lo.common.underConstruction} />
-    </>
+    <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-2xl" />}>
+      <LegalDashboardView />
+    </Suspense>
   );
 }

@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { sumDual } from '@/features/legal/cases/lib/case-money';
 import { casesService } from '@/features/legal/cases/api/cases.service';
 import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
-import type { CaseInput, LegalCase } from '@/features/legal/cases/types';
+import { CASE_STAGES, type CaseInput, type LegalCase } from '@/features/legal/cases/types';
+import { legalDashboardService } from '@/features/legal/dashboard/api/legal-dashboard.service';
 import { regulationsService } from '@/features/legal/regulations/api/regulations.service';
 import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
 import type { RegulationInput } from '@/features/legal/regulations/schemas/regulation.schema';
-import type { Regulation } from '@/features/legal/regulations/types';
+import { REGULATION_TYPES, type Regulation } from '@/features/legal/regulations/types';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
@@ -301,5 +303,48 @@ describe('legal cases handlers', () => {
     await casesService.remove('case-1');
     await expect(casesService.get('case-1')).rejects.toMatchObject(notFound);
     expect(casesMockDb.all()).toHaveLength(23);
+  });
+});
+
+describe('legal dashboard handler', () => {
+  it('401 without session', async () => {
+    await expect(legalDashboardService.get()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('aggregates the seed', async () => {
+    setMockSession('legal.viewer', false);
+    const d = await legalDashboardService.get();
+
+    // Regulations assertions
+    expect(d.regulations.total).toBe(30);
+    const statusSum = Object.values(d.regulations.byStatus).reduce((a, b) => a + b, 0);
+    expect(statusSum).toBe(30);
+
+    expect(d.regulations.byType.map((t) => t.type)).toEqual(
+      expect.arrayContaining([...REGULATION_TYPES]),
+    );
+    expect(d.regulations.byType).toHaveLength(6);
+
+    expect(d.regulations.byUnit.length).toBe(d.regulations.unitCount);
+    for (const u of d.regulations.byUnit) {
+      expect(u.count).toBeGreaterThan(0);
+    }
+    for (let i = 1; i < d.regulations.byUnit.length; i++) {
+      expect(d.regulations.byUnit[i - 1].count).toBeGreaterThanOrEqual(d.regulations.byUnit[i].count);
+    }
+
+    // Cases assertions
+    expect(d.cases.total).toBe(24);
+    expect(d.cases.inProgress + d.cases.finished).toBe(24);
+    expect(d.cases.byStage.map((s) => s.stage)).toEqual([...CASE_STAGES]);
+
+    const allCases = casesMockDb.all();
+    const expectedDamage = sumDual(allCases.map((c) => c.damage));
+    const expectedFine = sumDual(allCases.map((c) => c.fine));
+    const expectedRecovered = sumDual(allCases.map((c) => c.recovered));
+
+    expect(d.cases.damage).toEqual(expectedDamage);
+    expect(d.cases.fine).toEqual(expectedFine);
+    expect(d.cases.recovered).toEqual(expectedRecovered);
   });
 });
