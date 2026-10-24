@@ -28,14 +28,14 @@ describe('home summary handler', () => {
     expect(data).not.toHaveProperty('upcoming');
     expect(data.alerts.some((a) => a.daysLeft < 0)).toBe(true);
     expect(data.alerts.every((a) => a.daysLeft <= 90)).toBe(true);
-    // Non-gc offsets: ppa -2,0,3,12,45 + legal 0,12,25,80. Generated gc alerts (60/30/7/0 windows,
+    // Non-gc offsets: ppa -2,0,3,12,45 (no legal seeds). Generated gc alerts (60/30/7/0 windows,
     // overdue >30d dropped): expiring ends at 0,3,7,25,45,60; expired -1,-10,-25 (<0, not bucketed).
-    // 0..7: ppa 0,3 + legal 0 + gc 0,3,7 = 6; 8..30: ppa 12 + legal 12,25 + gc 25 = 4;
-    // 31..90: ppa 45 + legal 80 + gc 45,60 = 4.
+    // 0..7: ppa 0,3 + gc 0,3,7 = 5; 8..30: ppa 12 + gc 25 = 2;
+    // 31..90: ppa 45 + gc 45,60 = 3.
     expect(buildHomeView(data, admin).alertBuckets).toEqual({
-      within7: 6,
-      within30: 4,
-      within90: 4,
+      within7: 5,
+      within30: 2,
+      within90: 3,
     });
   });
 

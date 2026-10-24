@@ -17,10 +17,6 @@ const SEED: Array<{ module: ModuleKey; entityType: string; title: string; offset
   { module: 'ppa', entityType: 'contract', title: 'PPA-NT1 COD Milestone', offset: 3, read: true },
   { module: 'ppa', entityType: 'contract', title: 'PPA-HPP Expiry', offset: 12, read: false },
   { module: 'ppa', entityType: 'contract', title: 'PPA-TN Extension', offset: 45, read: false },
-  { module: 'legal', entityType: 'case', title: 'Hearing: Case 24/2026', offset: 0, read: false },
-  { module: 'legal', entityType: 'regulation', title: 'Regulation 118 Review', offset: 12, read: false },
-  { module: 'legal', entityType: 'procurement', title: 'Procurement P-077 Deadline', offset: 25, read: true },
-  { module: 'legal', entityType: 'case', title: 'Appeal Filing Case 11/2026', offset: 80, read: false },
 ];
 
 /** Static (non-gc) alerts. GC alerts are generated from the gc mock db by the alerts handler.

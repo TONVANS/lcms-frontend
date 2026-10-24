@@ -5,9 +5,7 @@ import {
   Gavel,
   LayoutDashboard,
   Library,
-  Scale,
   ScrollText,
-  ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
 import { MODULES } from '@/lib/constants/modules';
@@ -41,10 +39,8 @@ export const MODULE_NAV: Record<ModuleKey, NavItem[]> = {
   legal: [
     { key: 'dashboard', label: lo.nav.dashboard, href: '/legal', icon: LayoutDashboard },
     { key: 'regulations', label: lo.nav.regulations, href: '/legal/regulations', icon: ScrollText },
-    { key: 'procurement', label: lo.nav.procurement, href: '/legal/procurement', icon: ShoppingCart },
-    { key: 'laws', label: lo.nav.laws, href: '/legal/laws', icon: Library },
     { key: 'cases', label: lo.nav.cases, href: '/legal/cases', icon: Gavel },
-    { key: 'hearings', label: lo.nav.hearings, href: '/legal/hearings', icon: Scale },
+    { key: 'create', label: lo.nav.createLegal, href: '/legal/new', icon: FilePlus2, permission: 'create' },
   ],
 };
 

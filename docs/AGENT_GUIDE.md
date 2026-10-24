@@ -265,6 +265,8 @@ The password for every account is `password`.
 | `gc.editor` | gc | gc editor | `/contracts` |
 | `gc.viewer` | gc | gc viewer | `/contracts` |
 | `legal.user` | legal | legal main | `/legal` |
+| `legal.editor` | legal | legal editor | `/legal` |
+| `legal.viewer` | legal | legal viewer | `/legal` |
 | `none.user` | none | none | `/forbidden` |
 
 Roles are `viewer` (view only), `editor` (view, create, edit, delete) and `main` (editor plus download), as in `src/lib/auth/roles.ts`.

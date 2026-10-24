@@ -33,6 +33,18 @@ describe('MODULE_NAV', () => {
   it('has the expected item counts', () => {
     expect(MODULE_NAV.ppa).toHaveLength(5);
     expect(MODULE_NAV.gc).toHaveLength(4);
-    expect(MODULE_NAV.legal).toHaveLength(6);
+    expect(MODULE_NAV.legal).toHaveLength(4);
+  });
+});
+
+describe('legal nav', () => {
+  it('legal nav lists dashboard, regulations, cases, create', () => {
+    expect(MODULE_NAV.legal.map((i) => i.key)).toEqual(['dashboard', 'regulations', 'cases', 'create']);
+    expect(MODULE_NAV.legal.find((i) => i.key === 'create')?.permission).toBe('create');
+  });
+  it('legal detail routes highlight their list item', () => {
+    expect(isNavItemActive('/legal/regulations/reg-1', '/legal/regulations')).toBe(true);
+    expect(isNavItemActive('/legal/cases/case-3', '/legal/cases')).toBe(true);
+    expect(isNavItemActive('/legal/cases', '/legal')).toBe(false);
   });
 });

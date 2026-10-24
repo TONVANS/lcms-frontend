@@ -152,6 +152,7 @@ export const lo = {
     dashboard: 'ພາບລວມ',
     contracts: 'ລາຍການສັນຍາ',
     create: 'ສ້າງສັນຍາໃໝ່',
+    createLegal: 'ສ້າງໃໝ່',
     alerts: 'ແຈ້ງເຕືອນ',
     documents: 'ເອກະສານ',
     regulations: 'ນິຕິກຳ',
