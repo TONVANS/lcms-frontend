@@ -67,6 +67,9 @@ describe('RegulationDetailView', () => {
       F.responsible,
       F.unit,
       F.status,
+      F.createdAt,
+      F.updatedAt,
+      F.createdBy,
     ]) {
       expect(screen.getByText(label, { selector: 'dt' })).toBeInTheDocument();
     }
@@ -75,6 +78,9 @@ describe('RegulationDetailView', () => {
     expect(valueOf(F.issuedDate)).toHaveTextContent(formatDate(r.issuedDate));
     expect(valueOf(F.year)).toHaveTextContent(String(r.year));
     expect(valueOf(F.unit)).toHaveTextContent(lo.legal.units[r.unit]);
+    expect(valueOf(F.createdAt)).toHaveTextContent(formatDate(r.createdAt));
+    expect(valueOf(F.updatedAt)).toHaveTextContent(formatDate(r.updatedAt));
+    expect(valueOf(F.createdBy)).toHaveTextContent(r.createdBy);
     expect(screen.getByRole('link', { name: new RegExp(D.backToList) })).toHaveAttribute(
       'href',
       '/legal/regulations',
@@ -107,6 +113,23 @@ describe('RegulationDetailView', () => {
       expect(a).toHaveAttribute('target', '_blank');
       expect(a).toHaveAttribute('rel', 'noopener noreferrer');
     }
+  });
+
+  it('renders only https links as anchors; other entries are plain text', async () => {
+    session('legal.viewer');
+    const r = {
+      ...regulationsMockDb.get('reg-1')!,
+      externalLinks: ['https://drive.google.com/x', 'http://a.la', 'javascript:alert(1)'],
+    };
+    vi.spyOn(regulationsService, 'get').mockResolvedValue(r);
+    render(<RegulationDetailView id="reg-1" />);
+    await screen.findByRole('heading', { level: 1, name: r.title });
+    const region = screen.getByRole('region', { name: D.links });
+    const links = within(region).getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', 'https://drive.google.com/x');
+    expect(within(region).getByText('http://a.la').closest('a')).toBeNull();
+    expect(within(region).getByText('javascript:alert(1)').closest('a')).toBeNull();
   });
 
   it('shows the no-links text when there are none', async () => {

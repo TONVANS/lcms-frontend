@@ -39,6 +39,15 @@ type LoadState =
   | { kind: 'notFound' }
   | { kind: 'error'; error: ApiError };
 
+/** Only https: URLs become anchors, so a stored link can never run script when clicked. */
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function BackLink() {
   return (
     <Link
@@ -146,6 +155,15 @@ function LoadedDetail({
         />
       ),
     },
+    {
+      label: F.createdAt,
+      value: <span className="tabular-nums">{formatDate(regulation.createdAt)}</span>,
+    },
+    {
+      label: F.updatedAt,
+      value: <span className="tabular-nums">{formatDate(regulation.updatedAt)}</span>,
+    },
+    { label: F.createdBy, value: regulation.createdBy },
   ];
 
   return (
@@ -203,19 +221,23 @@ function LoadedDetail({
           <p className="text-sm text-(--text-muted)">{D.noLinks}</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {regulation.externalLinks.map((url) => (
-              <li key={url} className="min-w-0">
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'rounded-sm text-sm break-all text-(--text-strong) underline underline-offset-4',
-                    FOCUS_RING,
-                  )}
-                >
-                  {url}
-                </a>
+            {regulation.externalLinks.map((url, i) => (
+              <li key={`${i}-${url}`} className="min-w-0">
+                {isHttpsUrl(url) ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'rounded-sm text-sm break-all text-(--text-strong) underline underline-offset-4',
+                      FOCUS_RING,
+                    )}
+                  >
+                    {url}
+                  </a>
+                ) : (
+                  <span className="text-sm break-all text-(--text-strong)">{url}</span>
+                )}
               </li>
             ))}
           </ul>
