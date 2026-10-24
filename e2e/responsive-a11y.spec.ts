@@ -17,6 +17,12 @@ const pages: readonly { name: string; path: string; user: string | null; ready?:
   { name: 'gc-detail', path: '/contracts/list', user: 'admin', ready: 'detail' },
   { name: 'gc-detail-editor', path: '/contracts/list', user: 'gc.editor', ready: 'detail-editor' },
   { name: 'gc-not-found', path: '/contracts/nope', user: 'admin', ready: 'not-found' },
+  { name: 'legal-dashboard', path: '/legal', user: 'admin' },
+  { name: 'legal-regulations', path: '/legal/regulations', user: 'admin' },
+  { name: 'legal-regulation-detail', path: '/legal/regulations/reg-1', user: 'admin' },
+  { name: 'legal-cases', path: '/legal/cases', user: 'admin' },
+  { name: 'legal-case-detail', path: '/legal/cases/case-1', user: 'admin' },
+  { name: 'legal-new', path: '/legal/new', user: 'admin' },
 ];
 
 /** Waits until the route has real content, not a skeleton. */
@@ -47,6 +53,24 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
     ).toBeVisible();
   }
   if (ready === 'not-found') await expect(page.getByText(lo.gc.detail.notFound)).toBeVisible();
+  if (path === '/legal') {
+    await expect(page.getByRole('heading', { level: 2, name: lo.legal.dashboard.regulationsSection })).toBeVisible();
+  }
+  if (path === '/legal/regulations') {
+    await page.getByRole('link', { name: /^\d+\// }).first().waitFor();
+  }
+  if (path === '/legal/cases') {
+    await page.getByRole('link', { name: /^LC-/ }).first().waitFor();
+  }
+  if (path === '/legal/new') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.legal.wizard.title })).toBeVisible();
+  }
+  if (path.startsWith('/legal/regulations/')) {
+    await expect(page.getByRole('heading', { name: lo.legal.regulations.detail.info })).toBeVisible();
+  }
+  if (path.startsWith('/legal/cases/')) {
+    await expect(page.getByRole('heading', { name: lo.legal.cases.detail.info })).toBeVisible();
+  }
 }
 
 for (const theme of ['dark', 'light'] as const) {

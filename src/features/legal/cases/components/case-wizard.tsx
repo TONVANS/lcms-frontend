@@ -421,6 +421,7 @@ export function CaseWizard() {
                 <div className="flex items-center gap-3">
                   {step < TOTAL_STEPS ? (
                     <Button
+                      key="wizard-next-btn"
                       type="button"
                       onClick={() => goTo(step + 1)}
                       className="bg-(--litigation) text-white hover:bg-(--litigation)/90"
@@ -429,6 +430,7 @@ export function CaseWizard() {
                     </Button>
                   ) : (
                     <Button
+                      key="wizard-submit-btn"
                       type="submit"
                       disabled={submitting}
                       className="bg-(--litigation) text-white hover:bg-(--litigation)/90"

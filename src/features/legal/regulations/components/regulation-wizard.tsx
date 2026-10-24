@@ -468,6 +468,7 @@ export function RegulationWizard() {
                 <div className="flex items-center gap-3">
                   {step < TOTAL_STEPS ? (
                     <Button
+                      key="wizard-next-btn"
                       type="button"
                       onClick={() => goTo(step + 1)}
                       className="bg-(--gold) text-(--gold-contrast) hover:bg-(--gold-hover)"
@@ -476,6 +477,7 @@ export function RegulationWizard() {
                     </Button>
                   ) : (
                     <Button
+                      key="wizard-submit-btn"
                       type="submit"
                       disabled={submitting}
                       className="bg-(--gold) text-(--gold-contrast) hover:bg-(--gold-hover)"

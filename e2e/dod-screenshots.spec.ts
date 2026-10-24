@@ -14,6 +14,12 @@ const shots: readonly { name: string; path: string; user: string | null; detail?
   { name: 'gc-detail', path: '/contracts/list', user: 'admin', detail: true },
   { name: 'gc-wizard', path: '/contracts/new', user: 'admin' },
   { name: 'gc-alerts', path: '/contracts/alerts', user: 'admin' },
+  { name: 'legal-dashboard', path: '/legal', user: 'admin' },
+  { name: 'legal-regulations', path: '/legal/regulations', user: 'admin' },
+  { name: 'legal-regulation-detail', path: '/legal/regulations/reg-1', user: 'admin' },
+  { name: 'legal-cases', path: '/legal/cases', user: 'admin' },
+  { name: 'legal-case-detail', path: '/legal/cases/case-1', user: 'admin' },
+  { name: 'legal-new', path: '/legal/new', user: 'admin' },
 ];
 
 for (const theme of ['dark', 'light'] as const) {
@@ -38,6 +44,24 @@ for (const theme of ['dark', 'light'] as const) {
       if (s.path === '/ppa') {
         // PPA dashboard section headings (h3) only render once the data has loaded.
         await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
+      }
+      if (s.path === '/legal') {
+        await expect(page.getByRole('heading', { level: 2, name: lo.legal.dashboard.regulationsSection })).toBeVisible();
+      }
+      if (s.path === '/legal/regulations') {
+        await page.getByRole('link', { name: /^\d+\// }).first().waitFor();
+      }
+      if (s.path === '/legal/cases') {
+        await page.getByRole('link', { name: /^LC-/ }).first().waitFor();
+      }
+      if (s.path === '/legal/new') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.legal.wizard.title })).toBeVisible();
+      }
+      if (s.path.startsWith('/legal/regulations/')) {
+        await expect(page.getByRole('heading', { name: lo.legal.regulations.detail.info })).toBeVisible();
+      }
+      if (s.path.startsWith('/legal/cases/')) {
+        await expect(page.getByRole('heading', { name: lo.legal.cases.detail.info })).toBeVisible();
       }
       if (s.detail) {
         // The id is read from the list: open the first row.

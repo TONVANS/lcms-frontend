@@ -251,8 +251,11 @@ function LoadedDetail({
 
       <GlassCard className="p-5 sm:p-6">
         <SectionTitle id="case-amounts-title">{D.amounts}</SectionTitle>
-        <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
-          <Table className="w-full text-left text-sm">
+        <div className="rounded-xl border border-[var(--border-subtle)]">
+          <Table
+            containerProps={{ tabIndex: 0, role: 'region', 'aria-label': D.amounts }}
+            className="w-full text-left text-sm"
+          >
             <TableHeader className="bg-[var(--surface-inset)]">
               <TableRow className="border-b border-[var(--border-subtle)]">
                 <TableHead className="font-semibold text-[var(--text-muted)]">
