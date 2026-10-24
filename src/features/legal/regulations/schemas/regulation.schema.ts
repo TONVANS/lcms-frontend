@@ -18,7 +18,6 @@ const httpsUrl = z.url({ protocol: /^https$/ });
 const isHttpsUrl = (s: string): boolean => httpsUrl.safeParse(s).success;
 
 const requiredText = z.string(v.required).trim().min(1, v.required);
-const optionalText = z.string(v.invalid);
 
 /** Required YYYY-MM-DD. Empty reads "required"; anything else must be a real calendar date. */
 const requiredDate = z
