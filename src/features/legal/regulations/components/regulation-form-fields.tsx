@@ -15,49 +15,23 @@ import { LEGAL_UNITS } from '../../constants';
 import { yearOf, type RegulationFormValues } from '../schemas/regulation.schema';
 import { REGULATION_STATUSES, REGULATION_TYPES } from '../types';
 
-export type RegulationFormFieldName = keyof RegulationFormValues;
+import {
+  REGULATION_FIELD_ORDER,
+  regulationFieldId,
+  firstInvalidRegulationFieldId,
+  type RegulationFormFieldName,
+} from '../lib/regulation-server-errors';
 
-/** Visual order of the fields; the first invalid one receives focus. */
-export const REGULATION_FIELD_ORDER: readonly RegulationFormFieldName[] = [
-  'title',
-  'type',
-  'typeOther',
-  'number',
-  'issuedDate',
-  'year',
-  'purpose',
-  'responsible',
-  'unit',
-  'status',
-  'externalLinks',
-];
-
-export const regulationFieldId = (name: string): string => `reg-field-${name}`;
+export {
+  REGULATION_FIELD_ORDER,
+  regulationFieldId,
+  firstInvalidRegulationFieldId,
+  type RegulationFormFieldName,
+};
 
 interface LinkErrors {
   message?: string;
   [index: number]: { message?: string } | undefined;
-}
-
-/** DOM id of the control that should be focused for the first error in `errors`. */
-export function firstInvalidRegulationFieldId(
-  errors: FieldErrors<RegulationFormValues>,
-): string | null {
-  for (const name of REGULATION_FIELD_ORDER) {
-    const err = errors[name];
-    if (!err) continue;
-    if (name === 'externalLinks') {
-      const rows = err as unknown as Record<string, unknown>;
-      const first = Object.keys(rows)
-        .filter((k) => /^\d+$/.test(k) && rows[k])
-        .map(Number)
-        .sort((x, y) => x - y)[0];
-      if (first !== undefined) return regulationFieldId(`externalLinks-${first}`);
-      return regulationFieldId('externalLinks-add');
-    }
-    return regulationFieldId(name);
-  }
-  return null;
 }
 
 const TOKEN_FIELD =
@@ -201,7 +175,12 @@ function LinksField({ form }: { form: UseFormReturn<RegulationFormValues> }) {
  * All regulation fields in spec order. Shared by the dialog and the wizard. `year` follows
  * `issuedDate` until the user edits it (or when the stored year already differs from the date).
  */
-export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationFormValues> }) {
+export interface RegulationFormFieldsProps {
+  form: UseFormReturn<RegulationFormValues>;
+  fields?: readonly RegulationFormFieldName[];
+}
+
+export function RegulationFormFields({ form, fields }: RegulationFormFieldsProps) {
   const { register, control } = form;
   const errors = form.formState.errors;
   const f = lo.legal.fields;
@@ -212,13 +191,17 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
     yearTouched.current = v.year !== '' && v.year !== yearOf(v.issuedDate);
   }
 
+  const isShown = (name: RegulationFormFieldName) => !fields || fields.includes(name);
   return (
     <div className={GRID}>
-      <Field name="title" label={f.title} required wide error={msg(errors.title)}>
+      {isShown('title') ? (
+        <Field name="title" label={f.title} required wide error={msg(errors.title)}>
         {(c) => <Input {...c} {...register('title')} />}
       </Field>
+      ) : null}
 
-      <Field name="type" label={f.type} required error={msg(errors.type)}>
+      {isShown('type') ? (
+        <Field name="type" label={f.type} required error={msg(errors.type)}>
         {(c) => (
           <Controller
             control={control}
@@ -250,18 +233,22 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
           />
         )}
       </Field>
+      ) : null}
 
-      {type === 'other' ? (
+      {isShown('typeOther') && type === 'other' ? (
         <Field name="typeOther" label={f.typeOther} required error={msg(errors.typeOther)}>
           {(c) => <Input {...c} {...register('typeOther')} />}
         </Field>
       ) : null}
 
-      <Field name="number" label={f.number} required error={msg(errors.number)}>
+      {isShown('number') ? (
+        <Field name="number" label={f.number} required error={msg(errors.number)}>
         {(c) => <Input {...c} {...register('number')} />}
       </Field>
+      ) : null}
 
-      <Field name="issuedDate" label={f.issuedDate} required error={msg(errors.issuedDate)}>
+      {isShown('issuedDate') ? (
+        <Field name="issuedDate" label={f.issuedDate} required error={msg(errors.issuedDate)}>
         {(c, labelId) => (
           <Controller
             control={control}
@@ -286,8 +273,10 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
           />
         )}
       </Field>
+      ) : null}
 
-      <Field name="year" label={f.year} error={msg(errors.year)}>
+      {isShown('year') ? (
+        <Field name="year" label={f.year} error={msg(errors.year)}>
         {(c) => (
           <Input
             {...c}
@@ -300,16 +289,22 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
           />
         )}
       </Field>
+      ) : null}
 
-      <Field name="purpose" label={f.purpose} wide error={msg(errors.purpose)}>
+      {isShown('purpose') ? (
+        <Field name="purpose" label={f.purpose} wide error={msg(errors.purpose)}>
         {(c) => <Textarea {...c} rows={3} {...register('purpose')} />}
       </Field>
+      ) : null}
 
-      <Field name="responsible" label={f.responsible} error={msg(errors.responsible)}>
+      {isShown('responsible') ? (
+        <Field name="responsible" label={f.responsible} error={msg(errors.responsible)}>
         {(c) => <Input {...c} {...register('responsible')} />}
       </Field>
+      ) : null}
 
-      <Field name="unit" label={f.unit} required error={msg(errors.unit)}>
+      {isShown('unit') ? (
+        <Field name="unit" label={f.unit} required error={msg(errors.unit)}>
         {(c) => (
           <Controller
             control={control}
@@ -331,8 +326,10 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
           />
         )}
       </Field>
+      ) : null}
 
-      <Field name="status" label={f.status} required error={msg(errors.status)}>
+      {isShown('status') ? (
+        <Field name="status" label={f.status} required error={msg(errors.status)}>
         {(c) => (
           <Controller
             control={control}
@@ -354,8 +351,9 @@ export function RegulationFormFields({ form }: { form: UseFormReturn<RegulationF
           />
         )}
       </Field>
+      ) : null}
 
-      <LinksField form={form} />
+      {isShown('externalLinks') ? <LinksField form={form} /> : null}
     </div>
   );
 }

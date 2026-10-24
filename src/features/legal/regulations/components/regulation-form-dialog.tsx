@@ -22,6 +22,7 @@ import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { uploadStaged } from '../../lib/upload-staged';
+import { applyRegulationServerErrors } from '../lib/regulation-server-errors';
 import { regulationsService } from '../api/regulations.service';
 import {
   emptyRegulationForm,
@@ -32,14 +33,11 @@ import {
 } from '../schemas/regulation.schema';
 import type { Regulation } from '../types';
 import {
-  REGULATION_FIELD_ORDER,
   RegulationFormFields,
   firstInvalidRegulationFieldId,
-  type RegulationFormFieldName,
 } from './regulation-form-fields';
 
 const L = lo.legal.regulations.form;
-const FIELD_NAMES: ReadonlySet<string> = new Set(REGULATION_FIELD_ORDER);
 
 export interface RegulationFormDialogProps {
   open: boolean;
@@ -91,26 +89,6 @@ function RegulationFormBody({ regulation, onOpenChange, onSaved, busyRef, onBusy
     focusById(firstInvalidRegulationFieldId(errors));
   };
 
-  const applyServerErrors = (fieldErrors: Record<string, string> | undefined) => {
-    let unmatched = false;
-    const matched: RegulationFormFieldName[] = [];
-    for (const [key, message] of Object.entries(fieldErrors ?? {})) {
-      if (!FIELD_NAMES.has(key)) {
-        unmatched = true;
-        continue;
-      }
-      const name = key as RegulationFormFieldName;
-      const text =
-        name === 'number' && message === 'DUPLICATE_REGULATION_NO'
-          ? lo.legal.validation.numberDuplicate
-          : message;
-      form.setError(name, { type: 'server', message: text });
-      matched.push(name);
-    }
-    const first = REGULATION_FIELD_ORDER.find((n) => matched.includes(n));
-    return { matched, unmatched, focusId: first ? firstInvalidRegulationFieldId({ [first]: {} } as never) : null };
-  };
-
   const onValid = async (values: RegulationFormValues) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -138,7 +116,7 @@ function RegulationFormBody({ regulation, onOpenChange, onSaved, busyRef, onBusy
     } catch (e) {
       if (!alive.current) return;
       const err = normalizeError(e);
-      const { matched, unmatched, focusId } = applyServerErrors(err.fieldErrors);
+      const { matched, unmatched, focusId } = applyRegulationServerErrors(form, err);
       focusById(focusId);
       if (matched.length === 0 || unmatched) {
         const text = toUserMessage(err);

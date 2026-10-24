@@ -77,3 +77,6 @@ export { LegalSearch, type LegalSearchProps } from './lib/legal-search';
 export { legalDashboardService } from './dashboard/api/legal-dashboard.service';
 export { type LegalDashboard } from './dashboard/types';
 export { LegalDashboardView } from './dashboard/components/legal-dashboard-view';
+export { LegalNewView } from './components/legal-new-view';
+export { RegulationWizard } from './regulations/components/regulation-wizard';
+export { applyRegulationServerErrors, type AppliedRegulationServerErrors } from './regulations/lib/regulation-server-errors';
