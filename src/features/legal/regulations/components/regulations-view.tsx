@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Filter, Link2, RotateCcw, Trash2 } from 'lucide-react';
+import { Download, Filter, Link2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -34,6 +34,7 @@ import { csvStamp, downloadCsv } from '@/lib/utils/export-csv';
 import { LEGAL_PAGE_SIZES, LEGAL_UNITS, type LegalUnit } from '../../constants';
 import { regulationsService } from '../api/regulations.service';
 import { buildRegulationsCsv } from '../lib/regulations-csv';
+import { RegulationFormDialog } from './regulation-form-dialog';
 import { useRegulationsListStore, useRegulationsListUrlSync } from '../store/regulations-list.store';
 import {
   REGULATION_SORT_KEYS,
@@ -129,6 +130,9 @@ export function RegulationsView() {
   const setQuery = useRegulationsListStore((s) => s.setQuery);
 
   const canDelete = useCan('legal', 'delete');
+  const canEdit = useCan('legal', 'edit');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Regulation | null>(null);
   const [toDelete, setToDelete] = useState<Regulation | null>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -237,25 +241,42 @@ export function RegulationsView() {
         cell: (r) => <LinkCountChip count={r.externalLinks.length} />,
       },
     ];
-    if (canDelete) {
+    if (canDelete || canEdit) {
       cols.push({
         id: 'actions',
         header: lo.table.actions,
         cell: (r) => (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`${L.delete} ${r.number}`}
-            onClick={() => setToDelete(r)}
-            className="text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 aria-hidden="true" />
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            {canEdit ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`${L.edit} ${r.number}`}
+                onClick={() => {
+                  setEditing(r);
+                  setFormOpen(true);
+                }}
+              >
+                <Pencil aria-hidden="true" />
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`${L.delete} ${r.number}`}
+                onClick={() => setToDelete(r)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 aria-hidden="true" />
+              </Button>
+            ) : null}
+          </span>
         ),
       });
     }
     return cols;
-  }, [canDelete]);
+  }, [canDelete, canEdit]);
 
   const statusOptions = useMemo(
     () => [
@@ -309,12 +330,26 @@ export function RegulationsView() {
         title={L.title}
         accent="legal"
         actions={
-          <Can module="legal" permission="download">
-            <Button variant="secondary" onClick={() => void onExport()} disabled={exporting}>
-              <Download aria-hidden="true" />
-              {L.exportCsv}
-            </Button>
-          </Can>
+          <>
+            <Can module="legal" permission="download">
+              <Button variant="secondary" onClick={() => void onExport()} disabled={exporting}>
+                <Download aria-hidden="true" />
+                {L.exportCsv}
+              </Button>
+            </Can>
+            <Can module="legal" permission="create">
+              <Button
+                variant="gold"
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                <Plus aria-hidden="true" />
+                {L.add}
+              </Button>
+            </Can>
+          </>
         }
       />
 
@@ -450,6 +485,13 @@ export function RegulationsView() {
           caption={L.caption}
         />
       )}
+
+      <RegulationFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        regulation={editing ?? undefined}
+        onSaved={() => void useRegulationsListStore.getState().fetch()}
+      />
 
       <ConfirmDialog
         open={toDelete !== null}

@@ -36,6 +36,9 @@ export {
   useRegulationsListUrlSync,
 } from './regulations/store/regulations-list.store';
 export { buildRegulationsCsv } from './regulations/lib/regulations-csv';
+export { uploadStaged } from './lib/upload-staged';
+export { RegulationFormDialog, type RegulationFormDialogProps } from './regulations/components/regulation-form-dialog';
+export { RegulationFormFields } from './regulations/components/regulation-form-fields';
 export { RegulationsView } from './regulations/components/regulations-view';
 export {
   regulationFormSchema,

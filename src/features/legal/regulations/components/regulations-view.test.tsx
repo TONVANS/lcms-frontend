@@ -199,6 +199,42 @@ describe('RegulationsView', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('legal.viewer sees no add button and no row edit button', async () => {
+    session('legal.viewer');
+    render(<RegulationsView />);
+    await loadedRows();
+    expect(screen.queryByRole('button', { name: lo.legal.regulations.list.add })).toBeNull();
+    expect(screen.queryByRole('button', { name: new RegExp(`^${lo.legal.regulations.list.edit}`) })).toBeNull();
+  });
+
+  it("legal.editor's gold add opens the dialog; a row edit opens it prefilled; onSaved refetches the list", async () => {
+    session('legal.editor');
+    const user = userEvent.setup();
+    render(<RegulationsView />);
+    const first = (await loadedRows())[1]!;
+    const link = detailLink(first);
+    const no = link.textContent!;
+    const reg = regulationsMockDb.get(link.getAttribute('href')!.split('/').pop()!)!;
+
+    await user.click(screen.getByRole('button', { name: lo.legal.regulations.list.add }));
+    let dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(lo.legal.regulations.form.createTitle);
+    await user.click(within(dialog).getByRole('button', { name: lo.legal.regulations.form.cancel }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    await user.click(within(first).getByRole('button', { name: `${lo.legal.regulations.list.edit} ${no}` }));
+    dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(lo.legal.regulations.form.editTitle);
+    expect(within(dialog).getByLabelText(new RegExp(lo.legal.fields.title))).toHaveValue(reg.title);
+
+    const list = vi.spyOn(regulationsService, 'list');
+    await user.type(within(dialog).getByLabelText(new RegExp(lo.legal.fields.title)), ' X');
+    await user.click(within(dialog).getByRole('button', { name: lo.legal.regulations.form.save }));
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(regulationsMockDb.get(reg.id)!.title).toBe(`${reg.title} X`);
+  });
+
   it('sortable headers: number, issued date and title only', async () => {
     session('legal.viewer');
     render(<RegulationsView />);
