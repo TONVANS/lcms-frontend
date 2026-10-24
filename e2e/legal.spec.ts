@@ -120,8 +120,10 @@ test.describe('legal crud flows', () => {
     await expect(editDialog).toHaveCount(0);
     await expect(page.getByText(editedTitle)).toBeVisible();
 
-    // Delete row
-    await page.getByRole('button', { name: new RegExp(`^${lo.legal.regulations.list.delete} `) }).click({ force: true });
+    // Delete row (move pointer away and clear toasts to prevent overlay interception on mobile)
+    await page.mouse.move(0, 0);
+    await page.locator('[data-sonner-toast]').evaluateAll((toasts) => toasts.forEach((t) => (t as HTMLElement).remove())).catch(() => {});
+    await page.getByRole('button', { name: new RegExp(`^${lo.legal.regulations.list.delete} `) }).click();
     const confirmDialog = page.getByRole('dialog', { name: lo.legal.regulations.list.deleteTitle });
     await expect(confirmDialog).toBeVisible();
     await confirmDialog.getByRole('button', { name: lo.confirm.confirm }).click();
