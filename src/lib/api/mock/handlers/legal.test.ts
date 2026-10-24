@@ -133,17 +133,19 @@ describe('legal regulations handlers', () => {
     expect(tied).toEqual([...tied].sort());
   });
 
-  it('POST with an existing number (different case) returns 409 on number', async () => {
+  it('POST with an existing number (different case, padded) returns 409 on number', async () => {
     setMockSession('legal.editor', false);
-    const [first] = regulationsMockDb.all();
+    await regulationsService.create({ ...input, number: 'abc-1/x' });
     await expect(
-      regulationsService.create({ ...input, number: first.number.toUpperCase() }),
+      regulationsService.create({ ...input, number: '  ABC-1/X ' }),
     ).rejects.toMatchObject({
       status: 409,
       fieldErrors: { number: 'DUPLICATE_REGULATION_NO' },
     });
-    const dup = { ...input, number: `${first.number}` };
-    await expect(regulationsService.create(dup)).rejects.toMatchObject({ status: 409 });
+    const [first] = regulationsMockDb.all().filter((r) => r.id === 'reg-1');
+    await expect(regulationsService.create({ ...input, number: first.number })).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('PATCH keeping its own number succeeds; another record number is 409', async () => {
@@ -157,17 +159,22 @@ describe('legal regulations handlers', () => {
     ).rejects.toMatchObject({ status: 409, fieldErrors: { number: 'DUPLICATE_REGULATION_NO' } });
   });
 
-  it('GET/PATCH/DELETE unknown id return 404', async () => {
+  it('GET returns an existing record; GET/PATCH/DELETE unknown id return NOT_FOUND', async () => {
     setMockSession('legal.editor', false);
-    await expect(regulationsService.get('nope')).rejects.toMatchObject({ status: 404 });
-    await expect(regulationsService.update('nope', input)).rejects.toMatchObject({ status: 404 });
-    await expect(regulationsService.remove('nope')).rejects.toMatchObject({ status: 404 });
+    await expect(regulationsService.get('reg-1')).resolves.toMatchObject({ id: 'reg-1' });
+    const notFound = { status: 404, code: 'NOT_FOUND' };
+    await expect(regulationsService.get('nope')).rejects.toMatchObject(notFound);
+    await expect(regulationsService.update('nope', input)).rejects.toMatchObject(notFound);
+    await expect(regulationsService.remove('nope')).rejects.toMatchObject(notFound);
   });
 
   it('DELETE removes the record', async () => {
     setMockSession('legal.editor', false);
     await regulationsService.remove('reg-1');
-    await expect(regulationsService.get('reg-1')).rejects.toMatchObject({ status: 404 });
+    await expect(regulationsService.get('reg-1')).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
     expect(regulationsMockDb.all()).toHaveLength(29);
   });
 });
