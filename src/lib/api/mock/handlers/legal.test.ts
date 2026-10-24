@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { casesService } from '@/features/legal/cases/api/cases.service';
+import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
+import type { CaseInput, LegalCase } from '@/features/legal/cases/types';
 import { regulationsService } from '@/features/legal/regulations/api/regulations.service';
 import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
 import type { RegulationInput } from '@/features/legal/regulations/schemas/regulation.schema';
@@ -39,6 +42,7 @@ beforeEach(() => {
   installMocks(api, { delay: 0 });
   clearMockSession();
   regulationsMockDb.reset(new Date());
+  casesMockDb.reset(new Date());
 });
 
 describe('legal regulations handlers', () => {
@@ -176,5 +180,126 @@ describe('legal regulations handlers', () => {
       code: 'NOT_FOUND',
     });
     expect(regulationsMockDb.all()).toHaveLength(29);
+  });
+});
+
+const sampleCaseInput: CaseInput = {
+  defendant: 'ທ້າວ ບຸນມີ',
+  allegation: 'ລັກສາຍໄຟຟ້າ',
+  handlingUnit: 'ສານປະຊາຊົນນະຄອນຫຼວງ',
+  caseType: 'criminal',
+  stage: 'first_instance',
+  damage: { lak: 10000000, usd: null },
+  fine: { lak: 2000000, usd: null },
+  recovered: { lak: 0, usd: null },
+  disputeDate: '2026-05-10',
+  progress: 'ກຳລັງດຳເນີນຄະດີ',
+};
+
+const toCaseInput = (c: LegalCase): CaseInput => ({
+  defendant: c.defendant,
+  allegation: c.allegation,
+  handlingUnit: c.handlingUnit,
+  caseType: c.caseType,
+  stage: c.stage,
+  damage: { ...c.damage },
+  fine: { ...c.fine },
+  recovered: { ...c.recovered },
+  disputeDate: c.disputeDate,
+  progress: c.progress,
+});
+
+describe('legal cases handlers', () => {
+  it('401 without session; 403 for create/edit/delete as legal.viewer; legal.editor can create', async () => {
+    await expect(casesService.list()).rejects.toMatchObject({ status: 401 });
+    setMockSession('legal.viewer', false);
+    const [first] = casesMockDb.all();
+    await expect(casesService.create(sampleCaseInput)).rejects.toMatchObject({ status: 403 });
+    await expect(casesService.update(first.id, toCaseInput(first))).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(casesService.remove(first.id)).rejects.toMatchObject({ status: 403 });
+    expect(casesMockDb.get(first.id)).toBeDefined();
+    setMockSession('legal.editor', false);
+    await expect(casesService.create(sampleCaseInput)).resolves.toMatchObject({
+      defendant: sampleCaseInput.defendant,
+    });
+  });
+
+  it('default sort disputeDate desc with the null date last', async () => {
+    setMockSession('legal.viewer', false);
+    const r = await casesService.list();
+    expect(r.items).toHaveLength(10);
+    expect(r.total).toBe(24);
+    expect(r.page).toBe(1);
+    expect(r.pageSize).toBe(10);
+
+    const all = await casesService.list({ pageSize: 'all' });
+    expect(all.items.at(-1)?.disputeDate).toBeNull();
+    const nonNullDates = all.items.slice(0, -1).map((x) => x.disputeDate!);
+    expect(nonNullDates).toEqual([...nonNullDates].sort().reverse());
+
+    const asc = await casesService.list({ order: 'asc', pageSize: 'all' });
+    expect(asc.items.at(-1)?.disputeDate).toBeNull();
+    const nonNullAsc = asc.items.slice(0, -1).map((x) => x.disputeDate!);
+    expect(nonNullAsc).toEqual([...nonNullAsc].sort());
+  });
+
+  it('progress=finished returns only completed and closed', async () => {
+    setMockSession('legal.viewer', false);
+    const fin = await casesService.list({ progress: 'finished', pageSize: 'all' });
+    expect(fin.items.every((c) => c.stage === 'completed' || c.stage === 'closed')).toBe(true);
+    expect(fin.total).toBeGreaterThan(0);
+
+    const inProg = await casesService.list({ progress: 'in_progress', pageSize: 'all' });
+    expect(inProg.items.every((c) => c.stage !== 'completed' && c.stage !== 'closed')).toBe(true);
+    expect(fin.total + inProg.total).toBe(24);
+  });
+
+  it('stage=bogus falls back to no stage filter', async () => {
+    setMockSession('legal.viewer', false);
+    const r = await casesService.list({ stage: 'bogus' as never, pageSize: 'all' });
+    expect(r.total).toBe(24);
+  });
+
+  it('q matches progress text', async () => {
+    setMockSession('legal.viewer', false);
+    const [withProgress] = casesMockDb
+      .all()
+      .filter((c) => c.progress !== null && c.progress.length > 5);
+    const snippet = withProgress.progress!.slice(0, 5);
+    const r = await casesService.list({ q: snippet });
+    expect(r.items.map((x) => x.id)).toContain(withProgress.id);
+  });
+
+  it('pageSize=all with caseType filter returns all matching rows', async () => {
+    setMockSession('legal.viewer', false);
+    const r = await casesService.list({ caseType: 'criminal', pageSize: 'all' });
+    expect(r.items.length).toBe(r.total);
+    expect(r.pageSize).toBe(r.total);
+    expect(r.page).toBe(1);
+    expect(r.total).toBe(casesMockDb.all().filter((c) => c.caseType === 'criminal').length);
+  });
+
+  it('POST ignores a client-sent caseNo and assigns one', async () => {
+    setMockSession('legal.editor', false);
+    const created = await casesService.create({
+      ...sampleCaseInput,
+      caseNo: 'LC-9999-999',
+    } as unknown as CaseInput);
+    expect(created.caseNo).not.toBe('LC-9999-999');
+    expect(created.caseNo).toMatch(/^LC-\d{4}-\d{3}$/);
+  });
+
+  it('PATCH and DELETE 404 for an unknown id', async () => {
+    setMockSession('legal.editor', false);
+    await expect(casesService.get('case-1')).resolves.toMatchObject({ id: 'case-1' });
+    const notFound = { status: 404, code: 'NOT_FOUND' };
+    await expect(casesService.get('nope')).rejects.toMatchObject(notFound);
+    await expect(casesService.update('nope', sampleCaseInput)).rejects.toMatchObject(notFound);
+    await expect(casesService.remove('nope')).rejects.toMatchObject(notFound);
+    await casesService.remove('case-1');
+    await expect(casesService.get('case-1')).rejects.toMatchObject(notFound);
+    expect(casesMockDb.all()).toHaveLength(23);
   });
 });

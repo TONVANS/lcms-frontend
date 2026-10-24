@@ -25,7 +25,17 @@ export {
   type DualAmount,
   type DualTotals,
   type LegalCase,
+  type CaseInput,
 } from './cases/types';
+export {
+  casesService,
+  type CaseListQuery,
+} from './cases/api/cases.service';
+export {
+  casesQueryCodec,
+  useCasesListStore,
+  useCasesListUrlSync,
+} from './cases/store/cases-list.store';
 export { isCaseFinished, caseTotal, sumDual, CASE_STAGE_TONE } from './cases/lib/case-money';
 export { createQueryCodec, type ListQueryBase, type QueryCodec } from './lib/list-query-codec';
 export { createListStore, type ListState } from './lib/create-list-store';

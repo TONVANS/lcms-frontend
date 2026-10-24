@@ -46,3 +46,5 @@ export interface LegalCase {
   updatedAt: string;
   createdBy: string;
 }
+
+export type CaseInput = Omit<LegalCase, 'id' | 'caseNo' | 'createdAt' | 'updatedAt' | 'createdBy'>;
