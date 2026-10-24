@@ -5,6 +5,7 @@ import { register as registerAuth } from './handlers/auth';
 import { register as registerDocuments } from './handlers/documents';
 import { register as registerGc } from './handlers/gc';
 import { register as registerHome } from './handlers/home';
+import { register as registerLegal } from './handlers/legal';
 import { register as registerPpa } from './handlers/ppa';
 
 type Handler = (mock: MockAdapter) => void;
@@ -18,6 +19,7 @@ const handlers: Handler[] = [
   registerAlerts,
   registerDocuments,
   registerPpa,
+  registerLegal,
 ];
 
 export function installMocks(instance: AxiosInstance, opts?: { delay?: number }): MockAdapter {

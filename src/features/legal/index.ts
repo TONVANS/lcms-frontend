@@ -10,6 +10,10 @@ export {
   type Regulation,
 } from './regulations/types';
 export {
+  regulationsService,
+  type RegulationListQuery,
+} from './regulations/api/regulations.service';
+export {
   CASE_TYPES,
   CASE_STAGES,
   CASE_SORT_KEYS,
