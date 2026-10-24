@@ -634,6 +634,15 @@ export const lo = {
         requiredHint: 'ຊ່ອງທີ່ມີເຄື່ອງໝາຍ * ແມ່ນຕ້ອງປ້ອນ',
         amountsSection: 'ມູນຄ່າ ແລະ ຄ່າປັບໄໝ',
       },
+      detail: {
+        backToList: 'ກັບໄປລາຍການຄະດີ',
+        notFound: 'ບໍ່ພົບຄະດີນີ້',
+        info: 'ຂໍ້ມູນຄະດີ',
+        amounts: 'ມູນຄ່າ ແລະ ຄ່າປັບໄໝ',
+        category: 'ລາຍການ',
+        stageStepper: 'ຂັ້ນຕອນການດຳເນີນຄະດີ',
+        progress: 'ຄວາມຄືບໜ້າຄະດີ',
+      },
       csv: {
         filePrefix: 'EDL_Legal_Cases_',
         headers: [

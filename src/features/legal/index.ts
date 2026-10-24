@@ -72,4 +72,5 @@ export {
 } from './cases/schemas/case.schema';
 export { buildCasesCsv } from './cases/lib/cases-csv';
 export { CasesView } from './cases/components/cases-view';
+export { CaseDetailView } from './cases/components/case-detail-view';
 export { LegalSearch, type LegalSearchProps } from './lib/legal-search';
