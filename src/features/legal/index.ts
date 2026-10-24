@@ -60,3 +60,13 @@ export {
   type RegulationInput,
 } from './regulations/schemas/regulation.schema';
 export { RegulationDetailView } from './regulations/components/regulation-detail-view';
+export { DualAmountField, type DualAmountFieldProps } from './cases/components/dual-amount-field';
+export { CaseFormFields, type CaseFormFieldsProps } from './cases/components/case-form-fields';
+export { CaseFormDialog, type CaseFormDialogProps } from './cases/components/case-form-dialog';
+export {
+  caseFormSchema,
+  emptyCaseForm,
+  toCasePayload,
+  fromCase,
+  type CaseFormValues,
+} from './cases/schemas/case.schema';

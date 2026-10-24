@@ -87,8 +87,14 @@ describe('MoneyInput', () => {
     expect(onChange).toHaveBeenLastCalledWith({ amount: 500, currency: 'USD' });
   });
 
-  it('names the currency select and does not hardcode the amount label', () => {
+  it('with one currency it renders a static currency label and no combobox', () => {
     render(<MoneyInput id="v" value={null} onChange={() => {}} currencies={['LAK']} />);
+    expect(screen.getByText(lo.currency.LAK)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('with several currencies it still renders the select', () => {
+    render(<MoneyInput id="v" value={null} onChange={() => {}} currencies={['LAK', 'USD']} />);
     expect(screen.getByRole('combobox', { name: lo.money.currency })).toBeInTheDocument();
     expect(screen.getByRole('textbox')).not.toHaveAccessibleName(lo.money.amount);
   });

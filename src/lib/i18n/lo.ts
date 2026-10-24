@@ -601,5 +601,17 @@ export const lo = {
         ],
       },
     },
+    cases: {
+      form: {
+        createTitle: 'ເພີ່ມຄະດີ',
+        editTitle: 'ແກ້ໄຂຄະດີ',
+        save: 'ບັນທຶກ',
+        saving: 'ກຳລັງບັນທຶກ...',
+        cancel: 'ຍົກເລີກ',
+        saved: 'ບັນທຶກຄະດີສຳເລັດແລ້ວ',
+        requiredHint: 'ຊ່ອງທີ່ມີເຄື່ອງໝາຍ * ແມ່ນຕ້ອງປ້ອນ',
+        amountsSection: 'ມູນຄ່າ ແລະ ຄ່າປັບໄໝ',
+      },
+    },
   },
 } as const;

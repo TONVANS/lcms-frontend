@@ -77,24 +77,30 @@ export function MoneyInput({
           if (amount !== null) setRaw(formatNumber(amount, 6));
         }}
       />
-      <Select
-        value={currency}
-        onValueChange={(c) => {
-          setFallbackCurrency(c as Currency);
-          emit(raw, c as Currency);
-        }}
-      >
-        <SelectTrigger aria-label={lo.money.currency} aria-invalid={ariaInvalid} className="w-28 shrink-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {currencies.map((c) => (
-            <SelectItem key={c} value={c}>
-              {lo.currency[c]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {currencies.length === 1 ? (
+        <span className="w-28 shrink-0 text-sm font-medium text-(--text-secondary)">
+          {lo.currency[currency]}
+        </span>
+      ) : (
+        <Select
+          value={currency}
+          onValueChange={(c) => {
+            setFallbackCurrency(c as Currency);
+            emit(raw, c as Currency);
+          }}
+        >
+          <SelectTrigger aria-label={lo.money.currency} aria-invalid={ariaInvalid} className="w-28 shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {currencies.map((c) => (
+              <SelectItem key={c} value={c}>
+                {lo.currency[c]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
