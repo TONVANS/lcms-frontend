@@ -79,4 +79,5 @@ export { type LegalDashboard } from './dashboard/types';
 export { LegalDashboardView } from './dashboard/components/legal-dashboard-view';
 export { LegalNewView } from './components/legal-new-view';
 export { RegulationWizard } from './regulations/components/regulation-wizard';
+export { CaseWizard } from './cases/components/case-wizard';
 export { applyRegulationServerErrors, type AppliedRegulationServerErrors } from './regulations/lib/regulation-server-errors';

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { GlassCard } from '@/components/shared/glass-card';
 import { lo } from '@/lib/i18n/lo';
+import { CaseWizard } from '../cases/components/case-wizard';
 import { RegulationWizard } from '../regulations/components/regulation-wizard';
 
 export function LegalNewView() {
@@ -16,7 +17,9 @@ export function LegalNewView() {
     return <RegulationWizard />;
   }
 
-  // Until Task 18 implements the CaseWizard, kind=case also falls back to the chooser.
+  if (kind === 'case') {
+    return <CaseWizard />;
+  }
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

@@ -38,12 +38,13 @@ describe('LegalNewView', () => {
     expect(screen.getByRole('link', { name: new RegExp(lo.legal.wizard.chooseRegulation) })).toBeInTheDocument();
   });
 
-  it('renders chooser when kind is case (until Task 18 implements case wizard)', () => {
+  it('renders case wizard when kind is case', () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams('kind=case'));
     render(<LegalNewView />);
 
-    expect(screen.getByRole('heading', { level: 1, name: lo.legal.wizard.title })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: new RegExp(lo.legal.wizard.chooseCase) })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: lo.legal.wizard.cases.title }),
+    ).toBeInTheDocument();
   });
 
   it('renders regulation wizard when kind is regulation', () => {

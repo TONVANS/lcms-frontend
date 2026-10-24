@@ -2,7 +2,7 @@
 
 import { Plus, X } from 'lucide-react';
 import { useRef, type ReactNode } from 'react';
-import { Controller, useWatch, type FieldErrors, type UseFormReturn } from 'react-hook-form';
+import { Controller, useWatch, type UseFormReturn } from 'react-hook-form';
 import { DatePicker } from '@/components/shared/date-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
