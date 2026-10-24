@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FileTextIcon } from 'lucide-react';
+import { FileTextIcon, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -111,20 +111,35 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
       onSubmit={(e) => {
         void handleSubmit(onValid, onInvalid)(e);
       }}
-      className="flex flex-col gap-5"
+      className="flex min-h-0 flex-1 flex-col"
     >
-      <GcFormFieldGroup group="general" form={form} />
-      <GcFormFieldGroup group="dates" form={form} />
-      <GcFormFieldGroup group="money" form={form} />
-      <GcFormFieldGroup group="notes" form={form} />
-      {banner ? <AlertBanner tone="rose" title={banner} /> : null}
-      <DialogFooter className="mx-0 mb-0 rounded-none border-t border-(--border-subtle) bg-transparent p-0 pt-4">
-        <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
-          {lo.gc.form.cancel}
-        </Button>
-        <Button type="submit" disabled={saving}>
-          {saving ? lo.gc.form.saving : lo.gc.form.save}
-        </Button>
+      <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8 space-y-6">
+        <GcFormFieldGroup group="general" form={form} />
+        <GcFormFieldGroup group="dates" form={form} />
+        <GcFormFieldGroup group="money" form={form} />
+        <GcFormFieldGroup group="notes" form={form} />
+        {banner ? <AlertBanner tone="rose" title={banner} /> : null}
+      </div>
+
+      <DialogFooter className="mx-0 mb-0 shrink-0 flex items-center justify-between border-t border-(--border-subtle) bg-white/[0.02] px-6 py-4 sm:px-8">
+        <span className="text-xs text-(--text-muted) hidden sm:inline">
+          {lo.gc.form.requiredHint}
+        </span>
+        <div className="flex items-center gap-2.5 ml-auto">
+          <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
+            {lo.gc.form.cancel}
+          </Button>
+          <Button type="submit" disabled={saving} className="min-w-28 gap-2">
+            {saving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                <span>{lo.gc.form.saving}</span>
+              </>
+            ) : (
+              lo.gc.form.save
+            )}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );
@@ -146,16 +161,16 @@ export function GcContractFormDialog({ open, onOpenChange, contract, onSaved }: 
       <DialogContent
         showCloseButton={!busy}
         onCloseAutoFocus={returnFocus}
-        className="max-h-[90vh] max-w-[calc(100%-2rem)] gap-5 overflow-y-auto rounded-[26px] bg-(image:--surface-modal) p-6 sm:max-w-[780px] sm:p-8"
+        className="flex max-h-[90vh] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-[26px] border border-(--border-glass) bg-(image:--surface-modal) p-0 shadow-2xl sm:max-w-[780px]"
       >
-        <DialogHeader className="flex-row items-center gap-3 border-b border-(--border-subtle) pb-4">
+        <DialogHeader className="flex shrink-0 flex-row items-center gap-3.5 border-b border-(--border-subtle) px-6 py-4.5 sm:px-8">
           <div
             aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-(--gc)/30 bg-(--gc)/12 text-(--gc)"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-(--gc)/30 bg-(--gc)/15 text-(--gc) shadow-xs"
           >
-            <FileTextIcon className="size-5" />
+            <FileTextIcon className="size-5.5" />
           </div>
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle className="font-serif text-xl font-semibold text-(--text-strong)">
               {contract ? lo.gc.form.editTitle : lo.gc.form.createTitle}
             </DialogTitle>

@@ -18,6 +18,8 @@ export interface BarListProps {
   accent?: BarListAccent;
   valueFormatter?: (value: number) => string;
   className?: string;
+  orientation?: 'horizontal' | 'vertical';
+  height?: number;
 }
 
 // Literal class strings so Tailwind can detect them.
@@ -28,14 +30,85 @@ const ACCENT_GRADIENT: Record<BarListAccent, string> = {
   litigation: 'bg-linear-to-r from-(--series-litigation-from) to-(--series-litigation-to)',
 };
 
+const ACCENT_GRADIENT_VERTICAL: Record<BarListAccent, string> = {
+  ppa: 'bg-linear-to-t from-(--series-ppa-from) to-(--series-ppa-to)',
+  gc: 'bg-linear-to-t from-(--series-gc-from) to-(--series-gc-to)',
+  legal: 'bg-linear-to-t from-(--series-legal-from) to-(--series-legal-to)',
+  litigation: 'bg-linear-to-t from-(--series-litigation-from) to-(--series-litigation-to)',
+};
+
 export function BarList({
   data,
   maxValue,
   accent = 'ppa',
   valueFormatter = (val) => formatNumber(val),
   className,
+  orientation = 'horizontal',
+  height = 140,
 }: BarListProps) {
   const max = maxValue ?? Math.max(1, ...data.map((d) => d.value));
+
+  if (orientation === 'vertical') {
+    const verticalGradientClass = ACCENT_GRADIENT_VERTICAL[accent] ?? ACCENT_GRADIENT_VERTICAL.ppa;
+
+    return (
+      <div className={cn('flex flex-col', className)}>
+        <div className="flex items-end justify-between gap-2 overflow-x-auto pt-3 pb-1 sm:gap-4 scrollbar-none">
+          {data.map((item) => {
+            const percent = max > 0 ? Math.min(100, Math.round((item.value / max) * 100)) : 0;
+
+            return (
+              <div
+                key={item.key}
+                className="group flex flex-1 min-w-[56px] max-w-[84px] flex-col items-center gap-2"
+              >
+                {/* Count value above column */}
+                <span className="text-xs font-semibold tabular-nums text-[var(--text-strong)] group-hover:text-[var(--gc)] transition-colors">
+                  {valueFormatter(item.value)}
+                </span>
+
+                {/* Vertical column track */}
+                <div
+                  className="relative flex w-full max-w-[36px] items-end justify-center overflow-hidden rounded-t-lg bg-[var(--surface-inset)] border border-[var(--border-subtle)]"
+                  style={{ height: `${height}px` }}
+                >
+                  <div
+                    data-testid={`bar-fill-${item.key}`}
+                    className={cn(
+                      'w-full rounded-t-md transition-all duration-300 group-hover:brightness-110 shadow-sm',
+                      verticalGradientClass,
+                    )}
+                    style={{
+                      height: item.value > 0 ? `${Math.max(8, percent)}%` : '0%',
+                    }}
+                  />
+                </div>
+
+                {/* Baseline divider */}
+                <div className="w-full border-b border-[var(--border-subtle)]" />
+
+                {/* Document Type Label below */}
+                <div className="flex flex-col items-center gap-0.5 text-center min-w-0 w-full px-0.5">
+                  <span
+                    title={item.label}
+                    className="w-full truncate text-[11px] font-medium text-[var(--text)] group-hover:text-[var(--text-strong)] transition-colors"
+                  >
+                    {item.label}
+                  </span>
+                  {item.subValue && (
+                    <span className="text-[10px] tabular-nums text-[var(--text-muted)]">
+                      ({item.subValue})
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   const gradientClass = ACCENT_GRADIENT[accent] ?? ACCENT_GRADIENT.ppa;
 
   return (
@@ -74,3 +147,4 @@ export function BarList({
     </div>
   );
 }
+

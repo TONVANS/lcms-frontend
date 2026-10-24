@@ -1,6 +1,6 @@
 'use client';
 
-import { FilePlus2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FilePlus2, Filter, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -329,54 +329,85 @@ export function GcContractsView() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <GcSearch />
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <Label htmlFor="gc-type-filter" className="text-xs text-(--text-muted)">
-            {lo.gc.list.typeFilter}
-          </Label>
-          <Select
-            value={query.type ?? ALL}
-            onValueChange={(v) => setQuery({ type: v === ALL ? undefined : (v as GcContractType) })}
-          >
-            <SelectTrigger id="gc-type-filter" className="w-full sm:w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>{lo.gc.list.allTypes}</SelectItem>
-              {GC_CONTRACT_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {lo.gc.types[t]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col gap-3.5 rounded-2xl border border-[var(--border-glass)] bg-[var(--surface-glass)] p-4 sm:p-5 shadow-[var(--shadow-card)] backdrop-blur-md">
+        {/* Top row: Search, Type Select, Reset Button, and Page size/Items count */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-1 flex-wrap items-center gap-3 min-w-0">
+            <GcSearch />
+            <div className="w-full sm:w-60">
+              <Label htmlFor="gc-type-filter" className="sr-only">
+                {lo.gc.list.typeFilter}
+              </Label>
+              <Select
+                value={query.type ?? ALL}
+                onValueChange={(v) => setQuery({ type: v === ALL ? undefined : (v as GcContractType) })}
+              >
+                <SelectTrigger id="gc-type-filter" aria-label={lo.gc.list.typeFilter} className="w-full h-10">
+                  <SelectValue placeholder={lo.gc.list.allTypes} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{lo.gc.list.allTypes}</SelectItem>
+                  {GC_CONTRACT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {lo.gc.types[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {hasFilters ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setQuery({ q: undefined, type: undefined, status: undefined })}
+                className="h-10 gap-1.5 text-xs text-(--text-muted) hover:text-(--text) hover:bg-white/10"
+              >
+                <RotateCcw className="size-3.5" aria-hidden="true" />
+                <span>{lo.gc.list.resetFilters ?? lo.table.reset}</span>
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-4 shrink-0 text-xs text-(--text-muted)">
+            <span className="font-medium tabular-nums">
+              {total} {lo.gc.list.totalItems}
+            </span>
+            <div className="flex items-center gap-2 border-l border-(--border-subtle) pl-4">
+              <Label htmlFor="gc-page-size" className="text-xs text-(--text-muted) hidden sm:inline">
+                {lo.gc.list.pageSize}
+              </Label>
+              <Select value={String(pageSize)} onValueChange={(v) => setQuery({ pageSize: Number(v) })}>
+                <SelectTrigger id="gc-page-size" className="w-20 h-10 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GC_PAGE_SIZES.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-        <FilterChips
-          accent="gc"
-          ariaLabel={lo.table.filterByStatus}
-          options={statusOptions}
-          value={query.status ?? ALL}
-          onChange={(v) =>
-            setQuery({ status: v === ALL ? undefined : (v as (typeof GC_STATUSES)[number]) })
-          }
-        />
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <Label htmlFor="gc-page-size" className="text-xs text-(--text-muted)">
-            {lo.gc.list.pageSize}
-          </Label>
-          <Select value={String(pageSize)} onValueChange={(v) => setQuery({ pageSize: Number(v) })}>
-            <SelectTrigger id="gc-page-size" className="w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {GC_PAGE_SIZES.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+        {/* Bottom row: Status Filter Chips */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-(--border-subtle)">
+          <span className="text-xs font-medium text-(--text-muted) shrink-0 flex items-center gap-1.5">
+            <Filter className="size-3.5 text-(--gc)" aria-hidden="true" />
+            {lo.table.filterByStatus}:
+          </span>
+          <FilterChips
+            accent="gc"
+            ariaLabel={lo.table.filterByStatus}
+            options={statusOptions}
+            value={query.status ?? ALL}
+            onChange={(v) =>
+              setQuery({ status: v === ALL ? undefined : (v as (typeof GC_STATUSES)[number]) })
+            }
+          />
         </div>
       </div>
 

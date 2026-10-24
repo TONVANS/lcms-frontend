@@ -6,6 +6,7 @@ import { getModuleFromPath } from '@/config/navigation';
 import { useAlertsStore } from '@/features/alerts';
 import { useAuthStore } from '@/features/auth';
 import { canAccessModule } from '@/lib/auth/permissions';
+import { cn } from '@/lib/utils/cn';
 import { useUiStore } from '@/stores/ui.store';
 import { AppSidebar } from './app-sidebar';
 import { BackgroundGlows } from './background-glows';
@@ -38,27 +39,31 @@ export function AppShell({ children, unreadCount: unreadOverride }: AppShellProp
     if (moduleKey) setLastModule(moduleKey);
   }, [moduleKey, setLastModule]);
 
-  if (moduleKey) {
-    return (
-      <>
-        <BackgroundGlows accent={moduleKey} />
-        <div className="flex flex-wrap gap-6 p-6">
-          <AppSidebar module={moduleKey} />
-          <div className="flex min-w-0 flex-col gap-6" style={{ flex: '999 1 560px' }}>
-            <Topbar variant="module" unreadCount={unreadCount} />
-            <main id="main-content">{children}</main>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const isAdmin = user?.role === 'admin';
+  const isForbidden = pathModule !== null && user !== null && !canAccessModule(user, pathModule);
+
+  // Show sidebar for admin everywhere except forbidden pages, and for accessible module pages
+  const showSidebar = !isForbidden && (isAdmin || moduleKey !== null);
 
   return (
     <>
-      <BackgroundGlows />
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 p-6">
-        <Topbar variant="home" unreadCount={unreadCount} />
-        <main id="main-content">{children}</main>
+      <BackgroundGlows accent={moduleKey ?? undefined} />
+      <div
+        className={cn(
+          'p-6 transition-all',
+          showSidebar
+            ? 'flex flex-wrap gap-6'
+            : 'mx-auto flex w-full max-w-[1280px] flex-col gap-6',
+        )}
+      >
+        {showSidebar ? <AppSidebar module={moduleKey ?? undefined} /> : null}
+        <div
+          className="flex min-w-0 flex-col gap-6"
+          style={showSidebar ? { flex: '999 1 560px' } : undefined}
+        >
+          <Topbar variant={moduleKey ? 'module' : 'home'} unreadCount={unreadCount} />
+          <main id="main-content">{children}</main>
+        </div>
       </div>
     </>
   );

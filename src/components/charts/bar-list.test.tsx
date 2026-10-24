@@ -37,3 +37,20 @@ describe('BarList motion and tokens', () => {
     expect(screen.getByTestId('bar-fill-a').className).toContain('from-(--series-litigation-from)');
   });
 });
+
+describe('BarList vertical orientation', () => {
+  it('renders vertical columns with labels, values and height percentages', () => {
+    render(<BarList data={data} orientation="vertical" accent="gc" height={160} />);
+    expect(screen.getByText('ພະລັງງານນ້ຳ')).toBeInTheDocument();
+    expect(screen.getByText('1,200')).toBeInTheDocument();
+    expect(screen.getByText('(75%)')).toBeInTheDocument();
+    const hydroFill = screen.getByTestId('bar-fill-hydro');
+    expect(hydroFill.className).toContain('from-(--series-gc-from)');
+    expect(hydroFill.className).toContain('to-(--series-gc-to)');
+    expect(hydroFill).toHaveStyle({ height: '100%' });
+
+    const solarFill = screen.getByTestId('bar-fill-solar');
+    expect(solarFill).toHaveStyle({ height: '33%' });
+  });
+});
+

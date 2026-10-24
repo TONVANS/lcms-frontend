@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GcContractDetailView } from '@/features/gc';
 
+export const instant = false;
+
 export default async function GcContractDetailPage({
   params,
 }: {

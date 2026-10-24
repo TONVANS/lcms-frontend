@@ -444,86 +444,99 @@ export function PpaWizardView() {
         </div>
 
         {/* Right Live Summary Panel (Design.md §6) */}
-        <div>
-          <div className="sticky top-24 flex flex-col gap-4 rounded-2xl border border-[rgba(212,179,122,0.25)] bg-gradient-to-b from-[#1e3a8a]/40 to-[#13294f]/30 p-6 backdrop-blur-xl shadow-xl">
+        <div className="min-w-0">
+          <GlassCard
+            as="aside"
+            accent="ppa"
+            className="sticky top-24 flex min-w-0 flex-col gap-4 border-white/80 bg-[linear-gradient(160deg,rgba(255,255,255,0.92),rgba(255,255,255,0.70))] shadow-[inset_0_1px_0_#fff,0_20px_40px_-24px_rgba(15,35,80,0.18)] dark:border-[rgba(212,179,122,0.25)] dark:bg-[linear-gradient(160deg,rgba(30,58,138,0.35),rgba(19,41,79,0.25))] dark:shadow-xl"
+          >
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#d4b37a]" />
+                <div className="flex size-7 items-center justify-center rounded-lg border border-amber-600/25 bg-amber-500/10 text-amber-800 dark:border-[rgba(212,179,122,0.3)] dark:text-[#d4b37a]">
+                  <Sparkles className="size-3.5" aria-hidden="true" />
+                </div>
                 <h4 className="font-serif text-sm font-semibold text-[var(--text-strong)]">
                   {lo.ppa.wizard.summaryTitle}
                 </h4>
               </div>
-              <span className="text-xs font-semibold tabular-nums text-[#d4b37a]">
+              <span className="text-xs font-semibold tabular-nums text-amber-800 dark:text-[#d4b37a]">
                 {progressPercent}%
               </span>
             </div>
 
             {/* Gold progress bar */}
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              role="progressbar"
+              aria-label={lo.ppa.wizard.summaryTitle}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+              className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10"
+            >
               <div
-                className="h-full bg-gradient-to-r from-[#b08a4a] to-[#d4b37a] transition-all duration-300"
+                className="h-full rounded-full bg-gradient-to-r from-[#b08a4a] to-[#d4b37a] transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
 
-            <dl className="flex flex-col gap-3 text-xs pt-2">
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.contractNo}</dt>
-                <dd className="font-medium tabular-nums text-[var(--text-strong)]">
+            <dl className="flex flex-col gap-2.5 pt-1 text-xs">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.contractNo}</dt>
+                <dd className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
                   {formValues.contractNo || '—'}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.projectName}</dt>
-                <dd className="font-medium text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.projectName}</dt>
+                <dd className="text-xs font-semibold text-[var(--text-strong)] truncate">
                   {formValues.projectName || '—'}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.developer}</dt>
-                <dd className="font-medium text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.developer}</dt>
+                <dd className="text-xs font-semibold text-[var(--text-strong)] truncate">
                   {formValues.developerName || '—'}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.energyType}</dt>
-                <dd className="font-medium text-[var(--ppa)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.energyType}</dt>
+                <dd className="text-xs font-semibold text-[var(--ppa)]">
                   {lo.energy[formValues.energyType] ?? formValues.energyType}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.capacityMw}</dt>
-                <dd className="font-medium tabular-nums text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.capacityMw}</dt>
+                <dd className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
                   {formValues.capacityMw ? `${formatNumber(Number(formValues.capacityMw))} MW` : '—'}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.tariff}</dt>
-                <dd className="font-medium tabular-nums text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.tariff}</dt>
+                <dd className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
                   {formValues.tariffUsCentPerKwh ? `${formValues.tariffUsCentPerKwh} US¢/kWh` : '—'}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.codDate}</dt>
-                <dd className="font-medium tabular-nums text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.codDate}</dt>
+                <dd className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
                   {formatDate(formValues.codDate)}
                 </dd>
               </div>
 
-              <div>
-                <dt className="text-[var(--text-muted)]">{lo.ppa.fields.termYears}</dt>
-                <dd className="font-medium tabular-nums text-[var(--text-strong)]">
+              <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] px-3 py-2">
+                <dt className="text-[11px] font-medium text-[var(--text-muted)]">{lo.ppa.fields.termYears}</dt>
+                <dd className="text-xs font-semibold tabular-nums text-[var(--text-strong)]">
                   {formValues.termYears ? `${formValues.termYears} ປີ` : '—'}
                 </dd>
               </div>
             </dl>
-          </div>
+          </GlassCard>
         </div>
       </div>
     </div>
