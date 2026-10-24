@@ -23,3 +23,12 @@ export {
   type LegalCase,
 } from './cases/types';
 export { isCaseFinished, caseTotal, sumDual, CASE_STAGE_TONE } from './cases/lib/case-money';
+export {
+  regulationFormSchema,
+  emptyRegulationForm,
+  toRegulationPayload,
+  fromRegulation,
+  yearOf,
+  type RegulationFormValues,
+  type RegulationInput,
+} from './regulations/schemas/regulation.schema';
