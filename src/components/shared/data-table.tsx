@@ -238,7 +238,7 @@ export function DataTable<T extends object>({
       </div>
 
       {total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-4 px-1 py-1 text-xs text-[var(--text-muted)]">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-1 py-1 text-xs text-[var(--text-muted)] print:hidden">
           <div>
             {lo.common.showing(
               startItem === endItem ? startItem : `${startItem}–${endItem}`,

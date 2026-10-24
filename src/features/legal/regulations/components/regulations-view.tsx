@@ -2,7 +2,7 @@
 
 import { Download, Filter, Link2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Can, useCan } from '@/components/guards/can';
 import { PageHeader } from '@/components/layout/page-header';
@@ -14,7 +14,7 @@ import {
   type DataTableSort,
 } from '@/components/shared/data-table';
 import { FilterChips } from '@/components/shared/filter-chips';
-import { SearchInput } from '@/components/shared/search-input';
+import { LegalSearch } from '../../lib/legal-search';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -48,60 +48,10 @@ import {
 } from '../types';
 
 const ALL = 'all';
-const SEARCH_DEBOUNCE_MS = 300;
 const SORTABLE: ReadonlySet<string> = new Set(REGULATION_SORT_KEYS);
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 const L = lo.legal.regulations.list;
-
-/**
- * Search box that owns its text. It commits to the store after a debounce and follows the store's q
- * when that changes from outside (back/forward, URL on mount) unless the user is mid-typing.
- */
-function RegulationsSearch() {
-  const q = useRegulationsListStore((s) => s.query.q);
-  const setQuery = useRegulationsListStore((s) => s.setQuery);
-  const [text, setText] = useState(q ?? '');
-  const [prevQ, setPrevQ] = useState(q);
-  const [editing, setEditing] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  if (q !== prevQ) {
-    setPrevQ(q);
-    if (!editing && text.trim() !== (q ?? '')) setText(q ?? '');
-  }
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  const onChange = (value: string) => {
-    setText(value);
-    setEditing(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      setEditing(false);
-      const next = value.trim();
-      if (next !== (useRegulationsListStore.getState().query.q ?? '')) {
-        setQuery({ q: next || undefined });
-      }
-    }, SEARCH_DEBOUNCE_MS);
-  };
-
-  return (
-    <SearchInput
-      value={text}
-      onChange={onChange}
-      placeholder={L.searchPlaceholder}
-      aria-label={L.searchLabel}
-      className="w-full sm:w-72"
-    />
-  );
-}
 
 function LinkCountChip({ count }: { count: number }) {
   if (count === 0) return <span className="text-(--text-muted)">—</span>;
@@ -356,7 +306,12 @@ export function RegulationsView() {
       <div className="flex flex-col gap-3.5 rounded-2xl border border-[var(--border-glass)] bg-[var(--surface-glass)] p-4 sm:p-5 shadow-[var(--shadow-card)] backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <RegulationsSearch />
+            <LegalSearch
+              value={query.q}
+              onChange={(q) => setQuery({ q })}
+              placeholder={L.searchPlaceholder}
+              ariaLabel={L.searchLabel}
+            />
             <div className="w-full sm:w-52">
               <Label htmlFor="reg-type-filter" className="sr-only">
                 {L.typeFilter}

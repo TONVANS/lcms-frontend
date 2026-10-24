@@ -56,12 +56,18 @@ export function AppShell({ children, unreadCount: unreadOverride }: AppShellProp
             : 'mx-auto flex w-full max-w-[1280px] flex-col gap-6',
         )}
       >
-        {showSidebar ? <AppSidebar module={moduleKey ?? undefined} /> : null}
+        {showSidebar ? (
+          <div className="print:hidden flex shrink-0" style={{ flex: '1 1 248px' }}>
+            <AppSidebar module={moduleKey ?? undefined} />
+          </div>
+        ) : null}
         <div
           className="flex min-w-0 flex-col gap-6"
           style={showSidebar ? { flex: '999 1 560px' } : undefined}
         >
-          <Topbar variant={moduleKey ? 'module' : 'home'} unreadCount={unreadCount} />
+          <div className="print:hidden">
+            <Topbar variant={moduleKey ? 'module' : 'home'} unreadCount={unreadCount} />
+          </div>
           <main id="main-content">{children}</main>
         </div>
       </div>

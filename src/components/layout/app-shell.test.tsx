@@ -47,4 +47,14 @@ describe('AppShell', () => {
     expect(screen.getByRole('navigation', { name: lo.nav.mainMenu })).toBeInTheDocument();
     expect(useUiStore.getState().lastModule).toBe('ppa');
   });
+
+  it('wraps sidebar and topbar with print:hidden wrappers', () => {
+    pathname = '/ppa';
+    useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
+    render(<AppShell>child</AppShell>);
+    const sidebar = screen.getByRole('navigation', { name: lo.nav.mainMenu }).closest('.print\\:hidden');
+    expect(sidebar).not.toBeNull();
+    const topbar = screen.getByRole('banner').closest('.print\\:hidden');
+    expect(topbar).not.toBeNull();
+  });
 });
