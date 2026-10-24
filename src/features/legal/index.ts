@@ -35,6 +35,8 @@ export {
   useRegulationsListStore,
   useRegulationsListUrlSync,
 } from './regulations/store/regulations-list.store';
+export { buildRegulationsCsv } from './regulations/lib/regulations-csv';
+export { RegulationsView } from './regulations/components/regulations-view';
 export {
   regulationFormSchema,
   emptyRegulationForm,
