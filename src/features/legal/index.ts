@@ -49,3 +49,4 @@ export {
   type RegulationFormValues,
   type RegulationInput,
 } from './regulations/schemas/regulation.schema';
+export { RegulationDetailView } from './regulations/components/regulation-detail-view';

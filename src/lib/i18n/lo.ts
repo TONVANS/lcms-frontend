@@ -574,6 +574,13 @@ export const lo = {
         stagedHint: 'ເອກະສານຈະຖືກອັບໂຫຼດຫຼັງຈາກສ້າງນິຕິກຳສຳເລັດ',
         uploadFailed: (names: string) => `ສ້າງນິຕິກຳແລ້ວ ແຕ່ອັບໂຫຼດເອກະສານບໍ່ສຳເລັດ: ${names}`,
       },
+      detail: {
+        backToList: 'ກັບໄປລາຍການນິຕິກຳ',
+        notFound: 'ບໍ່ພົບນິຕິກຳນີ້',
+        info: 'ຂໍ້ມູນນິຕິກຳ',
+        links: 'ລິ້ງເອກະສານ',
+        noLinks: 'ບໍ່ມີລິ້ງເອກະສານ',
+      },
       csv: {
         filePrefix: 'EDL_Legal_Regulations_',
         linkSeparator: '; ',
