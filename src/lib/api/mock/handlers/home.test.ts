@@ -6,6 +6,9 @@ import { api } from '@/lib/api/client';
 import { endpoints } from '@/lib/api/endpoints';
 import { deriveGcStatus } from '@/features/gc/lib/derive-status';
 import { gcMockDb } from '@/features/gc/mocks/gc.mock';
+import { isCaseFinished } from '@/features/legal/cases/lib/case-money';
+import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
+import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 
 const admin = MOCK_USERS.find((u) => u.username === 'admin')!;
@@ -13,6 +16,8 @@ const admin = MOCK_USERS.find((u) => u.username === 'admin')!;
 beforeEach(() => {
   clearMockSession();
   gcMockDb.reset(new Date());
+  regulationsMockDb.reset(new Date());
+  casesMockDb.reset(new Date());
 });
 
 describe('home summary handler', () => {
@@ -54,10 +59,37 @@ describe('home summary handler', () => {
     });
   });
 
+  it('reports legal stats from legal mock dbs, matching the legal modules', async () => {
+    setMockSession('admin', false);
+    const { data } = await api.get<HomeSummary>(endpoints.home.summary);
+    const legal = data.modules.find((m) => m.module === 'legal')!;
+    const regs = regulationsMockDb.all();
+    const cases = casesMockDb.all();
+    const activeRegs = regs.filter((r) => r.status === 'in_force').length;
+    const activeCases = cases.filter((c) => !isCaseFinished(c.stage)).length;
+    const expectedActive = activeRegs + activeCases;
+    const expectedTotal = regs.length + cases.length;
+
+    expect(expectedTotal).toBe(54);
+    expect(legal).toEqual({
+      module: 'legal',
+      total: expectedTotal,
+      active: expectedActive,
+      expiring: 0,
+    });
+  });
+
   it('filters by the session user modules', async () => {
     setMockSession('ppa.user', false);
     const { data } = await api.get<HomeSummary>(endpoints.home.summary);
     expect(data.modules.map((m) => m.module)).toEqual(['ppa']);
     expect(data.alerts.every((a) => a.module === 'ppa')).toBe(true);
+  });
+
+  it('filters by legal.user session to only show legal card and empty alerts', async () => {
+    setMockSession('legal.user', false);
+    const { data } = await api.get<HomeSummary>(endpoints.home.summary);
+    expect(data.modules.map((m) => m.module)).toEqual(['legal']);
+    expect(data.alerts.every((a) => a.module === 'legal')).toBe(true);
   });
 });
