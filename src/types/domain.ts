@@ -1,4 +1,5 @@
 export type ModuleKey = 'ppa' | 'gc' | 'legal';
+export type AttachmentModule = 'contracts' | 'legal-documents' | 'legal-cases' | 'power-contracts';
 export type Role = 'admin' | 'user';
 export type ModuleRole = 'viewer' | 'editor' | 'main';
 export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download' | 'approve';

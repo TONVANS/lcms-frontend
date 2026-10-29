@@ -6,8 +6,8 @@ describe('parseEnv', () => {
     expect(parseEnv({})).toEqual({
       NEXT_PUBLIC_APP_NAME: 'LCMS',
       NEXT_PUBLIC_API_MODE: 'mock',
-      NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8080/api/v1',
-      NEXT_PUBLIC_MAX_UPLOAD_MB: 50,
+      NEXT_PUBLIC_API_BASE_URL: 'http://localhost:3001/api',
+      NEXT_PUBLIC_MAX_UPLOAD_MB: 25,
     });
     expect(parseEnv({}).NEXT_PUBLIC_API_MODE).toBe('mock');
   });

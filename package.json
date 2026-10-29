@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "smoke:live": "node scripts/live-smoke.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.0",

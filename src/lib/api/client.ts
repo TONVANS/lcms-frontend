@@ -13,7 +13,7 @@ export function setUnauthorizedHandler(fn: () => void): void {
 export const api = axios.create({
   baseURL: env.NEXT_PUBLIC_API_BASE_URL,
   timeout: 20000,
-  withCredentials: true,
+  withCredentials: false,
   headers: { 'Accept-Language': 'lo' },
 });
 

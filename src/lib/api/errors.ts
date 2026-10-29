@@ -1,6 +1,7 @@
 import { isAxiosError, isCancel } from 'axios';
 import { lo } from '@/lib/i18n/lo';
 import type { ApiError } from '@/types/api';
+import { endpoints } from './endpoints';
 
 function isApiError(e: unknown): e is ApiError {
   if (typeof e !== 'object' || e === null || e instanceof Error) return false;
@@ -33,14 +34,22 @@ export function normalizeError(e: unknown): ApiError {
     }
     const body = (typeof res.data === 'object' && res.data !== null ? res.data : {}) as {
       code?: string;
-      message?: string;
+      message?: string | string[];
       fieldErrors?: Record<string, string>;
     };
-    const err: ApiError = {
-      status: res.status,
-      code: body.code ?? `HTTP_${res.status}`,
-      message: body.message ?? '',
-    };
+    const url = (e.config?.url ?? '').split('?')[0];
+    const message = Array.isArray(body.message)
+      ? body.message.map(String).join('\n')
+      : typeof body.message === 'string'
+        ? body.message
+        : '';
+    const code =
+      typeof body.code === 'string'
+        ? body.code
+        : res.status === 401 && url === endpoints.auth.login
+          ? 'INVALID_CREDENTIALS'
+          : `HTTP_${res.status}`;
+    const err: ApiError = { status: res.status, code, message };
     if (body.fieldErrors) err.fieldErrors = body.fieldErrors;
     return err;
   }

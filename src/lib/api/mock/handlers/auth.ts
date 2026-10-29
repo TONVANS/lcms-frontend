@@ -30,9 +30,5 @@ export function register(mock: MockAdapter): void {
     return [204];
   });
 
-  mock.onPost(endpoints.auth.refresh).reply(() =>
-    getMockSessionUser() ? [200] : [401, { code: 'UNAUTHENTICATED' }],
-  );
-
   mock.onPost(endpoints.auth.forgotPassword).reply(204);
 }

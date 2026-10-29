@@ -34,6 +34,40 @@ describe('normalizeError', () => {
       fieldErrors: { name: 'y' },
     });
   });
+  it('reads a Nest error body with a string message', () => {
+    const e = withResponse(404, { statusCode: 404, message: 'Not found', error: 'Not Found' });
+    expect(normalizeError(e)).toEqual({ status: 404, code: 'HTTP_404', message: 'Not found' });
+  });
+  it('joins a Nest array message with newlines', () => {
+    const e = withResponse(400, {
+      statusCode: 400,
+      message: ['title must be a string', 'contractNumber should not be empty'],
+      error: 'Bad Request',
+    });
+    expect(normalizeError(e)).toEqual({
+      status: 400,
+      code: 'HTTP_400',
+      message: 'title must be a string\ncontractNumber should not be empty',
+    });
+  });
+  it('maps a 401 from the login URL to INVALID_CREDENTIALS', () => {
+    const loginConfig = { headers: {}, url: '/auth/login' } as InternalAxiosRequestConfig;
+    const response = {
+      status: 401,
+      data: { statusCode: 401, message: 'Unauthorized' },
+      statusText: '',
+      headers: {},
+      config: loginConfig,
+    } as AxiosResponse;
+    const e = new AxiosError('fail', 'ERR_BAD_RESPONSE', loginConfig, null, response);
+    expect(normalizeError(e)).toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS' });
+  });
+  it('keeps HTTP_401 for a 401 elsewhere', () => {
+    expect(normalizeError(withResponse(401, { statusCode: 401, message: 'Unauthorized' }))).toMatchObject({
+      status: 401,
+      code: 'HTTP_401',
+    });
+  });
   it('falls back to HTTP_<status> without a body', () => {
     expect(normalizeError(withResponse(500))).toMatchObject({ status: 500, code: 'HTTP_500' });
   });

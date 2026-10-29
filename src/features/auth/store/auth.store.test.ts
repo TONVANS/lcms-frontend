@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from '@/config/env';
-import { clearMockSession, readMockSession, setMockSession } from '@/lib/auth/session';
+import { clearMockSession, readMockSession, setMockSession, setSessionToken } from '@/lib/auth/session';
 import { MOCK_USERS } from '../mocks/auth.mock';
 import { authService } from '../api/auth.service';
 import { useAuthStore } from './auth.store';
@@ -100,7 +100,8 @@ describe('auth store', () => {
     expect(useAuthStore.getState().endReason).toBe('logout');
   });
 
-  it('live mode: fetchMe calls /auth/me even without a readable cookie', async () => {
+  it('live mode: fetchMe calls /auth/me when a session token cookie exists', async () => {
+    setSessionToken('live.jwt.token', false);
     const original = env.NEXT_PUBLIC_API_MODE;
     env.NEXT_PUBLIC_API_MODE = 'live';
     try {
