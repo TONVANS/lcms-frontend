@@ -1,317 +1,404 @@
 import type MockAdapter from 'axios-mock-adapter';
-import { isCaseFinished, sumDual } from '@/features/legal/cases/lib/case-money';
-import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
 import {
-  CASE_SORT_KEYS,
-  CASE_STAGES,
-  CASE_TYPES,
-  type CaseInput,
-  type CaseSortKey,
-  type CaseStage,
-  type CaseType,
-  type LegalCase,
-} from '@/features/legal/cases/types';
-import { LEGAL_PAGE_SIZES, LEGAL_UNITS, type LegalUnit } from '@/features/legal/constants';
-import type { LegalDashboard } from '@/features/legal/dashboard/types';
-import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
-import type { RegulationInput } from '@/features/legal/regulations/schemas/regulation.schema';
+  legalCasesMockDb,
+  nextLegalCaseIds,
+  type RawLegalCase,
+} from '@/features/legal/cases/mocks/legal-cases.mock';
+import { CASE_TYPES, DISPUTE_STATUSES } from '@/features/legal/cases/types';
 import {
-  REGULATION_SORT_KEYS,
-  REGULATION_STATUSES,
-  REGULATION_TYPES,
-  type Regulation,
-  type RegulationSortKey,
-  type RegulationStatus,
-  type RegulationType,
-} from '@/features/legal/regulations/types';
-import { hasPermission } from '@/lib/auth/permissions';
-import type { Paginated } from '@/types/api';
-import type { Permission, User } from '@/types/domain';
+  legalDocumentsMockDb,
+  nextLegalDocumentId,
+  type RawLegalDocument,
+} from '@/features/legal/documents/mocks/legal-documents.mock';
+import { DOC_STATUSES, DOC_TYPES } from '@/features/legal/documents/types';
+import { MOCK_DEPARTMENTS } from '@/features/lookups/mocks/lookups.mock';
+import { hasPermission, hasSystemModule } from '@/lib/auth/permissions';
+import type { Permission, SystemModule, User } from '@/types/domain';
 import { endpoints } from '../../endpoints';
 import { getMockSessionUser } from '../session';
 
 type Reply = [number, unknown?];
+type Body = Record<string, unknown>;
 
-const PAGE_SIZES: readonly number[] = LEGAL_PAGE_SIZES;
+const DOC_DETAIL_RE = /^\/legal-documents\/([^/]+)$/;
+const CASE_DETAIL_RE = /^\/legal-cases\/([^/]+)$/;
 
-const REGULATION_DETAIL_RE = /^\/legal\/regulations\/([^/]+)$/;
-const CASE_DETAIL_RE = /^\/legal\/cases\/([^/]+)$/;
+const nest = (statusCode: number, error: string, message: string | string[]): Reply => [
+  statusCode,
+  { statusCode, message, error },
+];
 
-function authorize(permission: Permission): { user: User } | { reply: Reply } {
+function authorize(sm: SystemModule, permission: Permission): { user: User } | { reply: Reply } {
   const user = getMockSessionUser();
-  if (!user) return { reply: [401, { code: 'UNAUTHENTICATED' }] };
-  if (!hasPermission(user, 'legal', permission)) return { reply: [403, { code: 'FORBIDDEN' }] };
+  if (!user) return { reply: [401, { statusCode: 401, message: 'Unauthorized', error: 'Unauthorized' }] };
+  if (!hasSystemModule(user, sm) || !hasPermission(user, 'legal', permission)) {
+    return { reply: nest(403, 'Forbidden', 'Forbidden resource') };
+  }
   return { user };
 }
 
-function parseBody<T>(data: unknown): Partial<T> {
+function parseBody(data: unknown): Body {
   if (typeof data === 'string') {
     try {
-      return JSON.parse(data) as Partial<T>;
+      return JSON.parse(data) as Body;
     } catch {
       return {};
     }
   }
-  return (data ?? {}) as Partial<T>;
+  return (data ?? {}) as Body;
 }
 
-/** Slice `rows` into the requested page. `pageSize === 'all'` returns every row on page 1. */
-function pageOf<T>(rows: T[], page: number, pageSize: number | 'all'): Paginated<T> {
-  if (pageSize === 'all') return { items: rows, page: 1, pageSize: rows.length, total: rows.length };
-  const start = (page - 1) * pageSize;
-  return { items: rows.slice(start, start + pageSize), page, pageSize, total: rows.length };
+const idFrom = (url: string | undefined, re: RegExp): string =>
+  decodeURIComponent(url?.match(re)?.[1] ?? '');
+
+const num = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+const isBlank = (v: unknown): boolean => typeof v !== 'string' || v.trim() === '';
+
+function paging(p: Record<string, unknown>): { page: number; limit: number } {
+  const page = Math.floor(Number(p.page));
+  const limit = Math.floor(Number(p.limit));
+  return {
+    page: Number.isFinite(page) && page >= 1 ? page : 1,
+    limit: Number.isFinite(limit) && limit >= 1 ? Math.min(limit, 100) : 10,
+  };
 }
 
-function compareNullsLast(
-  a: string | null,
-  b: string | null,
-  dir: 1 | -1,
-  collate = false,
-): number {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  if (collate) return a.localeCompare(b, 'lo') * dir;
-  return a < b ? -dir : a > b ? dir : 0;
-}
-
-function duplicateRegulationReply(): Reply {
+function pageReply<T>(rows: T[], page: number, limit: number): Reply {
   return [
-    409,
+    200,
     {
-      code: 'DUPLICATE_REGULATION_NO',
-      message: '',
-      fieldErrors: { number: 'DUPLICATE_REGULATION_NO' },
+      data: rows.slice((page - 1) * limit, page * limit),
+      meta: { total: rows.length, page, limit, totalPages: Math.max(1, Math.ceil(rows.length / limit)) },
     },
   ];
 }
 
-function isDuplicateRegulation(number: string | undefined, exceptId?: string): boolean {
-  if (!number) return false;
-  const needle = number.trim().toLowerCase();
-  return regulationsMockDb
-    .all()
-    .some((r) => r.id !== exceptId && r.number.trim().toLowerCase() === needle);
+const byCreatedDesc = <T extends { createdAt: string; id: string | number }>(a: T, b: T): number =>
+  b.createdAt.localeCompare(a.createdAt) || String(a.id).localeCompare(String(b.id));
+
+const departmentOf = (id: unknown): { id: string; name: string } | null => {
+  const d = MOCK_DEPARTMENTS.find((x) => x.id === id);
+  return d ? { id: d.id, name: d.name } : null;
+};
+
+// ---------------------------------------------------------------- documents
+
+function validateDocument(body: Body, partial: boolean): string[] {
+  const errors: string[] = [];
+  const need = (key: string, bad: boolean, text: string) => {
+    if (partial && !(key in body)) return;
+    if (bad) errors.push(text);
+  };
+  need('docTitle', isBlank(body.docTitle), 'docTitle should not be empty');
+  need('docType', !(DOC_TYPES as readonly string[]).includes(body.docType as string), 'docType must be a valid enum value');
+  need('issueYear', !Number.isFinite(Number(body.issueYear)) || body.issueYear === '' || body.issueYear === null, 'issueYear must be a number');
+  need('docNumberDate', isBlank(body.docNumberDate), 'docNumberDate should not be empty');
+  need('departmentId', isBlank(body.departmentId), 'departmentId should not be empty');
+  if (body.status !== undefined && !(DOC_STATUSES as readonly string[]).includes(body.status as string)) {
+    errors.push('status must be a valid enum value');
+  }
+  if (!isBlank(body.departmentId) && !departmentOf(body.departmentId)) {
+    errors.push('departmentId must reference an existing department');
+  }
+  return errors;
 }
 
-function registerRegulations(mock: MockAdapter): void {
-  mock.onGet(endpoints.legal.regulations).reply((config) => {
-    const auth = authorize('view');
+function registerDocuments(mock: MockAdapter): void {
+  const SM = 'legal-documents' as const;
+
+  mock.onGet(endpoints.legalDocuments.dashboard).reply(() => {
+    const auth = authorize(SM, 'view');
+    if ('reply' in auth) return auth.reply;
+    const rows = legalDocumentsMockDb.all();
+    const byType: Record<string, number> = {};
+    const byDept = new Map<string, { departmentId: string; name: string; count: number }>();
+    for (const r of rows) {
+      byType[r.docType] = (byType[r.docType] ?? 0) + 1;
+      const cur = byDept.get(r.departmentId) ?? { departmentId: r.departmentId, name: r.department.name, count: 0 };
+      cur.count += 1;
+      byDept.set(r.departmentId, cur);
+    }
+    const active = rows.filter((r) => r.status === 'ACTIVE').length;
+    return [
+      200,
+      {
+        data: {
+          total: rows.length,
+          active,
+          inactive: rows.length - active,
+          byType,
+          byDepartment: [...byDept.values()].sort((a, b) => b.count - a.count),
+        },
+      },
+    ];
+  });
+
+  mock.onGet(endpoints.legalDocuments.list).reply((config) => {
+    const auth = authorize(SM, 'view');
     if ('reply' in auth) return auth.reply;
     const p = (config.params ?? {}) as Record<string, unknown>;
-
-    const q = typeof p.q === 'string' ? p.q.trim().toLowerCase() : '';
-    const type = (REGULATION_TYPES as readonly string[]).includes(p.type as string)
-      ? (p.type as RegulationType)
-      : undefined;
-    const unit = (LEGAL_UNITS as readonly string[]).includes(p.unit as string)
-      ? (p.unit as LegalUnit)
-      : undefined;
-    const status = (REGULATION_STATUSES as readonly string[]).includes(p.status as string)
-      ? (p.status as RegulationStatus)
-      : undefined;
-    const sort: RegulationSortKey = (REGULATION_SORT_KEYS as readonly string[]).includes(
-      p.sort as string,
-    )
-      ? (p.sort as RegulationSortKey)
-      : 'issuedDate';
-    const dir = p.order === 'asc' ? 1 : -1;
-    const pageNum = Math.floor(Number(p.page));
-    const page = Number.isFinite(pageNum) && pageNum >= 1 ? pageNum : 1;
-    const sizeNum = Number(p.pageSize);
-    const pageSize: number | 'all' =
-      p.pageSize === 'all' ? 'all' : PAGE_SIZES.includes(sizeNum) ? sizeNum : 10;
-
-    const filtered = regulationsMockDb.all().filter((r) => {
-      if (type && r.type !== type) return false;
-      if (unit && r.unit !== unit) return false;
-      if (status && r.status !== status) return false;
-      if (q) {
-        const hay = [r.title, r.number, r.responsible ?? ''].join('\n').toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-    filtered.sort(
-      (a: Regulation, b: Regulation) =>
-        compareNullsLast(a[sort], b[sort], dir, sort === 'title') ||
-        (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-    );
-    return [200, pageOf(filtered, page, pageSize)];
+    const search = str(p.search).toLowerCase();
+    const year = p.issueYear === undefined || p.issueYear === '' ? null : Number(p.issueYear);
+    const rows = legalDocumentsMockDb
+      .all()
+      .filter((r) => {
+        if (p.docType && r.docType !== p.docType) return false;
+        if (p.status && r.status !== p.status) return false;
+        if (year !== null && Number(r.issueYear) !== year) return false;
+        if (p.departmentId && r.departmentId !== p.departmentId) return false;
+        if (search) {
+          const hay = [r.docTitle, r.docNumberDate, r.responsiblePerson ?? '', r.purpose ?? ''].join('\n').toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      })
+      .sort(byCreatedDesc);
+    const { page, limit } = paging(p);
+    return pageReply(rows, page, limit);
   });
 
-  mock.onPost(endpoints.legal.regulations).reply((config) => {
-    const auth = authorize('create');
+  mock.onPost(endpoints.legalDocuments.list).reply((config) => {
+    const auth = authorize(SM, 'create');
     if ('reply' in auth) return auth.reply;
-    const body = parseBody<RegulationInput>(config.data);
-    if (isDuplicateRegulation(body.number)) return duplicateRegulationReply();
-    return [201, regulationsMockDb.insert(body as RegulationInput, auth.user.username)];
+    const body = parseBody(config.data);
+    const errors = validateDocument(body, false);
+    if (errors.length > 0) return nest(400, 'Bad Request', errors);
+    const now = new Date().toISOString();
+    const dept = departmentOf(body.departmentId)!;
+    const row: RawLegalDocument = {
+      id: nextLegalDocumentId(),
+      docTitle: str(body.docTitle),
+      docType: body.docType as string,
+      issueYear: num(body.issueYear),
+      docNumberDate: str(body.docNumberDate),
+      status: body.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      responsiblePerson: str(body.responsiblePerson) || null,
+      departmentId: dept.id,
+      department: dept,
+      purpose: str(body.purpose) || null,
+      externalUrl: str(body.externalUrl) || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return [201, { data: legalDocumentsMockDb.insert(row) }];
   });
 
-  mock.onGet(REGULATION_DETAIL_RE).reply((config) => {
-    const auth = authorize('view');
+  mock.onGet(DOC_DETAIL_RE).reply((config) => {
+    const auth = authorize(SM, 'view');
     if ('reply' in auth) return auth.reply;
-    const found = regulationsMockDb.get(config.url?.match(REGULATION_DETAIL_RE)?.[1] ?? '');
-    return found ? [200, found] : [404, { code: 'NOT_FOUND' }];
+    const found = legalDocumentsMockDb.get(idFrom(config.url, DOC_DETAIL_RE));
+    return found ? [200, { data: found }] : nest(404, 'Not Found', 'Legal document not found');
   });
 
-  mock.onPatch(REGULATION_DETAIL_RE).reply((config) => {
-    const auth = authorize('edit');
+  mock.onPatch(DOC_DETAIL_RE).reply((config) => {
+    const auth = authorize(SM, 'edit');
     if ('reply' in auth) return auth.reply;
-    const id = config.url?.match(REGULATION_DETAIL_RE)?.[1] ?? '';
-    if (!regulationsMockDb.get(id)) return [404, { code: 'NOT_FOUND' }];
-    const body = parseBody<RegulationInput>(config.data);
-    // The record itself is excluded, so saving with its own number is not a duplicate.
-    if (isDuplicateRegulation(body.number, id)) return duplicateRegulationReply();
-    return [200, regulationsMockDb.update(id, body)];
+    const id = idFrom(config.url, DOC_DETAIL_RE);
+    if (!legalDocumentsMockDb.get(id)) return nest(404, 'Not Found', 'Legal document not found');
+    const body = parseBody(config.data);
+    const errors = validateDocument(body, true);
+    if (errors.length > 0) return nest(400, 'Bad Request', errors);
+    const patch: Partial<RawLegalDocument> = { updatedAt: new Date().toISOString() };
+    const text = ['docTitle', 'docNumberDate', 'responsiblePerson', 'purpose', 'externalUrl'] as const;
+    for (const k of text) if (k in body) patch[k] = (str(body[k]) || null) as never;
+    if ('docType' in body) patch.docType = body.docType as string;
+    if ('status' in body) patch.status = body.status as 'ACTIVE' | 'INACTIVE';
+    if ('issueYear' in body) patch.issueYear = num(body.issueYear);
+    if ('departmentId' in body) {
+      const dept = departmentOf(body.departmentId)!;
+      patch.departmentId = dept.id;
+      patch.department = dept;
+    }
+    return [200, { data: legalDocumentsMockDb.update(id, patch) }];
   });
 
-  mock.onDelete(REGULATION_DETAIL_RE).reply((config) => {
-    const auth = authorize('delete');
+  mock.onDelete(DOC_DETAIL_RE).reply((config) => {
+    const auth = authorize(SM, 'delete');
     if ('reply' in auth) return auth.reply;
-    const id = config.url?.match(REGULATION_DETAIL_RE)?.[1] ?? '';
-    if (!regulationsMockDb.get(id)) return [404, { code: 'NOT_FOUND' }];
-    regulationsMockDb.remove(id);
-    return [204];
+    const id = idFrom(config.url, DOC_DETAIL_RE);
+    if (!legalDocumentsMockDb.remove(id)) return nest(404, 'Not Found', 'Legal document not found');
+    return [200, { data: { id } }];
   });
 }
+
+// -------------------------------------------------------------------- cases
+
+function validateCase(body: Body, partial: boolean): string[] {
+  const errors: string[] = [];
+  const need = (key: string, bad: boolean, text: string) => {
+    if (partial && !(key in body)) return;
+    if (bad) errors.push(text);
+  };
+  need('caseCode', isBlank(body.caseCode), 'caseCode should not be empty');
+  need('defendant', isBlank(body.defendant), 'defendant should not be empty');
+  need('caseType', !(CASE_TYPES as readonly string[]).includes(body.caseType as string), 'caseType must be a valid enum value');
+  need('date', isBlank(body.date) || Number.isNaN(Date.parse(str(body.date))), 'date must be a valid ISO 8601 date string');
+  if (body.disputeStatus !== undefined && !(DISPUTE_STATUSES as readonly string[]).includes(body.disputeStatus as string)) {
+    errors.push('disputeStatus must be a valid enum value');
+  }
+  if (body.departmentId && !departmentOf(body.departmentId)) {
+    errors.push('departmentId must reference an existing department');
+  }
+  return errors;
+}
+
+const isDuplicateCode = (code: string, exceptId?: string): boolean =>
+  legalCasesMockDb
+    .all()
+    .some((c) => c.internalId !== exceptId && c.caseCode.trim().toLowerCase() === code.trim().toLowerCase());
+
+const conflict = (): Reply => nest(409, 'Conflict', 'Case code already exists');
 
 function registerCases(mock: MockAdapter): void {
-  mock.onGet(endpoints.legal.cases).reply((config) => {
-    const auth = authorize('view');
+  const SM = 'legal-cases' as const;
+
+  mock.onGet(endpoints.legalCases.dashboard).reply(() => {
+    const auth = authorize(SM, 'view');
     if ('reply' in auth) return auth.reply;
-    const p = (config.params ?? {}) as Record<string, unknown>;
-
-    const q = typeof p.q === 'string' ? p.q.trim().toLowerCase() : '';
-    const caseType = (CASE_TYPES as readonly string[]).includes(p.caseType as string)
-      ? (p.caseType as CaseType)
-      : undefined;
-    const stage = (CASE_STAGES as readonly string[]).includes(p.stage as string)
-      ? (p.stage as CaseStage)
-      : undefined;
-    const progress = p.progress === 'in_progress' || p.progress === 'finished' ? p.progress : undefined;
-    const sort: CaseSortKey = (CASE_SORT_KEYS as readonly string[]).includes(p.sort as string)
-      ? (p.sort as CaseSortKey)
-      : 'disputeDate';
-    const dir = p.order === 'asc' ? 1 : -1;
-    const pageNum = Math.floor(Number(p.page));
-    const page = Number.isFinite(pageNum) && pageNum >= 1 ? pageNum : 1;
-    const sizeNum = Number(p.pageSize);
-    const pageSize: number | 'all' =
-      p.pageSize === 'all' ? 'all' : PAGE_SIZES.includes(sizeNum) ? sizeNum : 10;
-
-    const filtered = casesMockDb.all().filter((c) => {
-      if (caseType && c.caseType !== caseType) return false;
-      if (stage && c.stage !== stage) return false;
-      if (progress === 'in_progress' && isCaseFinished(c.stage)) return false;
-      if (progress === 'finished' && !isCaseFinished(c.stage)) return false;
-      if (q) {
-        const hay = [c.caseNo, c.defendant, c.allegation, c.handlingUnit, c.progress ?? '']
-          .join('\n')
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-
-    filtered.sort(
-      (a: LegalCase, b: LegalCase) =>
-        compareNullsLast(a[sort], b[sort], dir, sort === 'defendant') ||
-        (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-    );
-    return [200, pageOf(filtered, page, pageSize)];
+    const rows = legalCasesMockDb.all();
+    const byDisputeStatus: Record<string, number> = {};
+    for (const r of rows) byDisputeStatus[r.disputeStatus] = (byDisputeStatus[r.disputeStatus] ?? 0) + 1;
+    const sum = (k: keyof RawLegalCase) => rows.reduce((s, r) => s + num(r[k]), 0);
+    return [
+      200,
+      {
+        data: {
+          total: rows.length,
+          byDisputeStatus,
+          lak: { damage: sum('damageLak'), fine: sum('fineLak'), totalDue: sum('totalDueLak'), recovered: sum('recoveredLak') },
+          usd: { damage: sum('damageUsd'), fine: sum('fineUsd'), totalDue: sum('totalDueUsd'), recovered: sum('recoveredUsd') },
+        },
+      },
+    ];
   });
 
-  mock.onPost(endpoints.legal.cases).reply((config) => {
-    const auth = authorize('create');
+  mock.onGet(endpoints.legalCases.list).reply((config) => {
+    const auth = authorize(SM, 'view');
     if ('reply' in auth) return auth.reply;
-    const body = parseBody<CaseInput>(config.data);
-    return [201, casesMockDb.insert(body as CaseInput, auth.user.username)];
+    const p = (config.params ?? {}) as Record<string, unknown>;
+    const search = str(p.search).toLowerCase();
+    const start = str(p.startDate);
+    const end = str(p.endDate);
+    const rows = legalCasesMockDb
+      .all()
+      .filter((r) => {
+        if (p.caseType && r.caseType !== p.caseType) return false;
+        if (p.disputeStatus && r.disputeStatus !== p.disputeStatus) return false;
+        if (p.departmentId && r.departmentId !== p.departmentId) return false;
+        const day = r.date.slice(0, 10);
+        if (start && day < start) return false;
+        if (end && day > end) return false;
+        if (search) {
+          const hay = [r.caseCode, r.defendant, r.allegation ?? '', r.departmentAction ?? '', r.disputeProgress ?? '']
+            .join('\n')
+            .toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => byCreatedDesc({ ...a, id: a.internalId }, { ...b, id: b.internalId }));
+    const { page, limit } = paging(p);
+    return pageReply(rows, page, limit);
+  });
+
+  mock.onPost(endpoints.legalCases.list).reply((config) => {
+    const auth = authorize(SM, 'create');
+    if ('reply' in auth) return auth.reply;
+    const body = parseBody(config.data);
+    const errors = validateCase(body, false);
+    if (errors.length > 0) return nest(400, 'Bad Request', errors);
+    if (isDuplicateCode(str(body.caseCode))) return conflict();
+    const now = new Date().toISOString();
+    const dept = body.departmentId ? departmentOf(body.departmentId) : null;
+    const damageLak = num(body.damageLak);
+    const damageUsd = num(body.damageUsd);
+    const fineLak = num(body.fineLak);
+    const fineUsd = num(body.fineUsd);
+    const row: RawLegalCase = {
+      ...nextLegalCaseIds(),
+      caseCode: str(body.caseCode),
+      defendant: str(body.defendant),
+      allegation: str(body.allegation) || null,
+      departmentId: dept?.id ?? '',
+      department: dept as { id: string; name: string },
+      departmentAction: str(body.departmentAction) || null,
+      caseType: body.caseType as string,
+      damageLak,
+      damageUsd,
+      fineLak,
+      fineUsd,
+      totalDueLak: damageLak + fineLak,
+      totalDueUsd: damageUsd + fineUsd,
+      disputeStatus: (body.disputeStatus as string) ?? 'FIRST_INSTANCE',
+      recoveredLak: num(body.recoveredLak),
+      recoveredUsd: num(body.recoveredUsd),
+      date: `${str(body.date).slice(0, 10)}T00:00:00.000Z`,
+      disputeProgress: str(body.disputeProgress) || null,
+      externalUrl: str(body.externalUrl) || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (!dept) {
+      row.departmentId = null as unknown as string;
+      row.department = null as unknown as { id: string; name: string };
+    }
+    return [201, { data: legalCasesMockDb.insert(row) }];
   });
 
   mock.onGet(CASE_DETAIL_RE).reply((config) => {
-    const auth = authorize('view');
+    const auth = authorize(SM, 'view');
     if ('reply' in auth) return auth.reply;
-    const found = casesMockDb.get(config.url?.match(CASE_DETAIL_RE)?.[1] ?? '');
-    return found ? [200, found] : [404, { code: 'NOT_FOUND' }];
+    const found = legalCasesMockDb.get(idFrom(config.url, CASE_DETAIL_RE));
+    return found ? [200, { data: found }] : nest(404, 'Not Found', 'Legal case not found');
   });
 
   mock.onPatch(CASE_DETAIL_RE).reply((config) => {
-    const auth = authorize('edit');
+    const auth = authorize(SM, 'edit');
     if ('reply' in auth) return auth.reply;
-    const id = config.url?.match(CASE_DETAIL_RE)?.[1] ?? '';
-    if (!casesMockDb.get(id)) return [404, { code: 'NOT_FOUND' }];
-    const body = parseBody<CaseInput>(config.data);
-    return [200, casesMockDb.update(id, body)];
+    const id = idFrom(config.url, CASE_DETAIL_RE);
+    const current = legalCasesMockDb.get(id);
+    if (!current) return nest(404, 'Not Found', 'Legal case not found');
+    const body = parseBody(config.data);
+    const errors = validateCase(body, true);
+    if (errors.length > 0) return nest(400, 'Bad Request', errors);
+    if ('caseCode' in body && isDuplicateCode(str(body.caseCode), id)) return conflict();
+
+    const patch: Partial<RawLegalCase> = { updatedAt: new Date().toISOString() };
+    for (const k of ['caseCode', 'defendant'] as const) if (k in body) patch[k] = str(body[k]);
+    for (const k of ['allegation', 'departmentAction', 'disputeProgress', 'externalUrl'] as const) {
+      if (k in body) patch[k] = str(body[k]) || null;
+    }
+    if ('caseType' in body) patch.caseType = body.caseType as string;
+    if ('disputeStatus' in body) patch.disputeStatus = body.disputeStatus as string;
+    if ('date' in body) patch.date = `${str(body.date).slice(0, 10)}T00:00:00.000Z`;
+    for (const k of ['damageLak', 'damageUsd', 'fineLak', 'fineUsd', 'recoveredLak', 'recoveredUsd'] as const) {
+      if (k in body) patch[k] = num(body[k]);
+    }
+    if ('departmentId' in body) {
+      const dept = body.departmentId ? departmentOf(body.departmentId) : null;
+      patch.departmentId = (dept?.id ?? null) as string;
+      patch.department = dept as { id: string; name: string };
+    }
+    const merged = { ...current, ...patch };
+    patch.totalDueLak = num(merged.damageLak) + num(merged.fineLak);
+    patch.totalDueUsd = num(merged.damageUsd) + num(merged.fineUsd);
+    return [200, { data: legalCasesMockDb.update(id, patch) }];
   });
 
   mock.onDelete(CASE_DETAIL_RE).reply((config) => {
-    const auth = authorize('delete');
+    const auth = authorize(SM, 'delete');
     if ('reply' in auth) return auth.reply;
-    const id = config.url?.match(CASE_DETAIL_RE)?.[1] ?? '';
-    if (!casesMockDb.get(id)) return [404, { code: 'NOT_FOUND' }];
-    casesMockDb.remove(id);
-    return [204];
-  });
-}
-
-function registerDashboard(mock: MockAdapter): void {
-  mock.onGet(endpoints.legal.dashboard).reply(() => {
-    const auth = authorize('view');
-    if ('reply' in auth) return auth.reply;
-
-    const allRegs = regulationsMockDb.all();
-    const byStatus = REGULATION_STATUSES.reduce((acc, s) => {
-      acc[s] = allRegs.filter((r) => r.status === s).length;
-      return acc;
-    }, {} as Record<RegulationStatus, number>);
-
-    const byType = REGULATION_TYPES.map((type) => ({
-      type,
-      count: allRegs.filter((r) => r.type === type).length,
-    }));
-
-    const byUnit = LEGAL_UNITS.map((unit) => ({
-      unit,
-      count: allRegs.filter((r) => r.unit === unit).length,
-    }))
-      .filter((u) => u.count > 0)
-      .sort((a, b) => b.count - a.count);
-
-    const allCases = casesMockDb.all();
-    const finished = allCases.filter((c) => isCaseFinished(c.stage)).length;
-    const inProgress = allCases.length - finished;
-
-    const byStage = CASE_STAGES.map((stage) => ({
-      stage,
-      count: allCases.filter((c) => c.stage === stage).length,
-    }));
-
-    const dashboard: LegalDashboard = {
-      regulations: {
-        total: allRegs.length,
-        byStatus,
-        unitCount: byUnit.length,
-        byType,
-        byUnit,
-      },
-      cases: {
-        total: allCases.length,
-        inProgress,
-        finished,
-        byStage,
-        damage: sumDual(allCases.map((c) => c.damage)),
-        fine: sumDual(allCases.map((c) => c.fine)),
-        recovered: sumDual(allCases.map((c) => c.recovered)),
-      },
-    };
-
-    return [200, dashboard];
+    const id = idFrom(config.url, CASE_DETAIL_RE);
+    if (!legalCasesMockDb.remove(id)) return nest(404, 'Not Found', 'Legal case not found');
+    return [200, { data: { id } }];
   });
 }
 
 export function register(mock: MockAdapter): void {
-  registerDashboard(mock);
-  registerRegulations(mock);
+  registerDocuments(mock);
   registerCases(mock);
 }
