@@ -2,56 +2,57 @@ import { expect, test } from '@playwright/test';
 import { lo } from '../src/lib/i18n/lo';
 import { loginAs } from './helpers';
 
-test.describe('PPA Module (Phase 2)', () => {
+test.describe('Power contracts module (/ppa)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, 'ppa.user');
   });
 
-  test('navigates to PPA dashboard and shows KPIs and breakdown charts', async ({ page }) => {
+  test('dashboard shows KPIs, status and project type breakdowns', async ({ page }) => {
     await page.goto('/ppa');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.nav.dashboard);
-    // KPIs should render
-    await expect(page.getByText(lo.ppa.kpi.total, { exact: true })).toBeVisible();
-    await expect(page.getByText(lo.ppa.kpi.activeCapacity)).toBeVisible();
-    // Breakdown charts
-    await expect(page.getByRole('heading', { name: 'ສະຖານະສັນຍາ' })).toBeVisible();
-    await expect(page.getByText('ກຳລັງຕິດຕັ້ງແຍກຕາມປະເພດພະລັງງານ (MW)')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.dashboard.title);
+    await expect(page.getByText(lo.ppa.dashboard.kpiTotal, { exact: true })).toBeVisible();
+    await expect(page.getByText(lo.ppa.dashboard.kpiCapacity)).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.ppa.dashboard.byStatus })).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.ppa.dashboard.byProjectType })).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.ppa.dashboard.expiringList })).toBeVisible();
   });
 
-  test('views contracts list and filters by status', async ({ page }) => {
+  test('list shows contracts and filters by contract type', async ({ page }) => {
     await page.goto('/ppa/contracts');
     await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.title);
-    // Table should contain mock contract
     await expect(page.getByText('PPA-EDL-2010-001')).toBeVisible();
-    // Filter chips (toggle buttons with aria-pressed) are rendered
-    await expect(page.getByRole('button', { name: lo.table.all }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: lo.status.active })).toBeVisible();
+    await page.getByRole('button', { name: lo.ppa.types.SALE, exact: true }).click();
+    await expect(page.getByText('PSA-EDL-2020-001')).toBeVisible();
+    await expect(page.getByText('PPA-EDL-2010-001')).toHaveCount(0);
+    await expect(page).toHaveURL(/type=SALE/);
   });
 
-  test('opens contract detail page and verifies milestone timeline and documents', async ({ page }) => {
+  test('opens contract detail with documents and history', async ({ page }) => {
     await page.goto('/ppa/contracts/ppa-1');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Nam Theun 2');
     await expect(page.getByText('PPA-EDL-2010-001').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'ເຂື່ອນໄຟຟ້າ ນ້ຳເທີນ 2 (Nam Theun 2)' })).toBeVisible();
-    await expect(page.getByText(lo.ppa.historyTitle)).toBeVisible();
-    await expect(page.getByText(lo.ppa.documentsTitle)).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.ppa.detail.documents })).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.history.title })).toBeVisible();
   });
 
-  test('renders 4-step PPA wizard with live summary', async ({ page }) => {
+  test('wizard renders step 1 with the conditional project type field', async ({ page }) => {
     await page.goto('/ppa/new');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('ສ້າງສັນຍາ');
-    await expect(page.getByText(lo.ppa.wizard.step1).first()).toBeVisible();
-    await expect(page.getByText(lo.ppa.wizard.summaryTitle)).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.wizard.title);
+    await expect(page.getByText(lo.ppa.wizard.summary)).toBeVisible();
+    await expect(page.getByRole('combobox', { name: new RegExp(lo.ppa.fields.projectType) })).toBeVisible();
+    await page.getByRole('radio', { name: lo.ppa.types.SALE }).click();
+    await expect(page.getByRole('textbox', { name: new RegExp(lo.ppa.fields.customer) })).toBeVisible();
   });
 
-  test('views PPA alerts and filters', async ({ page }) => {
+  test('alerts page lists expiring contracts and notifications', async ({ page }) => {
     await page.goto('/ppa/alerts');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.alertsTitle);
-    await expect(page.getByRole('button', { name: lo.table.all })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.alerts.title);
+    await expect(page.getByRole('heading', { name: lo.ppa.alerts.expiringSoon })).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.ppa.alerts.notifications })).toBeVisible();
   });
 
-  test('views PPA documents repository', async ({ page }) => {
-    await page.goto('/ppa/documents');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.documentsTitle);
-    await expect(page.getByText(lo.dropzone.prompt)).toBeVisible();
+  test('the documents library route no longer exists', async ({ page }) => {
+    const res = await page.goto('/ppa/documents');
+    expect(res?.status()).toBe(404);
   });
 });

@@ -84,12 +84,6 @@ export const endpoints = {
     list: '/alerts',
     read: (id: string) => `/alerts/${id}/read`,
   },
-  ppa: {
-    list: '/ppa/contracts',
-    detail: (id: string) => `/ppa/contracts/${id}`,
-    dashboard: '/ppa/dashboard',
-    history: (id: string) => `/ppa/contracts/${id}/history`,
-  },
   gc: {
     list: '/contracts',
     detail: (id: string) => `/contracts/${id}`,

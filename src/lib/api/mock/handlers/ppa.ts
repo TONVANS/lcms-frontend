@@ -1,254 +1,224 @@
 import type MockAdapter from 'axios-mock-adapter';
-import { MOCK_PPA_CONTRACTS } from '@/features/ppa/mocks/ppa.mock';
-import type {
-  EnergyType,
-  KeyEvent,
-  PpaContract,
-  PpaContractInput,
-  PpaDashboardSummary,
-} from '@/features/ppa/types';
-import { lo } from '@/lib/i18n/lo';
+import { toPowerContract } from '@/features/ppa/lib/power-contract-mapper';
+import { powerMockDb, type RawPowerContract } from '@/features/ppa/mocks/ppa.mock';
+import { POWER_STATUSES } from '@/features/ppa/types';
+import { hasPermission } from '@/lib/auth/permissions';
 import { daysLeft } from '@/lib/utils/date';
-import type { Paginated } from '@/types/api';
-import type { Alert } from '@/types/domain';
+import type { Permission, User } from '@/types/domain';
+import { endpoints } from '../../endpoints';
+import { getMockSessionUser } from '../session';
 
-let contracts: PpaContract[] = [...MOCK_PPA_CONTRACTS];
+type Reply = [number, unknown?];
 
-export function register(mock: MockAdapter) {
-  // GET /ppa/dashboard
-  mock.onGet('/ppa/dashboard').reply(() => {
-    const totalContracts = contracts.length;
-    const activeContracts = contracts.filter((c) => c.status === 'active');
-    const activeCapacityMw = activeContracts.reduce((sum, c) => sum + c.capacityMw, 0);
+const DETAIL_RE = /^\/power-contracts\/(?!dashboard$|project-types$)([^/?]+)$/;
+const DATE_FIELDS = ['signedDate', 'effectiveDate', 'expirationDate'] as const;
+const NUM_FIELDS = ['durationMonths', 'capacityValue', 'tariffValue', 'notifyDaysBefore'] as const;
 
-    // Expiring contracts within 90 days
-    const today = new Date();
-    const expiringContracts = contracts.filter((c) => {
-      if (!c.endDate) return false;
-      const d = daysLeft(c.endDate, today);
-      return d !== null && d >= 0 && d <= 90;
+const badRequest = (message: string[]): Reply => [
+  400,
+  { statusCode: 400, message, error: 'Bad Request' },
+];
+
+function authorize(permission: Permission): { user: User } | { reply: Reply } {
+  const user = getMockSessionUser();
+  if (!user) return { reply: [401, { statusCode: 401, message: 'Unauthorized', error: 'Unauthorized' }] };
+  if (!hasPermission(user, 'ppa', permission)) {
+    return { reply: [403, { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' }] };
+  }
+  return { user };
+}
+
+function parseBody(data: unknown): Record<string, unknown> {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return (data ?? {}) as Record<string, unknown>;
+}
+
+function validate(body: Record<string, unknown>, partial: boolean): string[] {
+  const errors: string[] = [];
+  const required = (key: string) => {
+    const v = body[key];
+    if (typeof v !== 'string' || v.trim() === '') errors.push(`${key} should not be empty`);
+  };
+  if (!partial || 'contractType' in body) {
+    if (body.contractType !== 'PURCHASE' && body.contractType !== 'SALE') {
+      errors.push('contractType must be one of the following values: PURCHASE, SALE');
+    }
+  }
+  if (!partial || 'projectName' in body) required('projectName');
+  if (!partial || 'projectTypeOrCustomer' in body) required('projectTypeOrCustomer');
+  for (const key of NUM_FIELDS) {
+    if (key in body && body[key] !== null && typeof body[key] !== 'number') {
+      errors.push(`${key} must be a number conforming to the specified constraints`);
+    }
+  }
+  if (typeof body.status === 'string' && !(POWER_STATUSES as readonly string[]).includes(body.status)) {
+    errors.push('status must be a valid enum value');
+  }
+  return errors;
+}
+
+function isDuplicate(contractNumber: unknown, exceptId?: string): boolean {
+  if (typeof contractNumber !== 'string' || contractNumber.trim() === '') return false;
+  const n = contractNumber.trim().toLowerCase();
+  return powerMockDb
+    .all()
+    .some((r) => r.id !== exceptId && String(r.contractNumber ?? '').toLowerCase() === n);
+}
+
+const conflict = (): Reply => [
+  409,
+  { statusCode: 409, message: 'Contract number already exists', error: 'Conflict' },
+];
+
+/** Server-side status: DRAFT without an expiration date, else by days left vs notifyDaysBefore. */
+function deriveStatus(rec: RawPowerContract): string {
+  const exp = toPowerContract(rec).expirationDate;
+  if (!exp) return 'DRAFT';
+  const left = daysLeft(exp);
+  if (left === null) return 'DRAFT';
+  if (left < 0) return 'EXPIRED';
+  const notify = Number(rec.notifyDaysBefore ?? 60);
+  return left <= notify ? 'EXPIRING_SOON' : 'ACTIVE';
+}
+
+function num(v: unknown, fallback: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export function register(mock: MockAdapter): void {
+  mock.onGet(endpoints.powerContracts.list).reply((config) => {
+    const auth = authorize('view');
+    if ('reply' in auth) return auth.reply;
+    const p = (config.params ?? {}) as Record<string, unknown>;
+    const page = Math.max(1, Math.floor(num(p.page, 1)));
+    const limit = Math.min(100, Math.max(1, Math.floor(num(p.limit, 10))));
+    const search = typeof p.search === 'string' ? p.search.trim().toLowerCase() : '';
+    const pt = typeof p.projectTypeOrCustomer === 'string' ? p.projectTypeOrCustomer.trim().toLowerCase() : '';
+
+    const rows = powerMockDb.all().filter((r) => {
+      if (p.contractType && r.contractType !== p.contractType) return false;
+      if (p.status && r.status !== p.status) return false;
+      if (pt && !String(r.projectTypeOrCustomer ?? '').toLowerCase().includes(pt)) return false;
+      if (search) {
+        const hay = [r.contractNumber, r.projectName, r.projectTypeOrCustomer]
+          .map((x) => String(x ?? '').toLowerCase())
+          .join('\n');
+        if (!hay.includes(search)) return false;
+      }
+      return true;
     });
-
-    const avgTariff =
-      contracts.length > 0
-        ? Number(
-            (
-              contracts.reduce((sum, c) => sum + c.tariffUsCentPerKwh, 0) /
-              contracts.length
-            ).toFixed(2),
-          )
-        : 0;
-
-    // Energy breakdown
-    const energyTypes: EnergyType[] = ['hydro', 'solar', 'wind', 'coal', 'biomass'];
-    const totalCap = contracts.reduce((sum, c) => sum + c.capacityMw, 0);
-    const energyBreakdown = energyTypes.map((type) => {
-      const typeContracts = contracts.filter((c) => c.energyType === type);
-      const cap = typeContracts.reduce((sum, c) => sum + c.capacityMw, 0);
-      return {
-        energyType: type,
-        label: lo.energy[type as keyof typeof lo.energy] ?? type,
-        count: typeContracts.length,
-        capacityMw: cap,
-        percentage: totalCap > 0 ? Math.round((cap / totalCap) * 100) : 0,
-      };
-    });
-
-    // Status breakdown
-    const statusKeys: PpaContract['status'][] = [
-      'active',
-      'negotiating',
-      'pending_cod',
-      'expiring',
-      'expired',
-      'draft',
-      'terminated',
-    ];
-    const statusBreakdown = statusKeys.map((status) => ({
-      status,
-      count: contracts.filter((c) => c.status === status).length,
-    }));
-
-    // Monthly expiring (next 6 months)
-    const monthlyExpiring = [
-      { month: '10/2026', count: 1 },
-      { month: '11/2026', count: 2 },
-      { month: '12/2026', count: 1 },
-      { month: '01/2027', count: 0 },
-      { month: '02/2027', count: 1 },
-      { month: '03/2027', count: 0 },
-    ];
-
-    // Upcoming alerts
-    const upcomingAlerts: Alert[] = expiringContracts.slice(0, 5).map((c) => {
-      const d = daysLeft(c.endDate, today) ?? 0;
-      return {
-        id: `alert-ppa-${c.id}`,
-        module: 'ppa',
-        entityType: 'ppa',
-        entityId: c.id,
-        title: `${c.projectName} - ສັນຍາໃກ້ໝົດອາຍຸ`,
-        dueDate: c.endDate ?? new Date().toISOString(),
-        daysLeft: d,
-        read: false,
-      };
-    });
-
-    const summary: PpaDashboardSummary = {
-      kpis: {
-        totalContracts,
-        activeCapacityMw,
-        expiringCount: expiringContracts.length,
-        avgTariff,
+    const total = rows.length;
+    return [
+      200,
+      {
+        data: rows.slice((page - 1) * limit, page * limit),
+        meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
       },
-      energyBreakdown,
-      statusBreakdown,
-      monthlyExpiring,
-      upcomingAlerts,
-    };
-
-    return [200, summary];
+    ];
   });
 
-  // GET /ppa/contracts/:id/history
-  mock.onGet(/\/ppa\/contracts\/[^/]+\/history$/).reply((config) => {
-    const id = config.url?.split('/')[3];
-    const contract = contracts.find((c) => c.id === id);
-    if (!contract) return [404, { message: 'Not found' }];
-
-    const history: KeyEvent[] = [];
-    if (contract.signedDate) {
-      history.push({
-        type: 'signed',
-        label: 'ເຊັນສັນຍາ PPA',
-        date: contract.signedDate,
-      });
+  mock.onGet(endpoints.powerContracts.dashboard).reply(() => {
+    const auth = authorize('view');
+    if ('reply' in auth) return auth.reply;
+    const all = powerMockDb.all();
+    const mapped = all.map(toPowerContract);
+    const byStatus: Record<string, number> = {};
+    for (const s of POWER_STATUSES) byStatus[s] = mapped.filter((c) => c.status === s).length;
+    const mw = (c: (typeof mapped)[number]) =>
+      c.capacityValue === null ? 0 : c.capacityUnit === 'kW' ? c.capacityValue / 1000 : c.capacityValue;
+    const groups = new Map<string, { count: number; capacityMw: number }>();
+    for (const c of mapped) {
+      const g = groups.get(c.projectTypeOrCustomer) ?? { count: 0, capacityMw: 0 };
+      g.count += 1;
+      g.capacityMw += mw(c);
+      groups.set(c.projectTypeOrCustomer, g);
     }
-    if (contract.codDate) {
-      history.push({
-        type: 'cod',
-        label: 'ເລີ່ມດຳເນີນງານທາງການຄ້າ (COD)',
-        date: contract.codDate,
-      });
-    }
-    if (contract.endDate) {
-      history.push({
-        type: 'end',
-        label: 'ກຳນົດສິ້ນສຸດສັນຍາ',
-        date: contract.endDate,
-      });
-    }
-
-    return [200, history];
+    const expiringSoon = all
+      .filter((r) => r.status === 'EXPIRING_SOON')
+      .sort((a, b) => String(a.expirationDate).localeCompare(String(b.expirationDate)))
+      .slice(0, 10);
+    return [
+      200,
+      {
+        data: {
+          total: all.length,
+          byStatus,
+          purchaseCount: mapped.filter((c) => c.contractType === 'PURCHASE').length,
+          saleCount: mapped.filter((c) => c.contractType === 'SALE').length,
+          totalCapacityMw: Math.round(mapped.reduce((s, c) => s + mw(c), 0) * 1000) / 1000,
+          byProjectType: [...groups.entries()]
+            .map(([projectType, g]) => ({
+              projectType,
+              count: g.count,
+              capacityMw: Math.round(g.capacityMw * 1000) / 1000,
+            })),
+          expiringSoon,
+        },
+      },
+    ];
   });
 
-  // GET /ppa/contracts/:id
-  mock.onGet(/\/ppa\/contracts\/[^/]+$/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    const contract = contracts.find((c) => c.id === id);
-    if (!contract) return [404, { message: 'Not found' }];
-    return [200, contract];
+  mock.onGet(DETAIL_RE).reply((config) => {
+    const auth = authorize('view');
+    if ('reply' in auth) return auth.reply;
+    const id = decodeURIComponent(config.url?.match(DETAIL_RE)?.[1] ?? '');
+    const rec = powerMockDb.find(id);
+    if (!rec) return [404, { statusCode: 404, message: 'Power contract not found', error: 'Not Found' }];
+    return [200, { data: rec }];
   });
 
-  // DELETE /ppa/contracts/:id
-  mock.onDelete(/\/ppa\/contracts\/[^/]+$/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    contracts = contracts.filter((c) => c.id !== id);
-    return [204];
-  });
-
-  // PATCH /ppa/contracts/:id
-  mock.onPatch(/\/ppa\/contracts\/[^/]+$/).reply((config) => {
-    const id = config.url?.split('/').pop();
-    const idx = contracts.findIndex((c) => c.id === id);
-    if (idx === -1) return [404, { message: 'Not found' }];
-
-    const body = JSON.parse(config.data || '{}') as Partial<PpaContractInput>;
-    const existing = contracts[idx];
-
-    const updated: PpaContract = {
-      ...existing,
+  mock.onPost(endpoints.powerContracts.list).reply((config) => {
+    const auth = authorize('create');
+    if ('reply' in auth) return auth.reply;
+    const body = parseBody(config.data);
+    const errors = validate(body, false);
+    if (errors.length > 0) return badRequest(errors);
+    if (isDuplicate(body.contractNumber)) return conflict();
+    const rec: Omit<RawPowerContract, 'id'> = {
+      notifyDaysBefore: 60,
+      capacityUnit: 'MW',
+      tariffCurrency: 'USD',
       ...body,
-      developer: body.developerName
-        ? { id: existing.developer.id, name: body.developerName }
-        : existing.developer,
     };
-    contracts[idx] = updated;
-    return [200, updated];
+    for (const key of DATE_FIELDS) if (typeof rec[key] === 'string' && rec[key] === '') rec[key] = null;
+    const now = new Date().toISOString();
+    rec.createdAt = now;
+    rec.updatedAt = now;
+    rec.status = deriveStatus(rec as RawPowerContract);
+    return [201, { data: powerMockDb.insert(rec) }];
   });
 
-  // POST /ppa/contracts
-  mock.onPost('/ppa/contracts').reply((config) => {
-    const body = JSON.parse(config.data || '{}') as PpaContractInput;
-    const newContract: PpaContract = {
-      id: `ppa-${Date.now()}`,
-      contractNo: body.contractNo,
-      projectName: body.projectName,
-      developer: { id: `dev-${Date.now()}`, name: body.developerName },
-      energyType: body.energyType,
-      capacityMw: Number(body.capacityMw),
-      tariffUsCentPerKwh: Number(body.tariffUsCentPerKwh),
-      annualEnergyGwh: body.annualEnergyGwh ? Number(body.annualEnergyGwh) : undefined,
-      market: body.market,
-      signedDate: body.signedDate,
-      codDate: body.codDate,
-      endDate: body.endDate,
-      termYears: body.termYears ? Number(body.termYears) : undefined,
-      status: body.status ?? 'active',
-      ownerUserId: 'ppa.user',
-      alertDays: body.alertDays ?? [90, 30, 7],
-      notes: body.notes,
-    };
-    contracts.unshift(newContract);
-    return [201, newContract];
+  mock.onPatch(DETAIL_RE).reply((config) => {
+    const auth = authorize('edit');
+    if ('reply' in auth) return auth.reply;
+    const id = decodeURIComponent(config.url?.match(DETAIL_RE)?.[1] ?? '');
+    const rec = powerMockDb.find(id);
+    if (!rec) return [404, { statusCode: 404, message: 'Power contract not found', error: 'Not Found' }];
+    const body = parseBody(config.data);
+    const errors = validate(body, true);
+    if (errors.length > 0) return badRequest(errors);
+    if ('contractNumber' in body && isDuplicate(body.contractNumber, id)) return conflict();
+    Object.assign(rec, body, { updatedAt: new Date().toISOString() });
+    if (!('status' in body) && ('expirationDate' in body || 'notifyDaysBefore' in body)) {
+      if (rec.status !== 'TERMINATED') rec.status = deriveStatus(rec);
+    }
+    return [200, { data: rec }];
   });
 
-  // GET /ppa/contracts
-  mock.onGet(/\/ppa\/contracts/).reply((config) => {
-    const urlParams = new URLSearchParams(config.url?.split('?')[1] ?? '');
-    const p = (config.params ?? {}) as Record<string, string | number | undefined>;
-
-    const q = (p.q ? String(p.q) : urlParams.get('q'))?.toLowerCase();
-    const status = p.status ? String(p.status) : urlParams.get('status');
-    const energyType = p.energyType ? String(p.energyType) : urlParams.get('energyType');
-    const market = p.market ? String(p.market) : urlParams.get('market');
-    const page = Number(p.page ?? urlParams.get('page') ?? 1);
-    const pageSize = Number(p.pageSize ?? urlParams.get('pageSize') ?? 10);
-
-    let filtered = [...contracts];
-
-    if (q) {
-      filtered = filtered.filter(
-        (c) =>
-          c.contractNo.toLowerCase().includes(q) ||
-          c.projectName.toLowerCase().includes(q) ||
-          c.developer.name.toLowerCase().includes(q),
-      );
+  mock.onDelete(DETAIL_RE).reply((config) => {
+    const auth = authorize('delete');
+    if ('reply' in auth) return auth.reply;
+    const id = decodeURIComponent(config.url?.match(DETAIL_RE)?.[1] ?? '');
+    if (!powerMockDb.remove(id)) {
+      return [404, { statusCode: 404, message: 'Power contract not found', error: 'Not Found' }];
     }
-
-    if (status && status !== 'all') {
-      filtered = filtered.filter((c) => c.status === status);
-    }
-
-    if (energyType && energyType !== 'all') {
-      filtered = filtered.filter((c) => c.energyType === energyType);
-    }
-
-    if (market && market !== 'all') {
-      filtered = filtered.filter((c) => c.market === market);
-    }
-
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
-
-    const response: Paginated<PpaContract> = {
-      items,
-      total,
-      page,
-      pageSize,
-    };
-
-    return [200, response];
+    return [200, { data: { success: true } }];
   });
 }
