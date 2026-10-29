@@ -19,22 +19,17 @@ import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { gcService } from '../api/gc.service';
-import {
-  emptyGcForm,
-  fromGcContract,
-  gcFormSchema,
-  toGcPayload,
-  type GcFormValues,
-} from '../schemas/gc.schema';
-import type { GeneralContract } from '../types';
+import { diffPayload, toContractPayload } from '../lib/contract-mapper';
+import { emptyGcForm, fromContract, gcFormSchema, type GcFormValues } from '../schemas/gc.schema';
+import type { Contract } from '../types';
 import { GcFormFieldGroup, firstInvalidFieldId } from './gc-contract-form-fields';
 import { applyGcServerErrors } from './gc-server-errors';
 
 export interface GcContractFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contract?: GeneralContract;
-  onSaved: (c: GeneralContract) => void;
+  contract?: Contract;
+  onSaved: (c: Contract) => void;
 }
 
 function focusById(id: string | null): void {
@@ -42,9 +37,9 @@ function focusById(id: string | null): void {
 }
 
 interface BodyProps {
-  contract?: GeneralContract;
+  contract?: Contract;
   onOpenChange: (open: boolean) => void;
-  onSaved: (c: GeneralContract) => void;
+  onSaved: (c: Contract) => void;
   busyRef: RefObject<boolean>;
   onBusyChange: (busy: boolean) => void;
 }
@@ -53,7 +48,7 @@ interface BodyProps {
 function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyChange }: BodyProps) {
   const form = useForm<GcFormValues>({
     resolver: zodResolver(gcFormSchema),
-    defaultValues: contract ? fromGcContract(contract) : emptyGcForm(),
+    defaultValues: contract ? fromContract(contract) : emptyGcForm(),
     shouldFocusError: false,
   });
   const { handleSubmit, formState } = form;
@@ -77,10 +72,14 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
     onBusyChange(true);
     setBanner(null);
     try {
-      const payload = toGcPayload(values);
-      const saved = contract
-        ? await gcService.update(contract.id, payload)
-        : await gcService.create(payload);
+      const payload = toContractPayload(values);
+      let saved: Contract;
+      if (contract) {
+        const patch = diffPayload(contract, payload);
+        saved = Object.keys(patch).length > 0 ? await gcService.update(contract.id, patch) : contract;
+      } else {
+        saved = await gcService.create(payload);
+      }
       busyRef.current = false;
       onBusyChange(false);
       onSaved(saved);

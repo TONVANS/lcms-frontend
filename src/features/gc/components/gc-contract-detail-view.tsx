@@ -12,23 +12,20 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { GlassCard } from '@/components/shared/glass-card';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Timeline } from '@/components/shared/timeline';
+import { ContractStatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentManager } from '@/features/documents';
+import { HistoryTimeline } from '@/features/history';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
-import { formatMoney } from '@/lib/utils/money';
 import type { ApiError } from '@/types/api';
 import { gcService } from '../api/gc.service';
-import { deriveGcStatus, GC_STATUS_TONE } from '../lib/derive-status';
-import { EMPTY, formatEquity } from '../lib/format';
-import { buildGcKeyDates } from '../lib/key-dates';
-import type { GeneralContract } from '../types';
+import { EMPTY, formatValue } from '../lib/format';
+import type { Contract } from '../types';
 import { GcContractFormDialog } from './gc-contract-form-dialog';
 
 const FOCUS_RING =
@@ -36,7 +33,7 @@ const FOCUS_RING =
 
 type LoadState =
   | { kind: 'loading' }
-  | { kind: 'ready'; contract: GeneralContract }
+  | { kind: 'ready'; contract: Contract }
   | { kind: 'notFound' }
   | { kind: 'error'; error: ApiError };
 
@@ -79,8 +76,8 @@ function LoadedDetail({
   contract,
   onChange,
 }: {
-  contract: GeneralContract;
-  onChange: (c: GeneralContract) => void;
+  contract: Contract;
+  onChange: (c: Contract) => void;
 }) {
   const router = useRouter();
   const canEdit = useCan('gc', 'edit');
@@ -90,9 +87,8 @@ function LoadedDetail({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const today = new Date();
-  const status = deriveGcStatus(contract, today);
-  const keyDates = buildGcKeyDates(contract, today);
+  const left = daysLeft(contract.expirationDate);
+  const showCountdown = left !== null && left >= 0 && left <= (contract.notifyDaysBefore ?? 60);
 
   const onConfirmDelete = async () => {
     try {
@@ -108,68 +104,57 @@ function LoadedDetail({
 
   const info: { label: string; value: ReactNode }[] = [
     { label: lo.gc.fields.title, value: contract.title },
-    { label: lo.gc.fields.type, value: lo.gc.types[contract.type] },
+    { label: lo.gc.fields.contractTypeId, value: contract.contractType?.nameLo ?? EMPTY },
     {
-      label: lo.gc.fields.contractNo,
-      value: <span className="tabular-nums">{contract.contractNo}</span>,
+      label: lo.gc.fields.contractNumber,
+      value: <span className="tabular-nums">{contract.contractNumber}</span>,
     },
-    { label: lo.gc.fields.counterparty, value: contract.counterparty ?? EMPTY },
-    { label: lo.gc.fields.termText, value: contract.termText ?? EMPTY },
+    { label: lo.gc.fields.durationText, value: contract.durationText ?? EMPTY },
     {
-      label: lo.gc.fields.signedDate,
-      value: <span className="tabular-nums">{formatDate(contract.signedDate)}</span>,
+      label: lo.gc.fields.durationMonths,
+      value: contract.durationMonths === null ? EMPTY : <span className="tabular-nums">{contract.durationMonths}</span>,
+    },
+    { label: lo.gc.fields.signedDate, value: <span className="tabular-nums">{formatDate(contract.signedDate)}</span> },
+    { label: lo.gc.fields.effectiveDate, value: <span className="tabular-nums">{formatDate(contract.effectiveDate)}</span> },
+    { label: lo.gc.fields.expirationDate, value: <span className="tabular-nums">{formatDate(contract.expirationDate)}</span> },
+    {
+      label: lo.gc.fields.contractValue,
+      value: <span className="tabular-nums">{formatValue(contract.contractValue, contract.currency)}</span>,
+    },
+    { label: lo.gc.fields.currency, value: contract.currency ?? EMPTY },
+    { label: lo.gc.fields.equityOrCapitalContribution, value: contract.equityOrCapitalContribution ?? EMPTY },
+    {
+      label: lo.gc.fields.sharePercentage,
+      value: contract.sharePercentage === null ? EMPTY : <span className="tabular-nums">{contract.sharePercentage}%</span>,
+    },
+    { label: lo.gc.fields.implementer, value: contract.implementer ?? EMPTY },
+    {
+      label: lo.gc.fields.notifyDaysBefore,
+      value: contract.notifyDaysBefore === null ? EMPTY : lo.gc.detail.notifyDays(contract.notifyDaysBefore),
     },
     {
-      label: lo.gc.fields.effectiveDate,
-      value: <span className="tabular-nums">{formatDate(contract.effectiveDate)}</span>,
-    },
-    {
-      label: lo.gc.fields.endDate,
-      value: contract.endDate ? (
-        <span className="tabular-nums">{formatDate(contract.endDate)}</span>
-      ) : (
-        lo.gc.openEnded
-      ),
-    },
-    {
-      label: lo.gc.fields.value,
-      value: contract.value ? (
-        <span className="tabular-nums">{formatMoney(contract.value)}</span>
+      label: lo.gc.fields.additionalDetails,
+      value: contract.additionalDetails ? (
+        <span className="whitespace-pre-wrap">{contract.additionalDetails}</span>
       ) : (
         EMPTY
       ),
     },
-    {
-      label: lo.gc.fields.equity,
-      value: <span className="tabular-nums">{formatEquity(contract.equity)}</span>,
-    },
-    { label: lo.gc.fields.implementer, value: contract.implementer ?? EMPTY },
-    {
-      label: lo.gc.fields.notes,
-      value: contract.notes ? <span className="whitespace-pre-wrap">{contract.notes}</span> : EMPTY,
-    },
-    {
-      label: lo.gc.fields.createdAt,
-      value: <span className="tabular-nums">{formatDate(contract.createdAt)}</span>,
-    },
-    {
-      label: lo.gc.fields.updatedAt,
-      value: <span className="tabular-nums">{formatDate(contract.updatedAt)}</span>,
-    },
-    { label: lo.gc.fields.createdBy, value: contract.createdBy },
+    { label: lo.gc.fields.createdAt, value: <span className="tabular-nums">{formatDate(contract.createdAt)}</span> },
+    { label: lo.gc.fields.updatedAt, value: <span className="tabular-nums">{formatDate(contract.updatedAt)}</span> },
   ];
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <BackLink />
       <PageHeader
-        eyebrow={`${MODULES.gc.code} · ${contract.contractNo}`}
+        eyebrow={`${MODULES.gc.code} · ${contract.contractNumber}`}
         title={contract.title}
         accent="gc"
         meta={
           <span className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={GC_STATUS_TONE[status]} label={lo.gc.status[status]} />
-            {contract.endDate ? <CountdownBadge days={daysLeft(contract.endDate, today)} /> : null}
+            <ContractStatusBadge status={contract.status} />
+            {showCountdown ? <CountdownBadge days={left} /> : null}
           </span>
         }
         actions={
@@ -192,12 +177,12 @@ function LoadedDetail({
         }
       />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-1 gap-6 ">
         <GlassCard
           as="section"
           accent="gc"
           aria-labelledby="gc-info-heading"
-          className="min-w-0 lg:col-span-2"
+          className="min-w-0"
         >
           <h2
             id="gc-info-heading"
@@ -214,22 +199,6 @@ function LoadedDetail({
           </dl>
         </GlassCard>
 
-        <GlassCard as="section" aria-labelledby="gc-dates-heading" className="min-w-0">
-          <h2
-            id="gc-dates-heading"
-            className="mb-4 font-serif text-lg font-semibold text-(--text-strong)"
-          >
-            {lo.gc.detail.keyDates}
-          </h2>
-          <Timeline
-            items={keyDates.map((k) => ({
-              id: k.key,
-              date: k.date,
-              title: k.label,
-              status: k.status,
-            }))}
-          />
-        </GlassCard>
       </div>
 
       <GlassCard as="section" aria-labelledby="gc-docs-heading" className="min-w-0">
@@ -248,6 +217,16 @@ function LoadedDetail({
         />
       </GlassCard>
 
+      <GlassCard as="section" aria-labelledby="gc-history-heading" className="min-w-0">
+        <h2
+          id="gc-history-heading"
+          className="mb-4 font-serif text-lg font-semibold text-(--text-strong)"
+        >
+          {lo.gc.detail.history}
+        </h2>
+        <HistoryTimeline kind="contracts" id={contract.id} />
+      </GlassCard>
+
       <GcContractFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -260,7 +239,7 @@ function LoadedDetail({
         onOpenChange={setDeleteOpen}
         tone="danger"
         title={lo.gc.list.deleteTitle}
-        description={lo.gc.list.deleteDesc(contract.contractNo)}
+        description={lo.gc.list.deleteDesc(contract.contractNumber)}
         onConfirm={onConfirmDelete}
       />
     </div>

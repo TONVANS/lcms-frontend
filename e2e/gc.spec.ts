@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { SUPPORT_CONTACTS, supportMailHref, supportTelHref } from '../src/config/support';
+import { STATUS_META } from '../src/lib/constants/status';
 import { lo } from '../src/lib/i18n/lo';
 import { loginAs } from './helpers';
 
@@ -43,6 +44,12 @@ async function pickToday(page: Page, scope: Page | Locator, label: string): Prom
 /** A form control by its label; the required marker (*) is part of the label text. */
 function field(scope: Page | Locator, label: string): Locator {
   return scope.getByLabel(new RegExp(String.raw`^${label}\s*\*?$`));
+}
+
+/** Picks a contract type from the (async-loaded) select inside `scope`. */
+async function pickType(page: Page, scope: Page | Locator, name: string): Promise<void> {
+  await scope.getByRole('combobox', { name: new RegExp(`^${lo.gc.fields.contractTypeId}`) }).click();
+  await page.getByRole('option', { name, exact: true }).click();
 }
 
 async function listAs(page: Page, user: string): Promise<void> {
@@ -101,7 +108,8 @@ test.describe('crud', () => {
     await page.getByRole('button', { name: lo.gc.list.create, exact: true }).click();
     const dialog = page.getByRole('dialog', { name: lo.gc.form.createTitle });
     await field(dialog, lo.gc.fields.title).fill(title);
-    await field(dialog, lo.gc.fields.contractNo).fill(no);
+    await field(dialog, lo.gc.fields.contractNumber).fill(no);
+    await pickType(page, dialog, lo.gc.types.land_lease);
     await pickToday(page, dialog, lo.gc.fields.signedDate);
     await pickToday(page, dialog, lo.gc.fields.effectiveDate);
     await dialog.getByRole('button', { name: lo.gc.form.save, exact: true }).click();
@@ -160,7 +168,8 @@ test('wizard creates a contract and lands on its detail', async ({ page }) => {
 
   const next = page.getByRole('button', { name: lo.gc.wizard.next, exact: true });
   await field(page, lo.gc.fields.title).fill(title);
-  await field(page, lo.gc.fields.contractNo).fill(no);
+  await field(page, lo.gc.fields.contractNumber).fill(no);
+  await pickType(page, page, lo.gc.types.moa);
   await next.click();
   await expect(page.getByRole('heading', { level: 2, name: lo.gc.wizard.step2 })).toBeVisible();
   await pickToday(page, page, lo.gc.fields.signedDate);
@@ -183,12 +192,13 @@ test('wizard creates a contract and lands on its detail', async ({ page }) => {
 });
 
 test.describe('alerts and dashboard', () => {
-  test('alerts page lists a 60-day contract', async ({ page }) => {
+  test('alerts page lists expiring contracts and contract notifications', async ({ page }) => {
     await loginAs(page, 'gc.user');
     await page.goto('/contracts/alerts');
-    const group = page.getByRole('region', { name: lo.gc.alerts.group60 });
-    await expect(page.getByRole('heading', { name: lo.gc.alerts.group60 })).toBeVisible();
+    const group = page.getByRole('region', { name: lo.gc.alerts.expiringSection });
+    await expect(page.getByRole('heading', { name: lo.gc.alerts.expiringSection })).toBeVisible();
     await expect(group.getByRole('listitem').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: lo.gc.alerts.notificationsSection })).toBeVisible();
   });
 
   test('marking an alert read removes its unread dot and decrements the bell', async ({ page }) => {
@@ -218,15 +228,15 @@ test.describe('alerts and dashboard', () => {
   test('dashboard expiring KPI equals the rows of the expiring list', async ({ page }) => {
     await loginAs(page, 'gc.user');
     await page.goto('/contracts');
-    const kpi = page.getByRole('link', { name: new RegExp(lo.gc.dashboard.kpiExpiring.replace(/[()]/g, '\\$&')) });
+    const kpi = page.locator('a[href="/contracts/list?status=EXPIRING_SOON"]');
     await expect(kpi).toBeVisible();
     const kpiValue = Number((await kpi.getByText(/^\d+$/).innerText()).replace(/\D/g, ''));
     expect(kpiValue).toBeGreaterThan(0);
 
     await kpi.click();
-    await expect(page).toHaveURL(/\/contracts\/list\?status=expiring/);
+    await expect(page).toHaveURL(/\/contracts\/list\?status=EXPIRING_SOON/);
     await waitForRows(page);
-    await expect(page.getByRole('button', { name: lo.gc.status.expiring, exact: true })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: STATUS_META.EXPIRING_SOON.label, exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
@@ -258,19 +268,19 @@ test.describe('list filters and navigation', () => {
     await loginAs(page, 'gc.user');
     await page.goto('/contracts/list');
     await waitForRows(page);
-    await page.getByRole('button', { name: lo.gc.status.expiring, exact: true }).click();
-    await expect(page).toHaveURL(/status=expiring/);
+    await page.getByRole('button', { name: STATUS_META.EXPIRING_SOON.label, exact: true }).click();
+    await expect(page).toHaveURL(/status=EXPIRING_SOON/);
 
     await page.reload();
     await waitForRows(page);
-    await expect(page.getByRole('button', { name: lo.gc.status.expiring, exact: true })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: STATUS_META.EXPIRING_SOON.label, exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     const rows = dataRows(page);
     const total = await rows.count();
     expect(total).toBeGreaterThan(0);
-    await expect(rows.filter({ hasText: lo.gc.status.expiring })).toHaveCount(total);
+    await expect(rows.filter({ hasText: STATUS_META.EXPIRING_SOON.label })).toHaveCount(total);
   });
 
   test('a row contract number opens the detail and the back link returns to the list', async ({ page }) => {

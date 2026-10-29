@@ -1,7 +1,5 @@
 import type MockAdapter from 'axios-mock-adapter';
 import { MOCK_ALERTS } from '@/features/alerts/mocks/alerts.mock';
-import { deriveGcStatus } from '@/features/gc/lib/derive-status';
-import { buildGcAlerts } from '@/features/gc/lib/alerts';
 import { gcMockDb } from '@/features/gc/mocks/gc.mock';
 import { isCaseFinished } from '@/features/legal/cases/lib/case-money';
 import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
@@ -13,14 +11,13 @@ import { endpoints } from '../../endpoints';
 import { getMockSessionUser } from '../session';
 
 function gcStats(): HomeSummary['modules'][number] {
-  const today = new Date();
-  const statuses = gcMockDb.all().map((c) => deriveGcStatus(c, today));
+  const statuses = gcMockDb.all().map((c) => c.status);
   const count = (s: string) => statuses.filter((x) => x === s).length;
   return {
     module: 'gc',
     total: statuses.length,
-    active: count('active'),
-    expiring: count('expiring'),
+    active: count('ACTIVE'),
+    expiring: count('EXPIRING_SOON'),
   };
 }
 
@@ -48,7 +45,7 @@ export function register(mock: MockAdapter): void {
         if (m.module === 'legal') return legalStats();
         return m;
       }).filter((m) => allowed.includes(m.module)),
-      alerts: [...MOCK_ALERTS, ...buildGcAlerts(gcMockDb.all())]
+      alerts: MOCK_ALERTS
         .filter((a) => allowed.includes(a.module) && a.daysLeft <= 90)
         .map((a) => ({ ...a })),
     };

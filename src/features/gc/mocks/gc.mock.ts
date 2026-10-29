@@ -1,147 +1,172 @@
-import { addDays, format } from 'date-fns';
-import type { Money } from '@/types/domain';
-import type { GcContractInput } from '../schemas/gc.schema';
-import { GC_CONTRACT_TYPES, type GcEquity, type GeneralContract } from '../types';
+/**
+ * Mock database in the backend's raw shape: Prisma Decimal values arrive as strings, dates as ISO
+ * datetimes, and the detail/list rows carry a nested `contractType`. Dates are relative to today.
+ */
+import { MOCK_CONTRACT_TYPES } from '@/features/lookups/mocks/lookups.mock';
 
-/** Local-time YYYY-MM-DD, `offset` days from `today` (never toISOString: that is UTC). */
-function dayOffset(today: Date, offset: number): string {
-  return format(addDays(today, offset), 'yyyy-MM-dd');
+export interface RawContract {
+  id: string;
+  title: string;
+  contractTypeId: number;
+  contractType: { id: number; nameLo: string; nameEn: string | null };
+  contractNumber: string;
+  durationText: string | null;
+  durationMonths: number | null;
+  signedDate: string | null;
+  effectiveDate: string | null;
+  expirationDate: string | null;
+  contractValue: string | number | null;
+  currency: 'LAK' | 'USD' | 'CNY' | null;
+  equityOrCapitalContribution: string | null;
+  sharePercentage: string | number | null;
+  implementer: string | null;
+  additionalDetails: string | null;
+  notifyDaysBefore: number;
+  status: 'DRAFT' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'TERMINATED';
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface Spec {
-  /** days from today to endDate; null = open-ended */
-  end: number | null;
-  /** days from today to effectiveDate (negative = already in force) */
-  eff: number;
+type Status = RawContract['status'];
+type Currency = NonNullable<RawContract['currency']>;
+
+interface Seed {
+  type: number;
+  title: string;
+  /** Days from today to the expiration date; null = open ended. */
+  exp: number | null;
+  months: number;
+  status: Status;
+  currency: Currency | null;
+  value: string | number | null;
+  share?: string | number;
+  implementer?: string;
 }
 
-// 14 types x 3 slots = 42 contracts. Slot 0 of the first types carries the
-// edge cases the status/alert tests need; the rest are comfortably active.
-const SPECS: Spec[][] = [
-  /* om_service       */ [{ end: 0, eff: -700 }, { end: -1, eff: -900 }, { end: 400, eff: -300 }],
-  /* equipment_lease  */ [{ end: 3, eff: -500 }, { end: -10, eff: -800 }, { end: 250, eff: -200 }],
-  /* land_lease       */ [{ end: 7, eff: -1200 }, { end: -25, eff: -1500 }, { end: 900, eff: -100 }],
-  /* epc              */ [{ end: 25, eff: -600 }, { end: -40, eff: -700 }, { end: 150, eff: -60 }],
-  /* pole_attachment  */ [{ end: 45, eff: -365 }, { end: -200, eff: -900 }, { end: 365, eff: -120 }],
-  /* bill_collection  */ [{ end: 60, eff: -730 }, { end: 120, eff: -400 }, { end: 700, eff: -30 }],
-  /* opgw_lease       */ [{ end: null, eff: -2000 }, { end: 61, eff: -500 }, { end: 500, eff: -50 }],
-  /* current_deposit  */ [{ end: null, eff: -1000 }, { end: 200, eff: -300 }, { end: 800, eff: -10 }],
-  /* edl_app_payment  */ [{ end: null, eff: -400 }, { end: 330, eff: -35 }, { end: 1000, eff: -5 }],
-  /* cooperation      */ [{ end: 400, eff: 10 }, { end: 1200, eff: -600 }, { end: 90, eff: -275 }],
-  /* shareholding     */ [{ end: 800, eff: 30 }, { end: 3000, eff: -1800 }, { end: 5000, eff: -2500 }],
-  /* pta              */ [{ end: 1500, eff: 90 }, { end: 600, eff: -240 }, { end: 100, eff: -265 }],
-  /* moa              */ [{ end: 180, eff: -150 }, { end: 270, eff: -90 }, { end: 450, eff: -20 }],
-  /* other_assigned   */ [{ end: 220, eff: -140 }, { end: 365, eff: -70 }, { end: 540, eff: -1 }],
+const SEEDS: Seed[] = [
+  { type: 1, title: 'ສັນຍາບໍລິການ O&M ສະຖານີໄຟຟ້າຍ່ອຍ 115kV ນະຄອນຫຼວງ', exp: 5, months: 60, status: 'EXPIRING_SOON', currency: 'USD', value: '1500000.00' },
+  { type: 2, title: 'ສັນຍາເຊົ່າອຸປະກອນພາກສະຖານີ ວຽງຈັນ 2', exp: 12, months: 36, status: 'EXPIRING_SOON', currency: 'LAK', value: '8500000000' },
+  { type: 3, title: 'ສັນຍາເຊົ່າທີ່ດິນສ້າງສະຖານີ ບ້ານໜອງ', exp: 28, months: 120, status: 'EXPIRING_SOON', currency: 'LAK', value: 420000000 },
+  { type: 4, title: 'ສັນຍາ EPC ສາຍສົ່ງ 230kV ເສັ້ນທາງເໜືອ', exp: 45, months: 48, status: 'EXPIRING_SOON', currency: 'USD', value: '12400000.50', implementer: 'ຝ່າຍວິສະວະກຳ' },
+  { type: 5, title: 'ສັນຍາບໍລິການເກາະຫ້ອຍສາຍໂທລະຄົມ ເສົາໄຟຟ້າແຮງຕ່ຳ', exp: 60, months: 24, status: 'EXPIRING_SOON', currency: 'LAK', value: '960000000' },
+  { type: 6, title: 'ສັນຍາຮັບຊຳລະຄ່າກະແສໄຟຟ້າ ຜ່ານທະນາຄານ BCEL', exp: 60, months: 36, status: 'EXPIRING_SOON', currency: null, value: null },
+  { type: 7, title: 'ສັນຍາເຊົ່າສາຍ OPGW ເສັ້ນທາງໃຕ້', exp: 30, months: 60, status: 'EXPIRING_SOON', currency: 'USD', value: '2750000' },
+  { type: 8, title: 'ສັນຍາເງິນຝາກກະແສລາຍວັນ ທະນາຄານ ການຄ້າຕ່າງປະເທດ', exp: 7, months: 12, status: 'EXPIRING_SOON', currency: 'CNY', value: '5000000.00' },
+  { type: 9, title: 'ສັນຍາຊຳລະເງິນຜ່ານ EDL App ກັບທະນາຄານ ອຸດສາຫະກຳ', exp: 400, months: 36, status: 'ACTIVE', currency: null, value: null },
+  { type: 10, title: 'ສັນຍາຮ່ວມທຸລະກິດ ໂຄງການໄຟຟ້າແສງຕາເວັນ', exp: 900, months: 120, status: 'ACTIVE', currency: 'USD', value: '35000000', share: '51.00' },
+  { type: 11, title: 'ສັນຍາຮ່ວມຫຸ້ນ ບໍລິສັດໄຟຟ້ານໍ້າລາວ', exp: 1800, months: 240, status: 'ACTIVE', currency: 'USD', value: '90000000', share: 34.5 },
+  { type: 12, title: 'ສັນຍາບໍລິການຜ່ານສາຍສົ່ງ (PTA) ໄທ-ລາວ', exp: 700, months: 60, status: 'ACTIVE', currency: 'USD', value: '4200000' },
+  { type: 13, title: 'ບົດບັນທຶກຂໍ້ຕົກລົງ ການພັດທະນາສາຍສົ່ງຂ້າມແດນ', exp: 520, months: 36, status: 'ACTIVE', currency: null, value: null },
+  { type: 14, title: 'ສັນຍາອື່ນໆ ທີ່ຖືກມອບໝາຍ ໂຄງການຊົນນະບົດ', exp: null, months: 0, status: 'ACTIVE', currency: 'LAK', value: '150000000' },
+  { type: 1, title: 'ສັນຍາບໍລິການ O&M ໂຮງໄຟຟ້າເຊນໍ້ານ້ອຍ', exp: 300, months: 24, status: 'ACTIVE', currency: 'CNY', value: '9800000' },
+  { type: 3, title: 'ສັນຍາເຊົ່າທີ່ດິນ ສະຖານີຈຳໜ່າຍ ປາກເຊ', exp: 1200, months: 360, status: 'ACTIVE', currency: 'LAK', value: '780000000' },
+  { type: 4, title: 'ສັນຍາ EPC ສະຖານີໄຟຟ້າຍ່ອຍ ສະຫວັນນະເຂດ', exp: 250, months: 30, status: 'ACTIVE', currency: 'USD', value: '7300000' },
+  { type: 2, title: 'ສັນຍາເຊົ່າອຸປະກອນສາຍສົ່ງ ຫຼວງພະບາງ', exp: 610, months: 48, status: 'ACTIVE', currency: 'LAK', value: '3400000000' },
+  { type: 5, title: 'ສັນຍາບໍລິການເກາະຫ້ອຍ ເຄືອຂ່າຍ ເມືອງຈັນທະບູລີ', exp: 150, months: 24, status: 'ACTIVE', currency: 'LAK', value: 210000000 },
+  { type: 7, title: 'ສັນຍາເຊົ່າສາຍ OPGW ເສັ້ນທາງກາງ', exp: -20, months: 60, status: 'EXPIRED', currency: 'USD', value: '1800000' },
+  { type: 6, title: 'ສັນຍາຮັບຊຳລະຄ່າກະແສໄຟຟ້າ ຮ້ານຄ້າຕົວແທນ', exp: -90, months: 24, status: 'EXPIRED', currency: 'LAK', value: '120000000' },
+  { type: 12, title: 'ສັນຍາ PTA ບໍລິການຜ່ານສາຍສົ່ງ ສະບັບເກົ່າ', exp: -200, months: 60, status: 'EXPIRED', currency: 'CNY', value: '640000' },
+  { type: 13, title: 'ບົດບັນທຶກຂໍ້ຕົກລົງ ຄວາມຮ່ວມມືດ້ານເຕັກນິກ', exp: -400, months: 24, status: 'EXPIRED', currency: null, value: null },
+  { type: 10, title: 'ສັນຍາຮ່ວມມື ໂຄງການໄຟຟ້າພະລັງງານລົມ (ຍົກເລີກ)', exp: 800, months: 120, status: 'TERMINATED', currency: 'USD', value: '22000000', share: '40' },
+  { type: 8, title: 'ສັນຍາເງິນຝາກກະແສລາຍວັນ ສາຂາ ວຽງຈັນ (ຍົກເລີກ)', exp: 100, months: 12, status: 'TERMINATED', currency: 'LAK', value: '500000000' },
+  { type: 9, title: 'ສັນຍາ EDL App ຮອບທົດລອງ (ຮ່າງ)', exp: null, months: 0, status: 'DRAFT', currency: null, value: null },
+  { type: 11, title: 'ສັນຍາຮ່ວມຫຸ້ນ ໂຄງການໄຟຟ້າຊີວະມວນ (ຮ່າງ)', exp: 1500, months: 180, status: 'DRAFT', currency: 'USD', value: '15000000', share: 25 },
+  { type: 14, title: 'ສັນຍາທີ່ຖືກມອບໝາຍ ການຕິດຕັ້ງມິເຕີອັດສະລິຍະ (ຮ່າງ)', exp: 365, months: 12, status: 'DRAFT', currency: 'LAK', value: '60000000' },
 ];
 
-const COUNTERPARTIES = [
-  'ບໍລິສັດ ລາວ ເທເລຄອມ ຈຳກັດ',
-  'ທະນາຄານ ການຄ້າຕ່າງປະເທດລາວ',
-  'Sinohydro Corporation',
-  'ບໍລິສັດ ພະລັງງານ ສີຂອງ ຈຳກັດ',
-  'China Southern Power Grid',
-  'ບໍລິສັດ ກໍ່ສ້າງ ວຽງຈັນ ຈຳກັດ',
-  null,
-];
+const pad = (n: number): string => String(n).padStart(3, '0');
 
-function valueFor(n: number): Money | null {
-  switch (n % 5) {
-    case 0:
-      return { amount: 1_500_000_000 + n * 25_000_000, currency: 'LAK' };
-    case 1:
-      return { amount: 250_000 + n * 10_000, currency: 'USD' };
-    case 2:
-      return { amount: 1_800_000 + n * 50_000, currency: 'CNY' };
-    case 3:
-      return null;
-    default:
-      return { amount: 800_000_000 + n * 10_000_000, currency: 'LAK' };
-  }
+function iso(offsetDays: number, now: Date): string {
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString();
 }
 
-function equityFor(type: GeneralContract['type'], slot: number): GcEquity | null {
-  if (type === 'shareholding') return { kind: 'percent', percent: [10, 25.5, 49][slot] };
-  if (type === 'cooperation') {
-    const currencies = ['USD', 'LAK', 'CNY'] as const;
-    const amounts = [500_000, 2_000_000_000, 3_000_000];
-    return { kind: 'amount', money: { amount: amounts[slot], currency: currencies[slot] } };
-  }
-  return null;
+function typeOf(id: number): RawContract['contractType'] {
+  const t = MOCK_CONTRACT_TYPES.find((x) => x.id === id) ?? MOCK_CONTRACT_TYPES[0];
+  return { id: t.id, nameLo: t.nameLo, nameEn: t.nameEn };
 }
 
-export function createGcSeed(today: Date = new Date()): GeneralContract[] {
-  const stamp = today.toISOString();
-  const out: GeneralContract[] = [];
-  let n = 0;
-  GC_CONTRACT_TYPES.forEach((type, ti) => {
-    SPECS[ti].forEach((spec, slot) => {
-      n += 1;
-      const no = String(n).padStart(3, '0');
-      const effective = dayOffset(today, spec.eff);
-      out.push({
-        id: `gc-${no}`,
-        title: `${type.replace(/_/g, ' ')} agreement ${no}`,
-        type,
-        contractNo: `GC-2026-${no}`,
-        counterparty: COUNTERPARTIES[n % COUNTERPARTIES.length],
-        termText: spec.end === null ? null : `${Math.max(1, Math.round((spec.end - spec.eff) / 365))} ປີ`,
-        signedDate: dayOffset(today, spec.eff - 14),
-        effectiveDate: effective,
-        endDate: spec.end === null ? null : dayOffset(today, spec.end),
-        value: valueFor(n),
-        equity: equityFor(type, slot),
-        implementer: n % 3 === 0 ? null : 'ພະແນກສັນຍາທົ່ວໄປ',
-        notes: n % 4 === 0 ? 'ໝາຍເຫດຕົວຢ່າງ' : null,
-        createdAt: stamp,
-        updatedAt: stamp,
-        createdBy: 'admin',
-      });
-    });
+export function createContractSeed(now: Date = new Date()): RawContract[] {
+  return SEEDS.map((s, i) => {
+    const n = i + 1;
+    const span = Math.max(s.months, 12) * 30;
+    return {
+      id: `gc-${pad(n)}`,
+      title: s.title,
+      contractTypeId: s.type,
+      contractType: typeOf(s.type),
+      contractNumber: `GC-2026-${pad(n)}`,
+      durationText: s.months > 0 ? (s.months % 12 === 0 ? `${s.months / 12} ປີ` : `${s.months} ເດືອນ`) : null,
+      durationMonths: s.months > 0 ? s.months : null,
+      signedDate: iso((s.exp ?? 365) - span - 14, now),
+      effectiveDate: iso((s.exp ?? 365) - span, now),
+      expirationDate: s.exp === null ? null : iso(s.exp, now),
+      contractValue: s.value,
+      currency: s.currency,
+      equityOrCapitalContribution: s.share !== undefined ? `${s.share}%` : null,
+      sharePercentage: s.share ?? null,
+      implementer: s.implementer ?? 'ຝ່າຍກົດໝາຍ-ສັນຍາ',
+      additionalDetails: n % 3 === 0 ? 'ໝາຍເຫດ: ຕິດຕາມການຕໍ່ສັນຍາ' : null,
+      notifyDaysBefore: 60,
+      status: s.status,
+      createdAt: iso(-(120 - n), now),
+      updatedAt: iso(-(30 - Math.min(n, 29)), now),
+    };
   });
-  return out;
 }
 
-let records: GeneralContract[] = createGcSeed();
-let seq = 1000;
+let rows: RawContract[] = createContractSeed();
+let seq = rows.length;
 
 export const gcMockDb = {
-  all(): GeneralContract[] {
-    return records.map((c) => ({ ...c }));
-  },
-  get(id: string): GeneralContract | undefined {
-    const c = records.find((r) => r.id === id);
-    return c ? { ...c } : undefined;
-  },
-  insert(input: GcContractInput, by: string): GeneralContract {
+  all: (): RawContract[] => rows,
+  get: (id: string): RawContract | undefined => rows.find((r) => r.id === id),
+  insert(body: Partial<RawContract>): RawContract {
     seq += 1;
     const now = new Date().toISOString();
-    const created: GeneralContract = {
-      ...input,
-      id: `gc-${seq}`,
+    const row: RawContract = {
+      id: `gc-${pad(seq)}`,
+      title: '',
+      contractTypeId: 0,
+      contractType: typeOf(Number(body.contractTypeId ?? 0)),
+      contractNumber: '',
+      durationText: null,
+      durationMonths: null,
+      signedDate: null,
+      effectiveDate: null,
+      expirationDate: null,
+      contractValue: null,
+      currency: null,
+      equityOrCapitalContribution: null,
+      sharePercentage: null,
+      implementer: null,
+      additionalDetails: null,
+      notifyDaysBefore: 60,
+      status: 'ACTIVE',
+      ...body,
       createdAt: now,
       updatedAt: now,
-      createdBy: by,
-    };
-    records = [created, ...records];
-    return { ...created };
+    } as RawContract;
+    row.contractType = typeOf(Number(row.contractTypeId));
+    rows = [row, ...rows];
+    return row;
   },
-  update(id: string, input: Partial<GcContractInput>): GeneralContract {
-    const idx = records.findIndex((r) => r.id === id);
-    if (idx < 0) throw new Error(`gc ${id} not found`);
-    const next: GeneralContract = {
-      ...records[idx],
-      ...input,
-      id,
-      updatedAt: new Date().toISOString(),
-    };
-    records = records.map((r, i) => (i === idx ? next : r));
-    return { ...next };
+  update(id: string, patch: Partial<RawContract>): RawContract | undefined {
+    const cur = rows.find((r) => r.id === id);
+    if (!cur) return undefined;
+    const next = { ...cur, ...patch, id, updatedAt: new Date().toISOString() } as RawContract;
+    next.contractType = typeOf(Number(next.contractTypeId));
+    rows = rows.map((r) => (r.id === id ? next : r));
+    return next;
   },
-  remove(id: string): void {
-    records = records.filter((r) => r.id !== id);
+  remove(id: string): boolean {
+    const had = rows.some((r) => r.id === id);
+    rows = rows.filter((r) => r.id !== id);
+    return had;
   },
-  reset(today: Date = new Date()): void {
-    records = createGcSeed(today);
-    seq = 1000;
+  reset(now: Date = new Date()): void {
+    rows = createContractSeed(now);
+    seq = rows.length;
   },
 };

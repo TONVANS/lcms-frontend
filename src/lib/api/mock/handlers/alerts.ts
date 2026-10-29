@@ -1,18 +1,16 @@
 import type MockAdapter from 'axios-mock-adapter';
 import { MOCK_ALERTS } from '@/features/alerts/mocks/alerts.mock';
-import { buildGcAlerts } from '@/features/gc/lib/alerts';
-import { gcMockDb } from '@/features/gc/mocks/gc.mock';
 import { getAccessibleModules } from '@/lib/auth/permissions';
 import type { Alert, ModuleKey } from '@/types/domain';
 import { endpoints } from '../../endpoints';
 import { getMockSessionUser } from '../session';
 
 // Read state lives in memory (until reload), keyed by alert id, so it applies to
-// both the static alerts and the gc alerts generated on every request.
+// the static alerts (GC alerts now come from /notifications).
 const readIds = new Set<string>(MOCK_ALERTS.filter((a) => a.read).map((a) => a.id));
 
 function allAlerts(): Alert[] {
-  return [...MOCK_ALERTS, ...buildGcAlerts(gcMockDb.all())].map((a) => ({
+  return MOCK_ALERTS.map((a) => ({
     ...a,
     read: readIds.has(a.id),
   }));

@@ -2,23 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useState, type ElementType, type ReactNode } from 'react';
-import {
-  ArrowRight,
-  BarChart3,
-  Bell,
-  Clock,
-  Coins,
-  FileText,
-  Layers,
-  PieChart,
-  Plus,
-} from 'lucide-react';
+import { BarChart3, Bell, Coins, FileText, Layers, PieChart, Plus } from 'lucide-react';
 import { BarList } from '@/components/charts/bar-list';
 import { StackedStatusBar } from '@/components/charts/stacked-status-bar';
 import { useCan } from '@/components/guards/can';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
-import { CountdownBadge } from '@/components/shared/countdown-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { FadeIn } from '@/components/shared/fade-in';
 import { GlassCard } from '@/components/shared/glass-card';
@@ -29,17 +18,14 @@ import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
-import { daysLeft, formatDate } from '@/lib/utils/date';
 import { formatNumber } from '@/lib/utils/number';
-import { gcService, type GcDashboard } from '../api/gc.service';
-import { GC_STATUS_TONE } from '../lib/derive-status';
-import { GC_STATUSES } from '../types';
+import { STATUS_META } from '@/lib/constants/status';
+import { gcService } from '../api/gc.service';
+import type { ContractsDashboard } from '../types';
 import { SupportCard } from './support-card';
 
 const FOCUS =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
-// Defensive: the handler already caps upcoming at 10.
-const UPCOMING_MAX = 10;
 const CURRENCY_ORDER = ['LAK', 'USD', 'CNY'] as const;
 
 function KpiLink({ href, children }: { href: string; children: ReactNode }) {
@@ -135,7 +121,7 @@ function DashboardSkeleton() {
 
 export function GcDashboardView() {
   const canCreate = useCan('gc', 'create');
-  const [data, setData] = useState<GcDashboard | null>(null);
+  const [data, setData] = useState<ContractsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [attempt, setAttempt] = useState(0);
@@ -263,22 +249,19 @@ export function GcDashboardView() {
     );
   }
 
-  const byType = [...data.byType]
-    .sort((a, b) => b.count - a.count)
-    .map((t) => ({ key: t.type, label: lo.gc.types[t.type], value: t.count }));
-  const statusData = GC_STATUSES.map((status) => ({ status, count: data.byStatus[status] ?? 0 }));
-  const totalsByCurrency = CURRENCY_ORDER.map(
-    (currency) =>
-      data.valueTotals.find((v) => v.currency === currency) ?? { currency, amount: 0, count: 0 },
-  );
-  const upcoming = data.upcoming.slice(0, UPCOMING_MAX);
-  const today = new Date();
+  const byType = [...data.byContractType]
+    .sort((x, y) => y.count - x.count)
+    .map((t) => ({ key: String(t.contractTypeId ?? t.name), label: t.name, value: t.count }));
+  const totalsByCurrency = CURRENCY_ORDER.map((currency) => ({
+    currency,
+    amount: data.valueByCurrency.find((v) => v.currency === currency)?.amount ?? 0,
+    count: data.byCurrency.find((v) => v.currency === currency)?.count ?? 0,
+  }));
 
   return (
     <div className="flex flex-col gap-8">
       {header}
 
-      {/* 1. Status Overview Section */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -286,15 +269,13 @@ export function GcDashboardView() {
               <Layers className="size-3.5" aria-hidden="true" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              ພາບລວມສະຖານະສັນຍາ
+              {lo.gc.dashboard.overview}
             </p>
           </div>
-          <span className="text-[11px] text-[var(--text-muted)]">
-            ຄລິກໃສ່ກາດເພື່ອເບິ່ງລາຍການສັນຍາ
-          </span>
+          <span className="text-[11px] text-[var(--text-muted)]">{lo.gc.dashboard.overviewHint}</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <KpiLink href="/contracts/list">
             <KpiCard
               interactive
@@ -303,36 +284,27 @@ export function GcDashboardView() {
               index={0}
             />
           </KpiLink>
-          <KpiLink href="/contracts/list?status=active">
-            <KpiCard
-              interactive
-              label={lo.gc.dashboard.kpiActive}
-              value={formatNumber(data.byStatus.active)}
-              index={1}
-            />
-          </KpiLink>
-          <KpiLink href="/contracts/list?status=expiring">
+          <KpiLink href="/contracts/list?status=EXPIRING_SOON">
             <KpiCard
               interactive
               label={lo.gc.dashboard.kpiExpiring}
-              value={formatNumber(data.byStatus.expiring)}
+              value={formatNumber(data.expiringSoonCount)}
               variant="warning"
-              index={2}
+              index={1}
             />
           </KpiLink>
-          <KpiLink href="/contracts/list?status=expired">
+          <KpiLink href="/contracts/list?status=EXPIRED">
             <KpiCard
               interactive
               label={lo.gc.dashboard.kpiExpired}
-              value={formatNumber(data.byStatus.expired)}
+              value={formatNumber(data.expiredCount)}
               variant="danger"
-              index={3}
+              index={2}
             />
           </KpiLink>
         </div>
       </section>
 
-      {/* 2. Financial Exposure by Currency */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -340,12 +312,10 @@ export function GcDashboardView() {
               <Coins className="size-3.5" aria-hidden="true" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              ມູນຄ່າລວມຕາມສະກຸນເງິນ
+              {lo.gc.dashboard.valueSection}
             </p>
           </div>
-          <span className="text-[11px] text-[var(--text-muted)]">
-            ຍອດມູນຄ່າຕົວຈິງໂດຍບໍ່ມີການແປງຄ່າ
-          </span>
+          <span className="text-[11px] text-[var(--text-muted)]">{lo.gc.dashboard.valueHint}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -355,108 +325,45 @@ export function GcDashboardView() {
               label={lo.gc.dashboard.valueTotal(lo.currency[v.currency])}
               value={formatNumber(v.amount)}
               delta={{ text: lo.gc.dashboard.contractsCount(v.count) }}
-              index={4 + i}
+              index={3 + i}
             />
           ))}
         </div>
       </section>
 
-      {/* 3. Analytics & Breakdowns */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5 lg:items-start">
-        <FadeIn variant="up" index={7} className="lg:col-span-3">
+        <FadeIn variant="up" index={6} className="lg:col-span-3">
           <GlassCard accent="gc" className="flex h-full flex-col gap-5 p-6">
             <SectionHeader
               icon={BarChart3}
               title={lo.gc.dashboard.byType}
-              subtitle="ຈຳນວນສັນຍາແຍກຕາມແຕ່ລະປະເພດສັນຍາ"
+              subtitle={lo.gc.dashboard.byTypeHint}
               action={
                 <span className="text-xs font-semibold tabular-nums text-[var(--text-muted)]">
-                  {data.byType.length} ປະເພດ
+                  {lo.gc.dashboard.typesCount(data.byContractType.length)}
                 </span>
               }
             />
-            <BarList data={byType} accent="gc" orientation="vertical" />
+            <BarList data={byType} accent="gc" />
           </GlassCard>
         </FadeIn>
-        <FadeIn variant="up" index={8} className="lg:col-span-2">
+        <FadeIn variant="up" index={7} className="lg:col-span-2">
           <GlassCard accent="gc" className="flex h-full flex-col gap-5 p-6">
             <SectionHeader
               icon={PieChart}
               title={lo.gc.dashboard.byStatus}
-              subtitle="ສັດສ່ວນສະຖານະສັນຍາທັງໝົດ"
+              subtitle={lo.gc.dashboard.byStatusHint}
             />
             <StackedStatusBar
-              data={statusData}
-              getLabel={(s) => lo.gc.status[s]}
-              getTone={(s) => GC_STATUS_TONE[s]}
+              data={data.byStatus}
+              getLabel={(st) => STATUS_META[st].label}
+              getTone={(st) => STATUS_META[st].tone}
             />
           </GlassCard>
         </FadeIn>
       </div>
 
-      {/* 4. Upcoming Deadlines & Support */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <FadeIn variant="up" index={9} className="lg:col-span-3">
-          <GlassCard as="section" accent="gc" className="flex h-full flex-col gap-4 p-6">
-            <SectionHeader
-              icon={Clock}
-              title={lo.gc.dashboard.upcoming90}
-              subtitle="ຕິດຕາມກຳນົດເວລາ ແລະ ພັນທະທີ່ໃກ້ສິ້ນສຸດ"
-              action={
-                upcoming.length > 0 ? (
-                  <Link
-                    href="/contracts/alerts"
-                    className={cn(
-                      'inline-flex items-center gap-1 text-xs font-semibold text-[var(--gc)] hover:underline',
-                      FOCUS,
-                    )}
-                  >
-                    <span>{lo.home.viewAllAlerts}</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
-                ) : null
-              }
-            />
-            {upcoming.length === 0 ? (
-              <EmptyState title={lo.gc.dashboard.noUpcoming} />
-            ) : (
-              <ul className="flex flex-col gap-2.5">
-                {upcoming.map((c) => (
-                  <li
-                    key={c.id}
-                    className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] p-3.5 transition-all duration-200 hover:border-[var(--gc)]/50 hover:shadow-sm"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-glass)] text-[var(--gc)] group-hover:bg-[var(--gc)]/10 transition-colors">
-                        <FileText className="size-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <Link
-                          href={`/contracts/${c.id}`}
-                          className={cn(
-                            'flex min-h-11 items-center truncate rounded-sm text-sm font-semibold text-[var(--text-strong)] underline-offset-2 hover:underline group-hover:text-[var(--gc)] transition-colors',
-                            FOCUS,
-                          )}
-                        >
-                          {c.title}
-                        </Link>
-                        <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                          {c.contractNo} · {formatDate(c.endDate)}
-                        </p>
-                      </div>
-                    </div>
-                    <CountdownBadge days={daysLeft(c.endDate, today)} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </GlassCard>
-        </FadeIn>
-        <div className="lg:col-span-2">
-          <SupportCard index={10} />
-        </div>
-      </div>
+      <SupportCard index={8} />
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { FilePlus2, Filter, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Eye, FilePlus2, Filter, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -9,14 +9,10 @@ import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
-import {
-  DataTable,
-  type DataTableColumn,
-  type DataTableSort,
-} from '@/components/shared/data-table';
+import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
 import { FilterChips } from '@/components/shared/filter-chips';
 import { SearchInput } from '@/components/shared/search-input';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { ContractStatusBadge } from '@/components/shared/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,30 +22,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useContractTypes } from '@/features/lookups';
+import { STATUS_META } from '@/lib/constants/status';
 import { MODULES } from '@/lib/constants/modules';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
-import { formatMoney } from '@/lib/utils/money';
 import { gcService } from '../api/gc.service';
-import { deriveGcStatus, GC_STATUS_TONE } from '../lib/derive-status';
+import { formatValue } from '../lib/format';
 import { useGcListUrlSync } from '../hooks/use-gc-list-url-sync';
 import { useGcListStore } from '../store/gc-list.store';
-import {
-  GC_CONTRACT_TYPES,
-  GC_PAGE_SIZES,
-  GC_SORT_KEYS,
-  GC_STATUSES,
-  type GcContractType,
-  type GcSortKey,
-  type GeneralContract,
-} from '../types';
+import { GC_PAGE_SIZES, GC_STATUSES, type Contract } from '../types';
 import { GcContractFormDialog } from './gc-contract-form-dialog';
 
 const ALL = 'all';
 const SEARCH_DEBOUNCE_MS = 300;
-const SORTABLE: ReadonlySet<string> = new Set(GC_SORT_KEYS);
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 
@@ -107,19 +95,26 @@ function RowActions({
   onEdit,
   onDelete,
 }: {
-  contract: GeneralContract;
+  contract: Contract;
   canEdit: boolean;
   canDelete: boolean;
-  onEdit: (c: GeneralContract) => void;
-  onDelete: (c: GeneralContract) => void;
+  onEdit: (c: Contract) => void;
+  onDelete: (c: Contract) => void;
 }) {
   return (
     <div className="flex items-center gap-1">
+      <Link
+        href={`/contracts/${contract.id}`}
+        aria-label={`${lo.gc.list.view} ${contract.contractNumber}`}
+        className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-(--text-secondary) hover:text-(--text)', FOCUS_RING)}
+      >
+        <Eye aria-hidden="true" />
+      </Link>
       {canEdit ? (
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`${lo.gc.list.edit} ${contract.contractNo}`}
+          aria-label={`${lo.gc.list.edit} ${contract.contractNumber}`}
           onClick={() => onEdit(contract)}
           className="text-(--text-secondary) hover:text-(--text)"
         >
@@ -130,7 +125,7 @@ function RowActions({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`${lo.gc.list.delete} ${contract.contractNo}`}
+          aria-label={`${lo.gc.list.delete} ${contract.contractNumber}`}
           onClick={() => onDelete(contract)}
           className="text-destructive hover:bg-destructive/10"
         >
@@ -156,12 +151,12 @@ export function GcContractsView() {
 
   // `contract` is kept after close so the dialog title and body do not flip to "create" mid exit-animation.
   // Opening replaces it (null for create); the body is keyed by contract id inside the dialog.
-  const [dialog, setDialog] = useState<{ open: boolean; contract: GeneralContract | null }>({
+  const [dialog, setDialog] = useState<{ open: boolean; contract: Contract | null }>({
     open: false,
     contract: null,
   });
   const openCreate = () => setDialog({ open: true, contract: null });
-  const [toDelete, setToDelete] = useState<GeneralContract | null>(null);
+  const [toDelete, setToDelete] = useState<Contract | null>(null);
 
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 10;
@@ -174,123 +169,95 @@ export function GcContractsView() {
     if (last < page) useGcListStore.getState().setQuery({ page: last });
   }, [status, items.length, total, page, pageSize]);
 
-  const columns = useMemo<DataTableColumn<GeneralContract>[]>(() => {
-    const cols: DataTableColumn<GeneralContract>[] = [
+  const columns = useMemo<DataTableColumn<Contract>[]>(() => {
+    const cols: DataTableColumn<Contract>[] = [
       {
-        id: 'contractNo',
-        header: lo.gc.fields.contractNo,
-        cell: (c) => (
-          <Link
-            href={`/contracts/${c.id}`}
-            className={cn(
-              'rounded-sm font-medium text-(--text-strong) tabular-nums underline underline-offset-4 hover:text-(--gc)',
-              FOCUS_RING,
-            )}
-          >
-            {c.contractNo}
-          </Link>
-        ),
-      },
-      {
-        id: 'title',
-        header: lo.gc.fields.title,
-        sortable: true,
-        className: 'min-w-48 whitespace-normal',
+        id: 'contractNumber',
+        header: lo.gc.list.numberAndTitle,
+        className: 'min-w-56 whitespace-normal',
         cell: (c) => (
           <>
-            <span className="font-semibold text-(--text-strong)">{c.title}</span>
+            <Link
+              href={`/contracts/${c.id}`}
+              className={cn(
+                'rounded-sm font-medium text-(--text-strong) tabular-nums underline underline-offset-4 hover:text-(--gc)',
+                FOCUS_RING,
+              )}
+            >
+              {c.contractNumber}
+            </Link>
+            <span className="mt-0.5 block font-semibold text-(--text-strong)">{c.title}</span>
             <span className="mt-0.5 block text-xs text-(--text-secondary) 2xl:hidden">
-              {lo.gc.types[c.type]}
+              {c.contractType?.nameLo ?? '—'}
             </span>
           </>
         ),
       },
       {
-        id: 'type',
-        header: lo.gc.fields.type,
+        id: 'contractType',
+        header: lo.gc.fields.contractTypeId,
         className: 'hidden 2xl:table-cell min-w-48 whitespace-normal',
-        cell: (c) => <span className="text-xs text-(--text-secondary)">{lo.gc.types[c.type]}</span>,
-      },
-      {
-        id: 'counterparty',
-        header: lo.gc.fields.counterparty,
-        className: 'hidden 2xl:table-cell min-w-40 whitespace-normal',
-        cell: (c) => c.counterparty ?? '—',
+        cell: (c) => <span className="text-xs text-(--text-secondary)">{c.contractType?.nameLo ?? '—'}</span>,
       },
       {
         id: 'signedDate',
         header: lo.gc.fields.signedDate,
-        sortable: true,
-        className: 'hidden 2xl:table-cell',
+        className: 'hidden xl:table-cell',
         cell: (c) => <span className="tabular-nums">{formatDate(c.signedDate)}</span>,
       },
       {
-        id: 'endDate',
-        header: lo.gc.fields.endDate,
-        sortable: true,
-        cell: (c) =>
-          c.endDate ? (
+        id: 'expirationDate',
+        header: lo.gc.fields.expirationDate,
+        cell: (c) => {
+          const left = daysLeft(c.expirationDate);
+          const show = left !== null && left >= 0 && left <= (c.notifyDaysBefore ?? 60);
+          return (
             <>
-              <span className="tabular-nums">{formatDate(c.endDate)}</span>
-              <span className="mt-1 block 2xl:hidden">
-                <CountdownBadge days={daysLeft(c.endDate)} />
-              </span>
+              <span className="tabular-nums">{formatDate(c.expirationDate)}</span>
+              {show ? (
+                <span className="mt-1 block">
+                  <CountdownBadge days={left} />
+                </span>
+              ) : null}
             </>
-          ) : (
-            lo.gc.openEnded
-          ),
+          );
+        },
       },
       {
-        id: 'value',
-        header: lo.gc.fields.value,
+        id: 'contractValue',
+        header: lo.gc.fields.contractValue,
         align: 'end',
-        cell: (c) => <span className="tabular-nums">{c.value ? formatMoney(c.value) : '—'}</span>,
+        cell: (c) => <span className="tabular-nums">{formatValue(c.contractValue, c.currency)}</span>,
       },
       {
         id: 'status',
         header: lo.gc.fields.status,
-        cell: (c) => {
-          const s = deriveGcStatus(c);
-          return <StatusBadge tone={GC_STATUS_TONE[s]} label={lo.gc.status[s]} />;
-        },
-      },
-      {
-        id: 'countdown',
-        header: lo.gc.list.countdown,
-        className: 'hidden 2xl:table-cell',
-        cell: (c) => (c.endDate ? <CountdownBadge days={daysLeft(c.endDate)} /> : null),
+        cell: (c) => <ContractStatusBadge status={c.status} />,
       },
     ];
-    if (canEdit || canDelete) {
-      cols.push({
-        id: 'actions',
-        header: lo.table.actions,
-        cell: (c) => (
-          <RowActions
-            contract={c}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            onEdit={(row) => setDialog({ open: true, contract: row })}
-            onDelete={setToDelete}
-          />
-        ),
-      });
-    }
+    cols.push({
+      id: 'actions',
+      header: lo.table.actions,
+      cell: (c) => (
+        <RowActions
+          contract={c}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          onEdit={(row) => setDialog({ open: true, contract: row })}
+          onDelete={setToDelete}
+        />
+      ),
+    });
     return cols;
   }, [canEdit, canDelete]);
 
   const statusOptions = useMemo(
     () => [
       { value: ALL, label: lo.table.all },
-      ...GC_STATUSES.map((s) => ({ value: s, label: lo.gc.status[s] })),
+      ...GC_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label })),
     ],
     [],
   );
-
-  const onSortChange = (s: DataTableSort) => {
-    if (!SORTABLE.has(s.id)) return;
-    setQuery({ sort: s.id as GcSortKey, order: s.order });
-  };
 
   const onConfirmDelete = async () => {
     if (!toDelete) return;
@@ -305,7 +272,8 @@ export function GcContractsView() {
     await useGcListStore.getState().afterDelete();
   };
 
-  const hasFilters = Boolean(query.q || query.type || query.status);
+  const hasFilters = Boolean(query.q || query.contractTypeId !== undefined || query.status);
+  const contractTypes = useContractTypes();
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -340,17 +308,17 @@ export function GcContractsView() {
                 {lo.gc.list.typeFilter}
               </Label>
               <Select
-                value={query.type ?? ALL}
-                onValueChange={(v) => setQuery({ type: v === ALL ? undefined : (v as GcContractType) })}
+                value={query.contractTypeId === undefined ? ALL : String(query.contractTypeId)}
+                onValueChange={(v) => setQuery({ contractTypeId: v === ALL ? undefined : Number(v) })}
               >
                 <SelectTrigger id="gc-type-filter" aria-label={lo.gc.list.typeFilter} className="w-full h-10">
                   <SelectValue placeholder={lo.gc.list.allTypes} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>{lo.gc.list.allTypes}</SelectItem>
-                  {GC_CONTRACT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {lo.gc.types[t]}
+                  {contractTypes.items.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.nameLo}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -360,7 +328,7 @@ export function GcContractsView() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setQuery({ q: undefined, type: undefined, status: undefined })}
+                onClick={() => setQuery({ q: undefined, contractTypeId: undefined, status: undefined })}
                 className="h-10 gap-1.5 text-xs text-(--text-muted) hover:text-(--text) hover:bg-white/10"
               >
                 <RotateCcw className="size-3.5" aria-hidden="true" />
@@ -430,8 +398,6 @@ export function GcContractsView() {
           page={page}
           pageSize={pageSize}
           onPageChange={(p) => setQuery({ page: p })}
-          sort={{ id: query.sort ?? 'endDate', order: query.order ?? 'asc' }}
-          onSortChange={onSortChange}
           isLoading={status === 'idle' || status === 'loading'}
           emptyTitle={lo.table.noData}
           emptyDescription={hasFilters ? lo.gc.list.emptyHint : undefined}
@@ -465,7 +431,7 @@ export function GcContractsView() {
         }}
         tone="danger"
         title={lo.gc.list.deleteTitle}
-        description={toDelete ? lo.gc.list.deleteDesc(toDelete.contractNo) : undefined}
+        description={toDelete ? lo.gc.list.deleteDesc(toDelete.contractNumber) : undefined}
         onConfirm={onConfirmDelete}
       />
     </div>

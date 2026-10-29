@@ -1,12 +1,16 @@
+import type { ContractStatus } from '@/types/domain';
 import type { GcListQuery } from '../api/gc.service';
-import { GC_CONTRACT_TYPES, GC_PAGE_SIZES, GC_SORT_KEYS, GC_STATUSES } from '../types';
+import { GC_PAGE_SIZES, GC_STATUSES } from '../types';
 
-export const DEFAULT_GC_QUERY: Required<Pick<GcListQuery, 'page' | 'pageSize' | 'sort' | 'order'>> &
-  GcListQuery = { page: 1, pageSize: 10, sort: 'endDate', order: 'asc' };
+export const DEFAULT_GC_QUERY: GcListQuery & { page: number; pageSize: number } = {
+  page: 1,
+  pageSize: 10,
+};
 
-function pick<T extends string>(allowed: readonly T[], v: string | null): T | undefined {
-  return v !== null && (allowed as readonly string[]).includes(v) ? (v as T) : undefined;
-}
+const posInt = (raw: string | null): number | undefined =>
+  raw !== null && /^\d+$/.test(raw) && Number.isSafeInteger(Number(raw)) && Number(raw) >= 1
+    ? Number(raw)
+    : undefined;
 
 export function parseGcListQuery(sp: URLSearchParams): GcListQuery {
   const out: GcListQuery = { ...DEFAULT_GC_QUERY };
@@ -14,29 +18,19 @@ export function parseGcListQuery(sp: URLSearchParams): GcListQuery {
   const q = sp.get('q')?.trim();
   if (q) out.q = q;
 
-  const type = pick(GC_CONTRACT_TYPES, sp.get('type'));
-  if (type) out.type = type;
-  const status = pick(GC_STATUSES, sp.get('status'));
-  if (status) out.status = status;
-
-  const pageRaw = sp.get('page');
-  if (
-    pageRaw !== null &&
-    /^\d+$/.test(pageRaw) &&
-    Number.isSafeInteger(Number(pageRaw)) &&
-    Number(pageRaw) >= 1
-  ) {
-    out.page = Number(pageRaw);
+  const status = sp.get('status');
+  if (status !== null && (GC_STATUSES as readonly string[]).includes(status)) {
+    out.status = status as ContractStatus;
   }
 
-  const sizeRaw = sp.get('pageSize');
-  if (sizeRaw !== null && /^\d+$/.test(sizeRaw)) {
-    const size = Number(sizeRaw);
-    if ((GC_PAGE_SIZES as readonly number[]).includes(size)) out.pageSize = size;
-  }
+  const typeId = posInt(sp.get('contractTypeId'));
+  if (typeId !== undefined) out.contractTypeId = typeId;
 
-  out.sort = pick(GC_SORT_KEYS, sp.get('sort')) ?? DEFAULT_GC_QUERY.sort;
-  out.order = pick(['asc', 'desc'] as const, sp.get('order')) ?? DEFAULT_GC_QUERY.order;
+  const page = posInt(sp.get('page'));
+  if (page !== undefined) out.page = page;
+
+  const size = posInt(sp.get('pageSize'));
+  if (size !== undefined && (GC_PAGE_SIZES as readonly number[]).includes(size)) out.pageSize = size;
   return out;
 }
 
@@ -44,13 +38,11 @@ export function serializeGcListQuery(q: GcListQuery): string {
   const sp = new URLSearchParams();
   const text = q.q?.trim();
   if (text) sp.set('q', text);
-  if (q.type) sp.set('type', q.type);
   if (q.status) sp.set('status', q.status);
+  if (q.contractTypeId !== undefined) sp.set('contractTypeId', String(q.contractTypeId));
   if (q.page !== undefined && q.page !== DEFAULT_GC_QUERY.page) sp.set('page', String(q.page));
   if (q.pageSize !== undefined && q.pageSize !== DEFAULT_GC_QUERY.pageSize) {
     sp.set('pageSize', String(q.pageSize));
   }
-  if (q.sort !== undefined && q.sort !== DEFAULT_GC_QUERY.sort) sp.set('sort', q.sort);
-  if (q.order !== undefined && q.order !== DEFAULT_GC_QUERY.order) sp.set('order', q.order);
   return sp.toString();
 }

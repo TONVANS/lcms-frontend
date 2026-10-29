@@ -84,11 +84,6 @@ export const endpoints = {
     list: '/alerts',
     read: (id: string) => `/alerts/${id}/read`,
   },
-  gc: {
-    list: '/contracts',
-    detail: (id: string) => `/contracts/${id}`,
-    dashboard: '/contracts/dashboard',
-  },
   legal: {
     regulations: '/legal/regulations',
     regulation: (id: string) => `/legal/regulations/${encodeURIComponent(id)}`,
