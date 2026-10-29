@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { alertsService, useAlertsStore } from '@/features/alerts';
+import { notificationsService, useNotificationsStore } from '@/features/notifications';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
 import { lo } from '@/lib/i18n/lo';
@@ -18,18 +18,18 @@ const byName = (n: string) => MOCK_USERS.find((u) => u.username === n)!;
 beforeEach(() => {
   pathname = '/';
   vi.restoreAllMocks();
-  vi.spyOn(alertsService, 'list').mockResolvedValue([]);
-  useAlertsStore.getState().reset();
+  vi.spyOn(notificationsService, 'list').mockResolvedValue([]);
+  useNotificationsStore.getState().reset();
   useUiStore.setState({ lastModule: null });
 });
 
 describe('AppShell', () => {
-  it('resets the alerts store on unmount', () => {
+  it('resets the notifications store on unmount', () => {
     useAuthStore.setState({ user: byName('ppa.user'), status: 'authenticated' });
     const { unmount } = render(<AppShell>child</AppShell>);
-    useAlertsStore.setState({ items: [{ id: 'x' } as never], unreadCount: 1, status: 'ready' });
+    useNotificationsStore.setState({ items: [{ id: 'x' } as never], unreadCount: 1, status: 'ready' } as never);
     unmount();
-    expect(useAlertsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
+    expect(useNotificationsStore.getState()).toMatchObject({ items: [], unreadCount: 0, status: 'idle' });
   });
 
   it('renders the home layout and does not store lastModule for a forbidden module', () => {
