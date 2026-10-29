@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
 import { api } from '@/lib/api/client';
@@ -16,6 +16,18 @@ vi.mock('next/navigation', () => ({
 
 const DOC = 'PPA-NamTheun2-Agreement-Signed.pdf';
 
+// The backend has no ppa viewer fixture in the shared mock users; register one for this suite.
+const PPA_VIEWER = {
+  ...MOCK_USERS.find((u) => u.username === 'ppa.user')!,
+  id: 'u-ppa-viewer',
+  username: 'ppa.viewer',
+  role: 'VIEWER' as const,
+  canUpload: false,
+  canEdit: false,
+  canDelete: false,
+  canDownload: false,
+};
+
 function session(username: string) {
   setMockSession(username, false);
   useAuthStore.setState({
@@ -25,12 +37,17 @@ function session(username: string) {
 }
 
 beforeEach(() => {
+  MOCK_USERS.push(PPA_VIEWER);
   installMocks(api, { delay: 0 });
 });
 
+afterEach(() => {
+  MOCK_USERS.splice(MOCK_USERS.indexOf(PPA_VIEWER), 1);
+});
+
 describe('PPA document controls follow the module role', () => {
-  it('detail: a ppa viewer (multi.user) sees the file but no upload, download or delete', async () => {
-    session('multi.user');
+  it('detail: a ppa viewer sees the file but no upload, download or delete', async () => {
+    session('ppa.viewer');
     render(<PpaContractDetailView id="ppa-1" />);
     expect(await screen.findByText(DOC)).toBeInTheDocument();
     expect(screen.queryByText(lo.dropzone.prompt)).toBeNull();
@@ -48,7 +65,7 @@ describe('PPA document controls follow the module role', () => {
   });
 
   it('documents page: a ppa viewer gets no upload zone, a main user does', async () => {
-    session('multi.user');
+    session('ppa.viewer');
     const { unmount } = render(<PpaDocumentsView />);
     expect(await screen.findByText(lo.dropzone.empty)).toBeInTheDocument();
     expect(screen.queryByText(lo.dropzone.prompt)).toBeNull();

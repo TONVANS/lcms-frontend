@@ -2,16 +2,17 @@
 
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/features/auth';
-import type { Role } from '@/types/domain';
+import { isAdmin } from '@/lib/auth/permissions';
 
 interface RoleGateProps {
-  role: Role;
+  /** Only `admin` exists; RoleGate checks `isAdmin`. */
+  role: 'admin';
   children: ReactNode;
   fallback?: ReactNode;
 }
 
-export function RoleGate({ role, children, fallback = null }: RoleGateProps) {
+export function RoleGate({ children, fallback = null }: RoleGateProps) {
   const user = useAuthStore((s) => s.user);
-  const allowed = user !== null && (user.role === 'admin' || user.role === role);
+  const allowed = user !== null && isAdmin(user);
   return <>{allowed ? children : fallback}</>;
 }

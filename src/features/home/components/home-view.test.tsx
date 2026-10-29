@@ -29,6 +29,15 @@ function login(username: string) {
   useAuthStore.setState({ user, status: 'authenticated' });
 }
 
+/** Divisions make multi-module users impossible in the backend, but the Home UI still handles them. */
+function loginMulti() {
+  const base = MOCK_USERS.find((u) => u.username === 'gc.user')!;
+  useAuthStore.setState({
+    user: { ...base, accessibleModules: ['power-contracts', 'contracts', 'departments', 'support'] },
+    status: 'authenticated',
+  });
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   replace.mockClear();
@@ -45,8 +54,8 @@ describe('HomeView', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('multi.user sees exactly two module cards (ppa, gc)', async () => {
-    login('multi.user');
+  it('a user with two modules sees exactly two module cards (ppa, gc)', async () => {
+    loginMulti();
     render(<HomeView />);
     const links = await cards();
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['/ppa', '/contracts']);
@@ -60,10 +69,10 @@ describe('HomeView', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('redirects none.user to /forbidden', async () => {
+  it('redirects none.user (no business module) to /support', async () => {
     login('none.user');
     render(<HomeView />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/forbidden'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/support'));
     expect(screen.queryByRole('link', { name: lo.home.openModule })).toBeNull();
   });
 

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { env } from '@/config/env';
-import { clearMockSession, readMockSession, setMockSession, setSessionToken } from '@/lib/auth/session';
+import { api } from '@/lib/api/client';
+import { clearMockSession, readMockSession, readSessionToken, setMockSession, setSessionToken } from '@/lib/auth/session';
 import { MOCK_USERS } from '../mocks/auth.mock';
 import { authService } from '../api/auth.service';
 import { useAuthStore } from './auth.store';
@@ -23,7 +24,7 @@ describe('auth store', () => {
       .login({ username: 'ppa.user', password: 'password', remember: false });
     expect(useAuthStore.getState()).toMatchObject({
       status: 'authenticated',
-      user: { modules: ['ppa'] },
+      user: { accessibleModules: ['power-contracts', 'power-notifications', 'departments', 'support'] },
       endReason: null,
     });
     expect(readMockSession()).toBe('ppa.user');
@@ -114,6 +115,24 @@ describe('auth store', () => {
     }
   });
 
+  it('live mode: fetchMe without a session token skips /auth/me', async () => {
+    const original = env.NEXT_PUBLIC_API_MODE;
+    env.NEXT_PUBLIC_API_MODE = 'live';
+    try {
+      const me = vi.spyOn(authService, 'me');
+      await useAuthStore.getState().fetchMe();
+      expect(me).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().status).toBe('unauthenticated');
+    } finally {
+      env.NEXT_PUBLIC_API_MODE = original;
+    }
+  });
+
+  it('login with remember stores the token cookie', async () => {
+    await useAuthStore.getState().login({ username: 'gc.user', password: 'password', remember: true });
+    expect(readSessionToken()).toBe('mock:gc.user');
+  });
+
   it('stale cookie: a single unauthenticated transition, endReason expired', async () => {
     setMockSession('ghost', false);
     const seen: string[] = [];
@@ -137,11 +156,12 @@ describe('auth store', () => {
     expect(readMockSession()).toBe('admin');
   });
 
-  it('logout with a failing request still clears local state', async () => {
+  it('logout makes no API call', async () => {
     setMockSession('admin', false);
     useAuthStore.setState({ user: MOCK_USERS[0], status: 'authenticated' });
-    vi.spyOn(authService, 'logout').mockRejectedValue({ status: 0, code: 'NETWORK', message: '' });
+    const post = vi.spyOn(api, 'post');
     await useAuthStore.getState().logout();
+    expect(post).not.toHaveBeenCalled();
     expect(useAuthStore.getState()).toMatchObject({
       status: 'unauthenticated',
       user: null,

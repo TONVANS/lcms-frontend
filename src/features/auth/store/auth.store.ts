@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { setUnauthorizedHandler } from '@/lib/api/client';
 import { normalizeError } from '@/lib/api/errors';
 import { runLogoutResets } from '@/lib/auth/logout-registry';
-import { clearMockSession, hasSessionHint } from '@/lib/auth/session';
+import { clearSession, hasSessionHint, setSessionToken } from '@/lib/auth/session';
 import type { ApiError } from '@/types/api';
 import type { User } from '@/types/domain';
 import { authService } from '../api/auth.service';
@@ -29,7 +29,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   async login(input) {
     set({ status: 'loading' });
     try {
-      const user = await authService.login(input);
+      const { token, user } = await authService.login(input);
+      setSessionToken(token, input.remember ?? false);
       set({ user, status: 'authenticated', endReason: null, error: null });
     } catch (e) {
       set({ user: null, status: 'unauthenticated' });
@@ -38,15 +39,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   async logout() {
-    // Clear local state first so a failing/401 request cannot race with it.
-    clearMockSession();
+    // The backend has no logout endpoint: logging out is purely client-side.
+    clearSession();
     runLogoutResets();
     set({ user: null, status: 'unauthenticated', endReason: 'logout', error: null });
-    try {
-      await authService.logout();
-    } catch {
-      // best-effort: the user is already logged out locally; server session expires on its own
-    }
   },
 
   async fetchMe() {
@@ -62,7 +58,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     } catch (e) {
       const err = normalizeError(e);
       if (err.status === 401) {
-        clearMockSession();
+        clearSession();
         set({ user: null, status: 'unauthenticated', endReason: 'expired', error: null });
       } else {
         // network/timeout/5xx: not an expiry; keep session and cookie untouched
@@ -74,7 +70,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   expire() {
     // Only a genuine mid-session 401; fetchMe/logout own their own transitions.
     if (get().status !== 'authenticated') return;
-    clearMockSession();
+    clearSession();
     runLogoutResets();
     set({ user: null, status: 'unauthenticated', endReason: 'expired' });
   },

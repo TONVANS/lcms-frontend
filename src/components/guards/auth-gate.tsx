@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/features/auth';
 import { toUserMessage } from '@/lib/api/errors';
-import { clearMockSession } from '@/lib/auth/session';
+import { clearSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
 
 export function AuthSkeleton() {
@@ -37,7 +37,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (status === 'idle') {
       void fetchMe();
     } else if (status === 'unauthenticated') {
-      clearMockSession();
+      clearSession();
       if (endReason === 'logout') {
         router.replace('/login?reason=logout');
       } else {

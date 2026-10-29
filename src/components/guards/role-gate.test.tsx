@@ -24,15 +24,13 @@ describe('RoleGate', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows admin content to admin, and admin passes user gates', () => {
+  it('shows admin content to admin', () => {
     useAuthStore.setState({ user: byName('admin'), status: 'authenticated' });
     render(
-      <>
-        <RoleGate role="admin"><span>a</span></RoleGate>
-        <RoleGate role="user"><span>b</span></RoleGate>
-      </>,
+      <RoleGate role="admin">
+        <span>a</span>
+      </RoleGate>,
     );
     expect(screen.getByText('a')).toBeInTheDocument();
-    expect(screen.getByText('b')).toBeInTheDocument();
   });
 });

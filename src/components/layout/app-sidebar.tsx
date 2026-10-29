@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MODULE_NAV, getModuleFromPath, isNavItemActive } from '@/config/navigation';
 import { useAuthStore } from '@/features/auth';
-import { getAccessibleModules, hasPermission } from '@/lib/auth/permissions';
+import { getAccessibleModules, hasPermission, isAdmin as isAdminUser } from '@/lib/auth/permissions';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
@@ -31,7 +31,7 @@ export function AppSidebar({ module }: { module?: ModuleKey }) {
   const user = useAuthStore((s) => s.user);
   const pathModule = getModuleFromPath(pathname);
   const activeModule = module ?? pathModule ?? 'ppa';
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user !== null && isAdminUser(user);
 
   // For admin: manage open/collapsed state of each module dropdown
   const [openModules, setOpenModules] = useState<Record<ModuleKey, boolean>>(() => {
@@ -208,10 +208,10 @@ export function AppSidebar({ module }: { module?: ModuleKey }) {
           <div className="flex items-center justify-between gap-2">
             <span className="truncate text-sm font-semibold text-white">{user.fullName}</span>
             <span className="shrink-0 rounded-md bg-amber-500/15 border border-amber-400/30 px-1.5 py-0.5 text-[10px] font-bold text-(--gold) uppercase tracking-wide">
-              {user.role}
+              {lo.roles[user.role]}
             </span>
           </div>
-          <span className="truncate text-xs text-[#9fb0cc]">{user.departmentName}</span>
+          <span className="truncate text-xs text-[#9fb0cc]">{user.division ?? user.department}</span>
         </div>
       ) : null}
     </aside>

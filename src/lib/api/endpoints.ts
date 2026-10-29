@@ -5,9 +5,7 @@ const e = encodeURIComponent;
 export const endpoints = {
   auth: {
     login: '/auth/login',
-    logout: '/auth/logout',
     me: '/auth/me',
-    forgotPassword: '/auth/forgot-password',
   },
 
   // ---- Backend map (Phase 5). Legacy keys below are removed by the feature tasks. ----

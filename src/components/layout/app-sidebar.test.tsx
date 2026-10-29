@@ -54,7 +54,10 @@ describe('AppSidebar', () => {
   });
 
   it('shows the module switcher for multi-module users', () => {
-    useAuthStore.setState({ user: byName('multi.user'), status: 'authenticated' });
+    useAuthStore.setState({
+      user: { ...byName('gc.user'), accessibleModules: ['power-contracts', 'contracts', 'support'] },
+      status: 'authenticated',
+    });
     render(<AppSidebar module="ppa" />);
     expect(screen.getByText(lo.modules.gc)).toBeInTheDocument();
     expect(screen.queryByText(lo.modules.legal)).toBeNull();

@@ -15,9 +15,13 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/ppa',
   useSearchParams: () => new URLSearchParams(search),
 }));
-vi.mock('@/lib/auth/session', () => ({ clearMockSession: () => clearMockSession() }));
+vi.mock('@/lib/auth/session', () => ({
+  clearSession: () => clearMockSession(),
+  hasSessionHint: () => false,
+  setSessionToken: () => {},
+}));
 
-const admin = MOCK_USERS.find((u) => u.role === 'admin')!;
+const admin = MOCK_USERS.find((u) => u.role === 'ADMIN')!;
 const fetchMe = vi.fn(async () => {});
 
 beforeEach(() => {

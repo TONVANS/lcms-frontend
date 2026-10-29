@@ -1,12 +1,17 @@
 import type MockAdapter from 'axios-mock-adapter';
 import { MOCK_PASSWORD, MOCK_USERS } from '@/features/auth/mocks/auth.mock';
-import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { endpoints } from '../../endpoints';
 import { getMockSessionUser } from '../session';
 
+const unauthorized = (message: string): [number, unknown] => [
+  401,
+  { statusCode: 401, message, error: 'Unauthorized' },
+];
+
+/** Mirrors the live envelope. The store (not the server) writes the session cookie. */
 export function register(mock: MockAdapter): void {
   mock.onPost(endpoints.auth.login).reply((config) => {
-    let body: { username?: string; password?: string; remember?: boolean } = {};
+    let body: { username?: string; password?: string } = {};
     try {
       body = typeof config.data === 'string' ? JSON.parse(config.data) : (config.data ?? {});
     } catch {
@@ -14,21 +19,13 @@ export function register(mock: MockAdapter): void {
     }
     const user = MOCK_USERS.find((u) => u.username === body.username);
     if (!user || body.password !== MOCK_PASSWORD) {
-      return [401, { code: 'INVALID_CREDENTIALS' }];
+      return unauthorized('Invalid credentials');
     }
-    setMockSession(user.username, Boolean(body.remember));
-    return [200, user];
+    return [200, { accessToken: `mock:${user.username}`, user }];
   });
 
   mock.onGet(endpoints.auth.me).reply(() => {
     const user = getMockSessionUser();
-    return user ? [200, user] : [401, { code: 'UNAUTHENTICATED' }];
+    return user ? [200, { data: user }] : unauthorized('Unauthorized');
   });
-
-  mock.onPost(endpoints.auth.logout).reply(() => {
-    clearMockSession();
-    return [204];
-  });
-
-  mock.onPost(endpoints.auth.forgotPassword).reply(204);
 }

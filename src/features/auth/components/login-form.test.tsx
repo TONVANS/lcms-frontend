@@ -57,7 +57,7 @@ describe('LoginForm', () => {
 
   it('uses landing route when no next', async () => {
     const user = userEvent.setup();
-    mockLogin('multi.user');
+    mockLogin('admin');
     render(<LoginForm />);
     await fillAndSubmit(user);
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));

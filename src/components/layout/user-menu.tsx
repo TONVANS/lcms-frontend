@@ -61,7 +61,7 @@ export function UserMenu() {
         >
           <DropdownMenuLabel className="flex flex-col gap-0.5">
             <span className="text-foreground text-sm font-semibold">{user.fullName}</span>
-            <span className="text-muted-foreground text-xs font-normal">{user.departmentName}</span>
+            <span className="text-muted-foreground text-xs font-normal">{user.division ?? user.department}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem

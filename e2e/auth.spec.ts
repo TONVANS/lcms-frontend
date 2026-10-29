@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SUPPORT_CONTACTS } from '../src/config/support';
 import { lo } from '../src/lib/i18n/lo';
 import { loginAs } from './helpers';
 
@@ -53,4 +54,15 @@ test('logout returns to login and protects routes again', async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?reason=logout$/);
   await page.goto('/ppa');
   await expect(page).toHaveURL(/\/login\?next=%2Fppa/);
+});
+
+test('forgot password is a static contact-IT notice with no form', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('link', { name: lo.auth.forgot }).click();
+  await expect(page).toHaveURL(/\/forgot-password$/);
+  await expect(page.getByText(lo.auth.forgotContactIt)).toBeVisible();
+  await expect(page.getByRole('link', { name: SUPPORT_CONTACTS.email })).toBeVisible();
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await page.getByRole('link', { name: lo.auth.backToLogin }).click();
+  await expect(page).toHaveURL(/\/login$/);
 });

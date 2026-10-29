@@ -1,19 +1,38 @@
+/** Backend RBAC module names (`accessibleModules` on the user profile). */
+export type SystemModule =
+  | 'contracts'
+  | 'contract-types'
+  | 'legal-documents'
+  | 'legal-cases'
+  | 'power-contracts'
+  | 'power-notifications'
+  | 'departments'
+  | 'support'
+  | 'users'
+  | 'audit-logs';
+export type UserRole = 'ADMIN' | 'MAIN_USER' | 'EDITOR' | 'VIEWER';
+/** UI module keys, derived from `SystemModule` (see `getAccessibleModules`). */
 export type ModuleKey = 'ppa' | 'gc' | 'legal';
 export type AttachmentModule = 'contracts' | 'legal-documents' | 'legal-cases' | 'power-contracts';
-export type Role = 'admin' | 'user';
-export type ModuleRole = 'viewer' | 'editor' | 'main';
-export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download' | 'approve';
+export type Permission = 'view' | 'create' | 'edit' | 'delete' | 'download';
 
 export interface User {
   id: string;
-  fullName: string;
+  employeeCode: string | null;
   username: string;
-  email: string;
-  role: Role;
-  departmentId: string;
-  departmentName: string;
-  modules: ModuleKey[]; // admin = all
-  moduleRoles: Partial<Record<ModuleKey, ModuleRole>>;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  department: string | null;
+  division: string | null;
+  position: string | null;
+  role: UserRole;
+  canView: boolean;
+  canUpload: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canDownload: boolean;
+  accessibleModules: SystemModule[];
 }
 
 export interface Department {

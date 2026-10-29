@@ -18,7 +18,7 @@ export const lo = {
     gc: 'ສັນຍາທົ່ວໄປ',
     legal: 'ນິຕິກຳ, ຈັດຊື້-ຈັດຈ້າງ ແລະ ຄະດີ',
   },
-  roles: { viewer: 'ດູຢ່າງດຽວ', editor: 'ຜູ້ແກ້ໄຂ', main: 'User ຫຼັກ' },
+  roles: { ADMIN: 'ຜູ້ດູແລລະບົບ', MAIN_USER: 'ຜູ້ໃຊ້ຫຼັກ', EDITOR: 'ຜູ້ແກ້ໄຂ', VIEWER: 'ຜູ້ເບິ່ງ' },
   status: {
     active: 'ມີຜົນບັງຄັບໃຊ້',
     negotiating: 'ກຳລັງເຈລະຈາ',
@@ -73,7 +73,7 @@ export const lo = {
   },
   auth: {
     loginTitle: 'ເຂົ້າສູ່ລະບົບ',
-    username: 'ຊື່ຜູ້ໃຊ້',
+    username: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດພະນັກງານ',
     password: 'ລະຫັດຜ່ານ',
     remember: 'ຈື່ຂ້ອຍໄວ້',
     forgot: 'ລືມລະຫັດຜ່ານ?',
@@ -83,7 +83,6 @@ export const lo = {
     logout: 'ອອກຈາກລະບົບ',
     sessionExpired: 'ໝົດເວລາເຂົ້າໃຊ້ ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່',
     forgotTitle: 'ລືມລະຫັດຜ່ານ',
-    forgotSent: 'ຖ້າມີບັນຊີນີ້ ພວກເຮົາໄດ້ສົ່ງຄຳແນະນຳໄປທາງອີເມວແລ້ວ',
     backToLogin: 'ກັບໄປໜ້າເຂົ້າສູ່ລະບົບ',
     brandHeading: 'ບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ ຢ່າງເປັນລະບົບ',
     brandIntro: 'ລວມສັນຍາພະລັງງານ ສັນຍາທົ່ວໄປ ແລະ ນິຕິກຳ ໄວ້ໃນບ່ອນດຽວ ພ້ອມການແຈ້ງເຕືອນກຳນົດເວລາ',
@@ -99,8 +98,9 @@ export const lo = {
     trustBankSecurity: 'ຄວາມປອດໄພລະດັບສູງ',
     trustSmartAlerts: 'ແຈ້ງເຕືອນອັດຕະໂນມັດ 90/30/7 ມື້',
     trustAuditTrail: 'ກວດສອບຍ້ອນຫຼັງໄດ້ 100%',
-    forgotIntro: 'ປ້ອນຊື່ຜູ້ໃຊ້ຂອງທ່ານ ເພື່ອຮັບຄຳແນະນຳໃນການຕັ້ງລະຫັດຜ່ານໃໝ່',
-    forgotSubmit: 'ສົ່ງຄຳແນະນຳ',
+    forgotIntro: 'ລະບົບບໍ່ສາມາດຣີເຊັດລະຫັດຜ່ານດ້ວຍຕົນເອງໄດ້',
+    forgotContactIt: 'ກະລຸນາຕິດຕໍ່ ພະແນກ IT / HRM ເພື່ອຕັ້ງລະຫັດຜ່ານໃໝ່',
+    forgotContactLabel: 'ຊ່ອງທາງຕິດຕໍ່',
   },
   validation: {
     usernameRequired: 'ກະລຸນາປ້ອນຊື່ຜູ້ໃຊ້',

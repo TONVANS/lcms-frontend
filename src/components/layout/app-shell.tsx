@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import { getModuleFromPath } from '@/config/navigation';
 import { useAlertsStore } from '@/features/alerts';
 import { useAuthStore } from '@/features/auth';
-import { canAccessModule } from '@/lib/auth/permissions';
+import { canAccessModule, isAdmin } from '@/lib/auth/permissions';
 import { cn } from '@/lib/utils/cn';
 import { useUiStore } from '@/stores/ui.store';
 import { AppSidebar } from './app-sidebar';
@@ -39,11 +39,11 @@ export function AppShell({ children, unreadCount: unreadOverride }: AppShellProp
     if (moduleKey) setLastModule(moduleKey);
   }, [moduleKey, setLastModule]);
 
-  const isAdmin = user?.role === 'admin';
+  const userIsAdmin = user !== null && isAdmin(user);
   const isForbidden = pathModule !== null && user !== null && !canAccessModule(user, pathModule);
 
   // Show sidebar for admin everywhere except forbidden pages, and for accessible module pages
-  const showSidebar = !isForbidden && (isAdmin || moduleKey !== null);
+  const showSidebar = !isForbidden && (userIsAdmin || moduleKey !== null);
 
   return (
     <>

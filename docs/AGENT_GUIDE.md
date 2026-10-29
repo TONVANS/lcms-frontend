@@ -111,7 +111,7 @@ When the plan and the code disagree, the controller decides. It records the deci
 | Errors | Interceptors already reject with a normalized `ApiError`. Use `toUserMessage(err)` for Lao text and `normalizeError(e)` for unknown throws. |
 | Mocks | Add `src/lib/api/mock/handlers/<feature>.ts` exporting `register(mock)`, then append it to the `handlers` array in `src/lib/api/mock/index.ts`. Keep mock data in `src/features/<x>/mocks/`. |
 | Current user | `useAuthStore(s => s.user)`. Status values: `idle`, `loading`, `authenticated`, `unauthenticated`, `error`. |
-| Access checks | `canAccessModule(u, m)`, `hasPermission(u, m, p)`, `getModuleRole(u, m)`, `getAccessibleModules(u)`, `getLandingRoute(u)` (`@/lib/auth/permissions`). `ROLE_PERMISSIONS` (`@/lib/auth/roles`) maps `viewer` (view), `editor` (view, create, edit, delete) and `main` (editor plus download). Admin has every permission. |
+| Access checks | `isAdmin(u)`, `hasSystemModule(u, sm)`, `canAccessModule(u, m)`, `hasPermission(u, m, p)`, `getAccessibleModules(u)`, `getLandingRoute(u)` (`@/lib/auth/permissions`). Roles are `ADMIN | MAIN_USER | EDITOR | VIEWER`; permissions come from the per-user `can*` flags (ADMIN and MAIN_USER have all). |
 | Guards | `ModuleGuard` already wraps every module `layout.tsx`. Use `RoleGate role="admin"` for admin-only UI. For module permissions use `useCan(module, permission)` (hook), `<Can module permission fallback>` (inline UI) and `<PermissionGuard module permission>` (whole routes; redirects to `/forbidden`), all from `@/components/guards`. Gate UI by permission, never by role name. |
 | Mock enforcement | Mock handlers enforce permissions the way the server will: 401 with no session, 403 without the permission, 409 on conflicts. Read the user with `getMockSessionUser()` (`@/lib/api/mock/session`). Gate the UI **and** make the handler refuse. |
 | Nav items | `NavItem.permission?` hides an item unless the user holds it (for example the `create` items). |
@@ -267,20 +267,17 @@ From `Frontend_LCMS_Project.md` §12:
 
 The password for every account is `password`.
 
-| Username | Modules | Module role | Lands on |
+| Username | Role | Division / modules | Lands on |
 |---|---|---|---|
-| `admin` | all | admin (all permissions) | `/` |
-| `multi.user` | ppa, gc | ppa viewer, gc editor | `/` |
-| `ppa.user` | ppa | ppa main | `/ppa` |
-| `gc.user` | gc | gc main | `/contracts` |
-| `gc.editor` | gc | gc editor | `/contracts` |
-| `gc.viewer` | gc | gc viewer | `/contracts` |
-| `legal.user` | legal | legal main | `/legal` |
-| `legal.editor` | legal | legal editor | `/legal` |
-| `legal.viewer` | legal | legal viewer | `/legal` |
-| `none.user` | none | none | `/forbidden` |
+| `admin` | ADMIN | all system modules (incl. users, audit-logs) | `/` |
+| `gc.user` | MAIN_USER | ພະແນກສັນຍາທົ່ວໄປ: contracts, contract-types, departments, support | `/contracts` |
+| `gc.editor` | EDITOR (view, upload, edit, delete) | same as `gc.user` | `/contracts` |
+| `gc.viewer` | VIEWER (view only) | same as `gc.user` | `/contracts` |
+| `legal.user` / `legal.editor` / `legal.viewer` | MAIN_USER / EDITOR / VIEWER | ພະແນກນິຕິກຳ ແລະ ແກ້ໄຂຂໍ້ຂັດແຍ່ງ: legal-documents, legal-cases, departments, support | `/legal` |
+| `ppa.user` | MAIN_USER | ພະແນກສັນຍາຊື້-ຂາຍໄຟຟ້າ: power-contracts, power-notifications, departments, support | `/ppa` |
+| `none.user` | VIEWER | departments, support only | `/support` |
 
-Roles are `viewer` (view only), `editor` (view, create, edit, delete) and `main` (editor plus download), as in `src/lib/auth/roles.ts`.
+Permissions: ADMIN and MAIN_USER hold every permission in the modules they can access; EDITOR/VIEWER follow the per-user flags (`canView`→view, `canUpload`→create, `canEdit`→edit, `canDelete`→delete, `canDownload`→download), see `src/lib/auth/permissions.ts`.
 
 Run `pnpm dev` and open http://localhost:3000. E2E tests use a production build on port 3100.
 

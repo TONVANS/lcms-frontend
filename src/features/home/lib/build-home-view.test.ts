@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { daysLeft } from '@/lib/utils/date';
-import type { Alert, ModuleKey, User } from '@/types/domain';
+import type { Alert, ModuleKey, SystemModule, User } from '@/types/domain';
 import type { HomeSummary } from '../types';
 import { buildHomeView } from './build-home-view';
 
@@ -21,16 +21,29 @@ function alertAt(id: string, module: ModuleKey, offset: number): Alert {
   };
 }
 
-const user = (modules: ModuleKey[], role: User['role'] = 'user'): User => ({
+const SYSTEM: Record<ModuleKey, SystemModule> = {
+  ppa: 'power-contracts',
+  gc: 'contracts',
+  legal: 'legal-cases',
+};
+
+const user = (modules: ModuleKey[], role: User['role'] = 'MAIN_USER'): User => ({
   id: 'u',
-  fullName: 'x',
+  employeeCode: null,
   username: 'x',
-  email: 'x@x',
+  fullName: 'x',
+  email: null,
+  phone: null,
+  department: null,
+  division: null,
+  position: null,
   role,
-  departmentId: 'd',
-  departmentName: 'd',
-  modules,
-  moduleRoles: {},
+  canView: true,
+  canUpload: false,
+  canEdit: false,
+  canDelete: false,
+  canDownload: false,
+  accessibleModules: modules.map((m) => SYSTEM[m]),
 });
 
 const summary: HomeSummary = {
@@ -68,7 +81,7 @@ describe('buildHomeView', () => {
   });
 
   it('gives admin every module', () => {
-    const r = buildHomeView(summary, user([], 'admin'), today);
+    const r = buildHomeView(summary, user([], 'ADMIN'), today);
     expect(r.modules.map((m) => m.module)).toEqual(['ppa', 'gc', 'legal']);
   });
 });
