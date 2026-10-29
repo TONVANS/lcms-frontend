@@ -1,49 +1,50 @@
-import type { Money } from '@/types/domain';
+import type { ContractStatus, ContractTypeOption, Currency } from '@/types/domain';
 
-export const GC_CONTRACT_TYPES = [
-  'om_service',
-  'equipment_lease',
-  'land_lease',
-  'epc',
-  'pole_attachment',
-  'bill_collection',
-  'opgw_lease',
-  'current_deposit',
-  'edl_app_payment',
-  'cooperation',
-  'shareholding',
-  'pta',
-  'moa',
-  'other_assigned',
-] as const;
-export type GcContractType = (typeof GC_CONTRACT_TYPES)[number];
+export const GC_STATUSES: readonly ContractStatus[] = [
+  'DRAFT',
+  'ACTIVE',
+  'EXPIRING_SOON',
+  'EXPIRED',
+  'TERMINATED',
+];
 
-export const GC_STATUSES = ['pending', 'active', 'expiring', 'expired'] as const;
-export type GcStatus = (typeof GC_STATUSES)[number];
+export const GC_CURRENCIES: readonly Currency[] = ['LAK', 'USD', 'CNY'];
 
 export const GC_PAGE_SIZES = [10, 20, 50] as const;
-export const GC_SORT_KEYS = ['endDate', 'signedDate', 'title'] as const;
-export type GcSortKey = (typeof GC_SORT_KEYS)[number];
 
-export const GC_CURRENCIES = ['LAK', 'USD', 'CNY'] as const;
+export const GC_DEFAULT_NOTIFY_DAYS = 60;
 
-export type GcEquity = { kind: 'percent'; percent: number } | { kind: 'amount'; money: Money };
-
-export interface GeneralContract {
+/** Model of a general contract. Field names follow the backend DTO verbatim (plan Ruling 1). */
+export interface Contract {
   id: string;
   title: string;
-  type: GcContractType;
-  contractNo: string;
-  counterparty: string | null;
-  termText: string | null;
-  signedDate: string;
-  effectiveDate: string;
-  endDate: string | null;
-  value: Money | null;
-  equity: GcEquity | null;
+  contractTypeId: number | null;
+  contractType: ContractTypeOption | null;
+  contractNumber: string;
+  durationText: string | null;
+  durationMonths: number | null;
+  /** YYYY-MM-DD */
+  signedDate: string | null;
+  effectiveDate: string | null;
+  expirationDate: string | null;
+  contractValue: number | null;
+  currency: Currency | null;
+  equityOrCapitalContribution: string | null;
+  sharePercentage: number | null;
   implementer: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
+  additionalDetails: string | null;
+  notifyDaysBefore: number | null;
+  status: ContractStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface ContractsDashboard {
+  total: number;
+  expiringSoonCount: number;
+  expiredCount: number;
+  byStatus: { status: ContractStatus; count: number }[];
+  byCurrency: { currency: Currency; count: number }[];
+  valueByCurrency: { currency: Currency; amount: number }[];
+  byContractType: { contractTypeId: number | null; name: string; count: number }[];
 }

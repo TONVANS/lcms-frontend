@@ -2,8 +2,7 @@
 
 import { CheckCheck } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
@@ -11,23 +10,28 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { GlassCard } from '@/components/shared/glass-card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { alertsService, useAlertsStore } from '@/features/alerts';
+import { useAuthStore } from '@/features/auth';
+import {
+  contractHref,
+  notificationKey,
+  useNotificationsStore,
+  type AppNotification,
+} from '@/features/notifications';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
-import type { Alert } from '@/types/domain';
-import { groupGcAlerts, type GcAlertGroupKey } from '../lib/group-alerts';
+import { gcService } from '../api/gc.service';
+import type { Contract } from '../types';
 
 const FOCUS =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
+const PAGE_SIZE = 50;
 
-const GROUP_LABEL: Record<GcAlertGroupKey, string> = {
-  overdue: lo.gc.alerts.groupOverdue,
-  d7: lo.gc.alerts.group7,
-  d30: lo.gc.alerts.group30,
-  d60: lo.gc.alerts.group60,
-};
+interface Loaded {
+  expiring: Contract[];
+  expired: Contract[];
+}
 
 function AlertsSkeleton() {
   return (
@@ -39,21 +43,125 @@ function AlertsSkeleton() {
   );
 }
 
+function ContractRows({ id, title, rows }: { id: string; title: string; rows: Contract[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <h2 id={id} className="font-serif text-base font-semibold text-[var(--text-strong)]">
+        {title}
+      </h2>
+      <ul className="flex flex-col gap-2.5">
+        {rows.map((c) => (
+          <li
+            key={c.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] p-3"
+          >
+            <div className="min-w-0">
+              <Link
+                href={`/contracts/${c.id}`}
+                className={cn(
+                  'flex min-h-11 items-center rounded-sm text-sm font-medium text-[var(--text-strong)] underline-offset-2 hover:underline',
+                  FOCUS,
+                )}
+              >
+                {c.title}
+              </Link>
+              <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
+                {c.contractNumber} · {lo.gc.alerts.due}: {formatDate(c.expirationDate)}
+              </p>
+            </div>
+            <CountdownBadge days={daysLeft(c.expirationDate)} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function NotificationRows({ rows }: { rows: AppNotification[] }) {
+  const markRead = useNotificationsStore((s) => s.markRead);
+  if (rows.length === 0) return null;
+  return (
+    <section aria-labelledby="gc-alerts-notifications" className="flex flex-col gap-3">
+      <h2
+        id="gc-alerts-notifications"
+        className="font-serif text-base font-semibold text-[var(--text-strong)]"
+      >
+        {lo.gc.alerts.notificationsSection}
+      </h2>
+      <ul className="flex flex-col gap-2.5">
+        {rows.map((n) => {
+          const href = contractHref(n);
+          return (
+            <li
+              key={notificationKey(n)}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] p-3"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                {n.read ? null : (
+                  <>
+                    <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[var(--gc)]" />
+                    <span className="sr-only">{lo.topbar.unread}</span>
+                  </>
+                )}
+                <div className="min-w-0">
+                  {href ? (
+                    <Link
+                      href={href}
+                      className={cn(
+                        'flex min-h-11 items-center rounded-sm text-sm text-[var(--text-strong)] underline-offset-2 hover:underline',
+                        n.read ? 'font-medium' : 'font-semibold',
+                        FOCUS,
+                      )}
+                    >
+                      {n.title}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-[var(--text-strong)]">{n.title}</span>
+                  )}
+                  {n.message ? (
+                    <p className="text-[11px] text-[var(--text-muted)]">{n.message}</p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <CountdownBadge days={n.daysLeft} />
+                {n.read ? null : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`${lo.gc.alerts.markRead}: ${n.title}`}
+                    onClick={() => void markRead(n)}
+                    className="min-h-11 min-w-11"
+                  >
+                    <CheckCheck className="size-4" aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function GcAlertsView() {
-  const [alerts, setAlerts] = useState<Alert[] | null>(null);
+  const user = useAuthStore((s) => s.user);
+  const notifStatus = useNotificationsStore((s) => s.status);
+  const allNotifications = useNotificationsStore((s) => s.items);
+  const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
-  const pendingRef = useRef(new Set<string>());
-  const focusId = useRef<string | null>(null);
-  const links = useRef(new Map<string, HTMLAnchorElement>());
 
   useEffect(() => {
     let active = true;
-    alertsService
-      .list({ module: 'gc' })
-      .then((res) => {
-        if (active) setAlerts(res);
+    Promise.all([
+      gcService.list({ status: 'EXPIRING_SOON', page: 1, pageSize: PAGE_SIZE }),
+      gcService.list({ status: 'EXPIRED', page: 1, pageSize: PAGE_SIZE }),
+    ])
+      .then(([expiring, expired]) => {
+        if (active) setData({ expiring: expiring.items, expired: expired.items });
       })
       .catch((e: unknown) => {
         if (active) setError(toUserMessage(normalizeError(e)) || lo.errors.unknown);
@@ -63,35 +171,14 @@ export function GcAlertsView() {
     };
   }, [attempt]);
 
-  // After a row loses its button, keep focus on the row's link instead of letting it fall to body.
   useEffect(() => {
-    const id = focusId.current;
-    if (!id) return;
-    focusId.current = null;
-    links.current.get(id)?.focus();
-  }, [alerts]);
+    if (user && notifStatus === 'idle') void useNotificationsStore.getState().fetch(user);
+  }, [user, notifStatus]);
 
-  const retry = () => {
+  const retry = useCallback(() => {
     setError(null);
-    setAlerts(null);
+    setData(null);
     setAttempt((n) => n + 1);
-  };
-
-  const markRead = useCallback(async (id: string) => {
-    if (pendingRef.current.has(id)) return;
-    pendingRef.current.add(id);
-    setPending(new Set(pendingRef.current));
-    try {
-      await alertsService.markRead(id);
-      focusId.current = id;
-      setAlerts((prev) => prev?.map((a) => (a.id === id ? { ...a, read: true } : a)) ?? prev);
-      void useAlertsStore.getState().fetch();
-    } catch (e) {
-      toast.error(toUserMessage(normalizeError(e)) || lo.errors.unknown);
-    } finally {
-      pendingRef.current.delete(id);
-      setPending(new Set(pendingRef.current));
-    }
   }, []);
 
   const header = <PageHeader eyebrow="GC" title={lo.gc.alerts.title} accent="gc" />;
@@ -113,7 +200,7 @@ export function GcAlertsView() {
     );
   }
 
-  if (!alerts) {
+  if (!data) {
     return (
       <div className="flex flex-col gap-6">
         {header}
@@ -122,9 +209,9 @@ export function GcAlertsView() {
     );
   }
 
-  const groups = groupGcAlerts(alerts);
-
-  if (groups.length === 0) {
+  const notifications = allNotifications.filter((n) => n.source === 'contracts');
+  const empty = data.expiring.length === 0 && data.expired.length === 0 && notifications.length === 0;
+  if (empty) {
     return (
       <div className="flex flex-col gap-6">
         {header}
@@ -135,84 +222,17 @@ export function GcAlertsView() {
     );
   }
 
-  const today = new Date();
-  const anyUnread = groups.some((g) => g.alerts.some((a) => !a.read));
-
   return (
     <div className="flex flex-col gap-6">
       {header}
-      {anyUnread ? null : (
+      {notifications.length > 0 && notifications.every((n) => n.read) ? (
         <p role="status" className="text-sm text-[var(--text-muted)]">
           {lo.gc.alerts.allRead}
         </p>
-      )}
-      {groups.map((g) => (
-        <section key={g.key} aria-labelledby={`gc-alerts-${g.key}`} className="flex flex-col gap-3">
-          <h2
-            id={`gc-alerts-${g.key}`}
-            className="font-serif text-base font-semibold text-[var(--text-strong)]"
-          >
-            {GROUP_LABEL[g.key]}
-          </h2>
-          <ul className="flex flex-col gap-2.5">
-            {g.alerts.map((a) => {
-              const busy = pending.has(a.id);
-              return (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-inset)] p-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    {a.read ? null : (
-                      <>
-                        <span
-                          aria-hidden="true"
-                          className="size-2 shrink-0 rounded-full bg-[var(--gc)]"
-                        />
-                        <span className="sr-only">{lo.topbar.unread}</span>
-                      </>
-                    )}
-                    <div className="min-w-0">
-                      <Link
-                        href={`/contracts/${a.entityId}`}
-                        ref={(el) => {
-                          if (el) links.current.set(a.id, el);
-                          else links.current.delete(a.id);
-                        }}
-                        className={cn(
-                          'flex min-h-11 items-center rounded-sm text-sm font-medium text-[var(--text-strong)] underline-offset-2 hover:underline',
-                          !a.read && 'font-semibold',
-                          FOCUS,
-                        )}
-                      >
-                        {a.title}
-                      </Link>
-                      <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                        {lo.gc.alerts.due}: {formatDate(a.dueDate)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CountdownBadge days={daysLeft(a.dueDate, today)} />
-                    {a.read ? null : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`${lo.gc.alerts.markRead}: ${a.title}`}
-                        aria-disabled={busy}
-                        onClick={() => void markRead(a.id)}
-                        className={cn('min-h-11 min-w-11', busy && 'opacity-50')}
-                      >
-                        <CheckCheck className="size-4" aria-hidden="true" />
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+      ) : null}
+      <ContractRows id="gc-alerts-expiring" title={lo.gc.alerts.expiringSection} rows={data.expiring} />
+      <NotificationRows rows={notifications} />
+      <ContractRows id="gc-alerts-expired" title={lo.gc.alerts.expiredSection} rows={data.expired} />
     </div>
   );
 }

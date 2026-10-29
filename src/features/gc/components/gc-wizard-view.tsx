@@ -19,11 +19,12 @@ import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
-import { formatDate } from '@/lib/utils/date';
-import { formatMoney } from '@/lib/utils/money';
+import { useContractTypes } from '@/features/lookups';
+import { formatNumber } from '@/lib/utils/number';
 import { gcService } from '../api/gc.service';
-import { EMPTY, displayDate as date, displayText as text, formatEquity } from '../lib/format';
-import { emptyGcForm, gcFormSchema, toGcPayload, type GcFormValues } from '../schemas/gc.schema';
+import { toContractPayload } from '../lib/contract-mapper';
+import { EMPTY, displayDate as date, displayText as text, formatValue } from '../lib/format';
+import { emptyGcForm, gcFormSchema, type GcFormValues } from '../schemas/gc.schema';
 import {
   GC_FIELD_ORDER,
   GcFormFieldGroup,
@@ -46,10 +47,10 @@ const STEP_LABELS = [
 const STEPS = STEP_LABELS.map((label, i) => ({ id: i + 1, label }));
 
 const STEP_FIELDS: Record<number, readonly GcFormFieldName[]> = {
-  1: ['title', 'type', 'contractNo', 'counterparty', 'implementer'],
-  2: ['signedDate', 'effectiveDate', 'endDate', 'termText'],
-  3: ['value', 'equity'],
-  4: ['notes'],
+  1: ['title', 'contractTypeId', 'contractNumber'],
+  2: ['signedDate', 'effectiveDate', 'expirationDate', 'durationText', 'durationMonths'],
+  3: ['contractValue', 'currency', 'equityOrCapitalContribution', 'sharePercentage'],
+  4: ['implementer', 'additionalDetails', 'notifyDaysBefore'],
 };
 
 const STEP_GROUP: Record<number, GcFieldGroup> = { 1: 'general', 2: 'dates', 3: 'money', 4: 'notes' };
@@ -87,16 +88,22 @@ function useFormValues(control: Control<GcFormValues>): GcFormValues {
   return useWatch({ control }) as GcFormValues;
 }
 
+function useTypeName(id: number | null): string {
+  const types = useContractTypes();
+  return types.items.find((t) => t.id === id)?.nameLo ?? EMPTY;
+}
+
 function SummaryAside({ control, completed }: { control: Control<GcFormValues>; completed: number }) {
   const v = useFormValues(control);
+  const typeName = useTypeName(v.contractTypeId);
   const headingId = useId();
   const rows: { label: string; value: string }[] = [
     { label: lo.gc.fields.title, value: text(v.title) },
-    { label: lo.gc.fields.type, value: v.type ? lo.gc.types[v.type] : EMPTY },
-    { label: lo.gc.fields.contractNo, value: text(v.contractNo) },
+    { label: lo.gc.fields.contractTypeId, value: typeName },
+    { label: lo.gc.fields.contractNumber, value: text(v.contractNumber) },
     { label: lo.gc.fields.effectiveDate, value: date(v.effectiveDate) },
-    { label: lo.gc.fields.endDate, value: v.endDate ? formatDate(v.endDate) : EMPTY },
-    { label: lo.gc.fields.value, value: v.value ? formatMoney(v.value) : EMPTY },
+    { label: lo.gc.fields.expirationDate, value: date(v.expirationDate) },
+    { label: lo.gc.fields.contractValue, value: formatValue(v.contractValue, v.currency) },
   ];
   return (
     <aside aria-labelledby={headingId} className="min-w-0 lg:sticky lg:top-6 lg:self-start">
@@ -194,6 +201,7 @@ function ReviewStep({
   locked: boolean;
 }) {
   const v = useFormValues(control);
+  const typeName = useTypeName(v.contractTypeId);
   const f = lo.gc.fields;
   const headingId = useId();
   return (
@@ -203,12 +211,10 @@ function ReviewStep({
       </h3>
       <ReviewSection step={1} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.title}>{text(v.title)}</ReviewItem>
-        <ReviewItem label={f.type}>{v.type ? lo.gc.types[v.type] : EMPTY}</ReviewItem>
-        <ReviewItem label={f.contractNo}>
-          <span className="tabular-nums">{text(v.contractNo)}</span>
+        <ReviewItem label={f.contractTypeId}>{typeName}</ReviewItem>
+        <ReviewItem label={f.contractNumber}>
+          <span className="tabular-nums">{text(v.contractNumber)}</span>
         </ReviewItem>
-        <ReviewItem label={f.counterparty}>{text(v.counterparty)}</ReviewItem>
-        <ReviewItem label={f.implementer}>{text(v.implementer)}</ReviewItem>
       </ReviewSection>
       <ReviewSection step={2} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.signedDate}>
@@ -217,21 +223,29 @@ function ReviewStep({
         <ReviewItem label={f.effectiveDate}>
           <span className="tabular-nums">{date(v.effectiveDate)}</span>
         </ReviewItem>
-        <ReviewItem label={f.endDate}>
-          {v.endDate ? <span className="tabular-nums">{formatDate(v.endDate)}</span> : lo.gc.openEnded}
+        <ReviewItem label={f.expirationDate}>
+          <span className="tabular-nums">{date(v.expirationDate)}</span>
         </ReviewItem>
-        <ReviewItem label={f.termText}>{text(v.termText)}</ReviewItem>
+        <ReviewItem label={f.durationText}>{text(v.durationText)}</ReviewItem>
+        <ReviewItem label={f.durationMonths}>
+          {v.durationMonths === null ? EMPTY : formatNumber(v.durationMonths)}
+        </ReviewItem>
       </ReviewSection>
       <ReviewSection step={3} onEdit={onEdit} locked={locked}>
-        <ReviewItem label={f.value}>
-          <span className="tabular-nums">{v.value ? formatMoney(v.value) : EMPTY}</span>
+        <ReviewItem label={f.contractValue}>
+          <span className="tabular-nums">{formatValue(v.contractValue, v.currency)}</span>
         </ReviewItem>
-        <ReviewItem label={f.equity}>
-          <span className="tabular-nums">{formatEquity(v.equity)}</span>
+        <ReviewItem label={f.equityOrCapitalContribution}>
+          {text(v.equityOrCapitalContribution)}
+        </ReviewItem>
+        <ReviewItem label={f.sharePercentage}>
+          {v.sharePercentage === null ? EMPTY : `${v.sharePercentage}%`}
         </ReviewItem>
       </ReviewSection>
       <ReviewSection step={4}>
-        <ReviewItem label={f.notes}>{text(v.notes)}</ReviewItem>
+        <ReviewItem label={f.implementer}>{text(v.implementer)}</ReviewItem>
+        <ReviewItem label={f.notifyDaysBefore}>{v.notifyDaysBefore ?? EMPTY}</ReviewItem>
+        <ReviewItem label={f.additionalDetails}>{text(v.additionalDetails)}</ReviewItem>
         <ReviewItem label={f.documents}>
           {staged.length > 0 ? staged.map((s) => s.file.name).join(', ') : lo.gc.wizard.noFiles}
         </ReviewItem>
@@ -330,7 +344,7 @@ export function GcWizardView() {
       let justCreated = false;
       if (createdIdRef.current === null) {
         try {
-          const created = await gcService.create(toGcPayload(values));
+          const created = await gcService.create(toContractPayload(values));
           createdIdRef.current = created.id;
           justCreated = true;
         } catch (e) {

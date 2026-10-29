@@ -1,46 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { alertsService } from '@/features/alerts/api/alerts.service';
 import { gcService } from '@/features/gc/api/gc.service';
-import { deriveGcStatus } from '@/features/gc/lib/derive-status';
 import { gcMockDb } from '@/features/gc/mocks/gc.mock';
-import type { GcContractInput } from '@/features/gc/schemas/gc.schema';
-import type { GeneralContract } from '@/features/gc/types';
-import type { HomeSummary } from '@/features/home/types';
 import { api } from '@/lib/api/client';
-import { endpoints } from '@/lib/api/endpoints';
 import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
-import { daysLeft } from '@/lib/utils/date';
-
-const toInput = (c: GeneralContract): GcContractInput => ({
-  title: c.title,
-  type: c.type,
-  contractNo: c.contractNo,
-  counterparty: c.counterparty,
-  termText: c.termText,
-  signedDate: c.signedDate,
-  effectiveDate: c.effectiveDate,
-  endDate: c.endDate,
-  value: c.value,
-  equity: c.equity,
-  implementer: c.implementer,
-  notes: c.notes,
-});
-
-const input: GcContractInput = {
-  title: 'New contract',
-  type: 'moa',
-  contractNo: 'NEW-001',
-  counterparty: null,
-  termText: null,
-  signedDate: '2026-10-01',
-  effectiveDate: '2026-10-02',
-  endDate: null,
-  value: null,
-  equity: null,
-  implementer: null,
-  notes: null,
-};
 
 beforeEach(() => {
   installMocks(api, { delay: 0 });
@@ -48,194 +11,93 @@ beforeEach(() => {
   gcMockDb.reset(new Date());
 });
 
+describe('mock data', () => {
+  it('has >= 25 records covering every status and currency with varied types', () => {
+    const all = gcMockDb.all();
+    expect(all.length).toBeGreaterThanOrEqual(25);
+    expect(new Set(all.map((c) => c.status)).size).toBe(5);
+    expect(new Set(all.map((c) => c.currency).filter(Boolean)).size).toBe(3);
+    expect(new Set(all.map((c) => c.contractTypeId)).size).toBe(14);
+    expect(all.slice(0, 8).map((c) => c.id)).toEqual(
+      Array.from({ length: 8 }, (_, i) => `gc-00${i + 1}`),
+    );
+    expect(all.some((c) => typeof c.contractValue === 'string')).toBe(true);
+  });
+});
+
 describe('gc handlers', () => {
   it('401 without a session', async () => {
     await expect(gcService.list()).rejects.toMatchObject({ status: 401 });
   });
 
-  it('list filters, sorts and paginates on the server', async () => {
+  it('list filters and paginates with the backend envelope', async () => {
     setMockSession('gc.viewer', false);
-    const r = await gcService.list({ status: 'expiring', page: 1, pageSize: 10 });
-    expect(r.items.length).toBeGreaterThan(0);
-    expect(r.items.every((c) => deriveGcStatus(c) === 'expiring')).toBe(true);
-    expect(r.total).toBe(r.items.length);
-    const endDates = r.items.map((c) => c.endDate);
-    expect(endDates).toEqual([...endDates].sort());
+    const raw = await api.get('/contracts', { params: { status: 'EXPIRED', page: 1, limit: 2 } });
+    expect(raw.data.meta).toMatchObject({ page: 1, limit: 2 });
+    expect(raw.data.meta.total).toBe(gcMockDb.all().filter((c) => c.status === 'EXPIRED').length);
+    expect(raw.data.meta.totalPages).toBe(Math.ceil(raw.data.meta.total / 2));
+    expect(raw.data.data.length).toBeLessThanOrEqual(2);
+
+    const typed = await gcService.list({ contractTypeId: 1, page: 1, pageSize: 50 });
+    expect(typed.items.length).toBeGreaterThan(0);
+    expect(typed.items.every((c) => c.contractTypeId === 1)).toBe(true);
+
+    const found = await gcService.list({ q: 'GC-2026-003' });
+    expect(found.items.map((c) => c.contractNumber)).toEqual(['GC-2026-003']);
   });
 
-  it('paginates and searches', async () => {
+  it('detail has nested contractType; unknown id is 404', async () => {
     setMockSession('gc.viewer', false);
-    const p2 = await gcService.list({ page: 2, pageSize: 20 });
-    expect(p2.items).toHaveLength(20);
-    expect(p2.total).toBe(42);
-    const first = gcMockDb.all()[0];
-    const q = await gcService.list({ q: first.contractNo.toLowerCase() });
-    expect(q.items.map((c) => c.id)).toContain(first.id);
-    expect(q.total).toBe(1);
-  });
-
-  it('puts open-ended contracts last in either direction', async () => {
-    setMockSession('gc.viewer', false);
-    for (const order of ['asc', 'desc'] as const) {
-      const r = await gcService.list({ sort: 'endDate', order, pageSize: 50 });
-      const ends = r.items.map((c) => c.endDate);
-      const firstNull = ends.indexOf(null);
-      expect(firstNull).toBeGreaterThan(-1);
-      expect(ends.slice(firstNull).every((e) => e === null)).toBe(true);
-    }
-  });
-
-  it('sorts titles with Lao collation, not code-point order', async () => {
-    setMockSession('gc.editor', false);
-    // A leading vowel (U+0EC0) sorts after every consonant by code point, but collates by the consonant that follows it.
-    const lead = await gcService.create({ ...input, contractNo: 'LAO-1', title: '\u0EC0\u0E81' });
-    const plain = await gcService.create({ ...input, contractNo: 'LAO-2', title: '\u0E82' });
-    expect('\u0EC0\u0E81' < '\u0E82').toBe(false);
-    const r = await gcService.list({ sort: 'title', order: 'asc', pageSize: 50 });
-    const ids = r.items.map((c) => c.id);
-    expect(ids.indexOf(lead.id)).toBeLessThan(ids.indexOf(plain.id));
-    const titles = r.items.map((c) => c.title);
-    expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b, 'lo')));
-  });
-
-  it('ignores invalid query values', async () => {
-    setMockSession('gc.viewer', false);
-    const r = await gcService.list({ status: 'bogus' as never, pageSize: 999, page: -2 });
-    expect(r.pageSize).toBe(10);
-    expect(r.page).toBe(1);
-    expect(r.total).toBe(42);
-  });
-
-  it('viewer gets 403 on create, edit and delete; editor succeeds on create', async () => {
-    setMockSession('gc.viewer', false);
-    const [first] = gcMockDb.all();
-    await expect(gcService.create(input)).rejects.toMatchObject({ status: 403 });
-    await expect(gcService.update(first.id, toInput(first))).rejects.toMatchObject({ status: 403 });
-    await expect(gcService.remove(first.id)).rejects.toMatchObject({ status: 403 });
-    expect(gcMockDb.get(first.id)).toBeDefined();
-    setMockSession('gc.editor', false);
-    await expect(gcService.create(input)).resolves.toMatchObject({ contractNo: input.contractNo });
-  });
-
-  it('a user without gc access gets 403 on read', async () => {
-    setMockSession('ppa.user', false);
-    await expect(gcService.list()).rejects.toMatchObject({ status: 403 });
-  });
-
-  it('duplicate contractNo -> 409 with field error; editing self keeps own number', async () => {
-    setMockSession('gc.editor', false);
-    const [first, second] = gcMockDb.all();
-    await expect(
-      gcService.update(second.id, { ...toInput(second), contractNo: first.contractNo.toLowerCase() }),
-    ).rejects.toMatchObject({ status: 409, fieldErrors: { contractNo: 'DUPLICATE_CONTRACT_NO' } });
-    await expect(gcService.update(first.id, toInput(first))).resolves.toMatchObject({ id: first.id });
-    await expect(
-      gcService.update(first.id, { ...toInput(first), contractNo: first.contractNo.toUpperCase() }),
-    ).resolves.toMatchObject({ id: first.id });
-    await expect(
-      gcService.create({ ...input, contractNo: first.contractNo.toUpperCase() }),
-    ).rejects.toMatchObject({ status: 409 });
-  });
-
-  it('PATCH with null clears value; unknown id is 404; delete removes', async () => {
-    setMockSession('gc.editor', false);
-    const withValue = gcMockDb.all().find((c) => c.value !== null)!;
-    await gcService.update(withValue.id, { ...toInput(withValue), value: null });
-    expect((await gcService.get(withValue.id)).value).toBeNull();
+    const c = await gcService.get('gc-001');
+    expect(c.contractType?.id).toBe(c.contractTypeId);
     await expect(gcService.get('nope')).rejects.toMatchObject({ status: 404 });
-    await expect(gcService.update('nope', input)).rejects.toMatchObject({ status: 404 });
-    await gcService.remove(withValue.id);
-    await expect(gcService.get(withValue.id)).rejects.toMatchObject({ status: 404 });
   });
 
-  it('dashboard route is not captured by detail', async () => {
+  it('create requires permission; 400 Nest-style on missing required; 409 on duplicate number', async () => {
     setMockSession('gc.viewer', false);
-    const d = await gcService.dashboard();
-    expect(d.total).toBe(42);
-    expect(d.byType).toHaveLength(14);
-    expect(Object.values(d.byStatus).reduce((a, b) => a + b, 0)).toBe(42);
+    await expect(gcService.create({ title: 'a' })).rejects.toMatchObject({ status: 403 });
+
+    setMockSession('gc.editor', false);
+    const bad = await api.post('/contracts', { title: '' }, { validateStatus: () => true });
+    expect(bad.status).toBe(400);
+    expect(Array.isArray(bad.data.message)).toBe(true);
+    expect(bad.data.message.length).toBeGreaterThanOrEqual(2);
+
+    const dup = await api.post(
+      '/contracts',
+      { title: 'x', contractTypeId: 1, contractNumber: 'GC-2026-001' },
+      { validateStatus: () => true },
+    );
+    expect(dup.status).toBe(409);
+    expect(typeof dup.data.message).toBe('string');
+
+    const created = await gcService.create({ title: 'New', contractTypeId: 2, contractNumber: 'NEW-1', contractValue: 5, currency: 'USD' });
+    expect(created.contractType?.id).toBe(2);
+    expect(created.contractValue).toBe(5);
+    expect((await gcService.list({ q: 'NEW-1' })).total).toBe(1);
   });
 
-  it('dashboard byStatus equals the list endpoint count per status', async () => {
+  it('patch changes only given fields; delete removes', async () => {
+    setMockSession('gc.editor', false);
+    const before = await gcService.get('gc-002');
+    const after = await gcService.update('gc-002', { implementer: 'Z' });
+    expect(after.implementer).toBe('Z');
+    expect(after.title).toBe(before.title);
+    await expect(gcService.update('gc-002', { contractNumber: 'GC-2026-001' })).rejects.toMatchObject({ status: 409 });
+    await gcService.remove('gc-002');
+    await expect(gcService.get('gc-002')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('dashboard returns the backend field names', async () => {
     setMockSession('gc.viewer', false);
-    const d = await gcService.dashboard();
-    for (const status of ['pending', 'active', 'expiring', 'expired'] as const) {
-      const listed = await gcService.list({ status, pageSize: 10 });
-      expect(d.byStatus[status], status).toBe(listed.total);
+    const raw = await api.get('/contracts/dashboard');
+    const d = raw.data.data;
+    expect(d.total).toBe(gcMockDb.all().length);
+    for (const k of ['expiringSoonCount', 'expiredCount', 'byStatus', 'byCurrency', 'valueByCurrency', 'byContractType']) {
+      expect(d).toHaveProperty(k);
     }
-  });
-
-  it('dashboard upcoming is 0..90 days, ascending, capped at 10, no expired or open-ended', async () => {
-    setMockSession('gc.viewer', false);
-    const { upcoming } = await gcService.dashboard();
-    expect(upcoming.length).toBeGreaterThan(0);
-    expect(upcoming.length).toBeLessThanOrEqual(10);
-    const ends = upcoming.map((c) => c.endDate);
-    expect(ends.every((e) => e !== null)).toBe(true);
-    expect([...ends].sort()).toEqual(ends);
-    const today = new Date();
-    for (const c of upcoming) {
-      const left = daysLeft(c.endDate, today)!;
-      expect(left).toBeGreaterThanOrEqual(0);
-      expect(left).toBeLessThanOrEqual(90);
-      expect(deriveGcStatus(c, today)).not.toBe('expired');
-    }
-  });
-
-  it('dashboard upcoming is the first 10 qualifying contracts by endDate ascending', async () => {
-    setMockSession('gc.user', false);
-    const base = gcMockDb.all()[0]!;
-    for (let i = 0; i < 6; i += 1) {
-      await gcService.create({ ...toInput(base), contractNo: `ORD-${i}`, endDate: base.endDate });
-    }
-    const today = new Date();
-    const expected = gcMockDb
-      .all()
-      .filter((c) => {
-        const left = daysLeft(c.endDate, today);
-        return left !== null && left >= 0 && left <= 90;
-      })
-      .map((c) => c.endDate!)
-      .sort()
-      .slice(0, 10);
-    const { upcoming } = await gcService.dashboard();
-    expect(upcoming.map((c) => c.endDate)).toEqual(expected);
-  });
-
-  it('dashboard upcoming is capped at 10 even when more qualify', async () => {
-    setMockSession('gc.user', false);
-    const base = gcMockDb.all()[0]!;
-    for (let i = 0; i < 6; i += 1) {
-      await gcService.create({ ...toInput(base), contractNo: `CAP-${i}` });
-    }
-    const { upcoming } = await gcService.dashboard();
-    expect(upcoming).toHaveLength(10);
-  });
-});
-
-describe('alerts and home integration', () => {
-  it('alerts include generated gc alerts and persist read state', async () => {
-    setMockSession('gc.user', false);
-    const alerts = await alertsService.list({ module: 'gc' });
-    expect(alerts.some((a) => a.id.endsWith('-w60'))).toBe(true);
-    expect(alerts.every((a) => a.module === 'gc')).toBe(true);
-    const target = alerts[0];
-    await alertsService.markRead(target.id);
-    const again = await alertsService.list({ module: 'gc' });
-    expect(again.find((a) => a.id === target.id)?.read).toBe(true);
-  });
-
-  it('home gc stats come from the gc db', async () => {
-    setMockSession('gc.user', false);
-    const { data } = await api.get<HomeSummary>(endpoints.home.summary);
-    const gc = data.modules.find((m) => m.module === 'gc')!;
-    const statuses = gcMockDb.all().map((c) => deriveGcStatus(c));
-    const expiring = statuses.filter((s) => s === 'expiring').length;
-    expect(gc).toEqual({
-      module: 'gc',
-      total: 42,
-      active: statuses.filter((s) => s === 'active').length, // matches the gc dashboard: expiring is separate
-      expiring,
-    });
+    const mapped = await gcService.dashboard();
+    expect(mapped.expiredCount).toBe(gcMockDb.all().filter((c) => c.status === 'EXPIRED').length);
+    expect(mapped.valueByCurrency.length).toBe(3);
   });
 });

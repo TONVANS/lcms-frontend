@@ -2,20 +2,19 @@
 
 import { useState, type ReactNode } from 'react';
 import { AlignLeft, Calendar, Coins, FileText, type LucideIcon } from 'lucide-react';
-import { Controller, useController, useWatch, type FieldErrors, type UseFormReturn } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Controller, type FieldErrors, type UseFormReturn } from 'react-hook-form';
 import { DatePicker } from '@/components/shared/date-picker';
 import { MoneyInput } from '@/components/shared/money-input';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useContractTypes } from '@/features/lookups';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
-import { suggestTermText } from '../lib/term';
+import type { Currency } from '@/types/domain';
 import type { GcFormValues } from '../schemas/gc.schema';
-import { GC_CONTRACT_TYPES, GC_CURRENCIES, type GcContractType } from '../types';
+import { GC_CURRENCIES } from '../types';
 
 export type GcFieldGroup = 'general' | 'dates' | 'money' | 'notes';
 
@@ -24,39 +23,28 @@ export type GcFormFieldName = keyof GcFormValues;
 /** Visual order of the fields; the first invalid one receives focus. */
 export const GC_FIELD_ORDER: readonly GcFormFieldName[] = [
   'title',
-  'type',
-  'contractNo',
-  'counterparty',
-  'implementer',
+  'contractTypeId',
+  'contractNumber',
   'signedDate',
   'effectiveDate',
-  'endDate',
-  'termText',
-  'value',
-  'equity',
-  'notes',
+  'expirationDate',
+  'durationText',
+  'durationMonths',
+  'contractValue',
+  'currency',
+  'equityOrCapitalContribution',
+  'sharePercentage',
+  'implementer',
+  'additionalDetails',
+  'notifyDaysBefore',
 ];
 
 export const gcFieldId = (name: string): string => `gc-field-${name}`;
 
-interface EquityErrors {
-  message?: string;
-  percent?: { message?: string };
-  money?: { message?: string; amount?: { message?: string }; currency?: { message?: string } };
-}
-
 /** DOM id of the control that should be focused for the first error in `errors`. */
 export function firstInvalidFieldId(errors: FieldErrors<GcFormValues>): string | null {
   for (const name of GC_FIELD_ORDER) {
-    const err = errors[name];
-    if (!err) continue;
-    if (name === 'equity') {
-      const eq = err as EquityErrors;
-      if (eq.percent) return gcFieldId('equity-percent');
-      if (eq.money) return gcFieldId('equity-amount');
-      return gcFieldId('equity-kind-none');
-    }
-    return gcFieldId(name);
+    if (errors[name]) return gcFieldId(name === 'currency' ? 'contractValue' : name);
   }
   return null;
 }
@@ -116,138 +104,35 @@ function Field({ name, label, required, error, wide, children }: FieldProps) {
 const GRID = 'grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4';
 
 /** Raw text is local so "12." and "" survive typing; the form holds NaN while the text is not a number. */
-function PercentInput({
+function NumberInput({
   value,
   onChange,
   control,
+  decimal,
+  onBlur,
 }: {
-  value: number;
-  onChange: (v: number) => void;
+  value: number | null;
+  onChange: (v: number | null) => void;
   control: ControlProps;
+  decimal?: boolean;
+  onBlur?: () => void;
 }) {
-  const [raw, setRaw] = useState(() => (Number.isFinite(value) ? String(value) : ''));
+  const [raw, setRaw] = useState(() => (value === null || Number.isNaN(value) ? '' : String(value)));
   return (
     <Input
       {...control}
       type="text"
-      inputMode="decimal"
+      inputMode={decimal ? 'decimal' : 'numeric'}
       value={raw}
+      onBlur={onBlur}
       onChange={(e) => {
         const text = e.target.value;
         setRaw(text);
         const t = text.trim();
-        onChange(t !== '' && /^\d*\.?\d*$/.test(t) && t !== '.' ? Number(t) : Number.NaN);
+        if (t === '') onChange(null);
+        else onChange(/^\d*\.?\d*$/.test(t) && t !== '.' ? Number(t) : Number.NaN);
       }}
     />
-  );
-}
-
-type EquityKind = 'none' | 'percent' | 'amount';
-
-function EquityField({ form }: { form: UseFormReturn<GcFormValues> }) {
-  const { field } = useController({ control: form.control, name: 'equity' });
-  const equity = field.value;
-  const kind: EquityKind = equity === null ? 'none' : equity.kind;
-  const errors = form.formState.errors.equity as EquityErrors | undefined;
-  const base = gcFieldId('equity');
-  const labelId = `${base}-label`;
-  const groupError = errors?.message;
-  const percentError = errors?.percent?.message;
-  const moneyError = errors?.money?.amount?.message ?? errors?.money?.currency?.message ?? errors?.money?.message;
-  const describedBy = groupError ? `${base}-error` : undefined;
-
-  const setKind = (next: string) => {
-    form.clearErrors('equity');
-    if (next === 'none') field.onChange(null);
-    else if (next === 'percent') field.onChange({ kind: 'percent', percent: Number.NaN });
-    else
-      field.onChange({ kind: 'amount', money: { amount: Number.NaN, currency: GC_CURRENCIES[0] } });
-  };
-
-  const option = (value: EquityKind, label: string) => (
-    <div key={value} className="flex items-center gap-2">
-      <RadioGroupItem value={value} id={gcFieldId(`equity-kind-${value}`)} />
-      <Label htmlFor={gcFieldId(`equity-kind-${value}`)} className="text-sm">
-        {label}
-      </Label>
-    </div>
-  );
-
-  return (
-    <div className="col-span-full flex flex-col gap-3">
-      <span id={labelId} className="text-xs leading-none font-medium text-(--text-secondary)">
-        {lo.gc.fields.equity}
-      </span>
-      <RadioGroup
-        value={kind}
-        onValueChange={setKind}
-        aria-labelledby={labelId}
-        aria-invalid={Boolean(groupError)}
-        aria-describedby={describedBy}
-        className="flex flex-wrap gap-x-6 gap-y-2"
-      >
-        {option('none', lo.gc.form.equityNone)}
-        {option('percent', lo.gc.equityKind.percent)}
-        {option('amount', lo.gc.equityKind.amount)}
-      </RadioGroup>
-      {groupError ? (
-        <p id={`${base}-error`} className="text-xs text-(--text-error)">
-          {groupError}
-        </p>
-      ) : null}
-      {equity?.kind === 'percent' ? (
-        <Field name="equity-percent" label={lo.gc.form.percentInput} required error={percentError}>
-          {(control) => (
-            <PercentInput
-              control={control}
-              value={equity.percent}
-              onChange={(percent) => field.onChange({ kind: 'percent', percent })}
-            />
-          )}
-        </Field>
-      ) : null}
-      {equity?.kind === 'amount' ? (
-        <Field name="equity-amount" label={lo.money.amount} required error={moneyError}>
-          {(control) => (
-            <MoneyInput
-              id={control.id}
-              aria-invalid={control['aria-invalid']}
-              aria-describedby={control['aria-describedby']}
-              aria-required={control['aria-required']}
-              currencies={[...GC_CURRENCIES]}
-              value={Number.isFinite(equity.money.amount) ? equity.money : null}
-              onChange={(m) =>
-                field.onChange({
-                  kind: 'amount',
-                  money: m ?? { amount: Number.NaN, currency: equity.money.currency },
-                })
-              }
-            />
-          )}
-        </Field>
-      ) : null}
-    </div>
-  );
-}
-
-function TermSuggestion({ form }: { form: UseFormReturn<GcFormValues> }) {
-  const effective = useWatch({ control: form.control, name: 'effectiveDate' });
-  const end = useWatch({ control: form.control, name: 'endDate' });
-  const termText = useWatch({ control: form.control, name: 'termText' });
-  const suggestion = effective && end ? suggestTermText(effective, end) : '';
-  if (!suggestion || suggestion === termText.trim()) return null;
-  return (
-    <div className="col-span-full flex flex-wrap items-center gap-2 text-sm text-(--text-secondary)">
-      <span>{lo.gc.form.suggestTerm(suggestion)}</span>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={() => form.setValue('termText', suggestion, { shouldDirty: true })}
-      >
-        {lo.gc.form.useSuggestion}
-      </Button>
-    </div>
   );
 }
 
@@ -289,6 +174,51 @@ function SectionCard({
   );
 }
 
+function ContractTypeSelect({
+  control,
+  form,
+  error,
+}: {
+  control: ControlProps;
+  form: UseFormReturn<GcFormValues>;
+  error?: string;
+}) {
+  const types = useContractTypes();
+  return (
+    <>
+      <Controller
+        control={form.control}
+        name="contractTypeId"
+        render={({ field }) => (
+          <Select
+            value={typeof field.value === 'number' && !Number.isNaN(field.value) ? String(field.value) : ''}
+            onValueChange={(v) => field.onChange(Number(v))}
+          >
+            <SelectTrigger
+              {...control}
+              ref={field.ref}
+              onBlur={field.onBlur}
+              className={cn('w-full', TOKEN_FIELD)}
+            >
+              <SelectValue placeholder={lo.gc.form.selectType} />
+            </SelectTrigger>
+            <SelectContent>
+              {types.items.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.nameLo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+      {types.status === 'error' && !error ? (
+        <p className="text-xs text-(--text-error)">{lo.gc.form.typesLoadFailed}</p>
+      ) : null}
+    </>
+  );
+}
+
 export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: UseFormReturn<GcFormValues> }) {
   const { register, control } = form;
   const errors = form.formState.errors;
@@ -296,50 +226,16 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
 
   if (group === 'general') {
     return (
-      <SectionCard
-        icon={FileText}
-        title={lo.gc.form.sectionGeneral}
-        description={lo.gc.form.sectionGeneralDesc}
-      >
+      <SectionCard icon={FileText} title={lo.gc.form.sectionGeneral} description={lo.gc.form.sectionGeneralDesc}>
         <div className={GRID}>
           <Field name="title" label={f.title} required wide error={msg(errors.title)}>
             {(c) => <Input {...c} {...register('title')} />}
           </Field>
-          <Field name="type" label={f.type} required error={msg(errors.type)}>
-            {(c) => (
-              <Controller
-                control={control}
-                name="type"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      {...c}
-                      ref={field.ref}
-                      onBlur={field.onBlur}
-                      className={cn('w-full', TOKEN_FIELD)}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GC_CONTRACT_TYPES.map((t: GcContractType) => (
-                        <SelectItem key={t} value={t}>
-                          {lo.gc.types[t]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            )}
+          <Field name="contractTypeId" label={f.contractTypeId} required error={msg(errors.contractTypeId)}>
+            {(c) => <ContractTypeSelect control={c} form={form} error={msg(errors.contractTypeId)} />}
           </Field>
-          <Field name="contractNo" label={f.contractNo} required error={msg(errors.contractNo)}>
-            {(c) => <Input {...c} {...register('contractNo')} />}
-          </Field>
-          <Field name="counterparty" label={f.counterparty} error={msg(errors.counterparty)}>
-            {(c) => <Input {...c} {...register('counterparty')} />}
-          </Field>
-          <Field name="implementer" label={f.implementer} error={msg(errors.implementer)}>
-            {(c) => <Input {...c} {...register('implementer')} />}
+          <Field name="contractNumber" label={f.contractNumber} required error={msg(errors.contractNumber)}>
+            {(c) => <Input {...c} {...register('contractNumber')} />}
           </Field>
         </div>
       </SectionCard>
@@ -347,12 +243,8 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
   }
 
   if (group === 'dates') {
-    const dateField = (
-      name: 'signedDate' | 'effectiveDate' | 'endDate',
-      label: string,
-      required: boolean,
-    ) => (
-      <Field name={name} label={label} required={required} error={msg(errors[name])}>
+    const dateField = (name: 'signedDate' | 'effectiveDate' | 'expirationDate', label: string) => (
+      <Field name={name} label={label} error={msg(errors[name])}>
         {(c, labelId) => (
           <Controller
             control={control}
@@ -363,13 +255,14 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
                 labelId={labelId}
                 aria-invalid={c['aria-invalid']}
                 aria-describedby={c['aria-describedby']}
-                required={required}
-                clearable={name === 'endDate'}
+                clearable
                 value={field.value || null}
                 onChange={(v) => {
-                  field.onChange(name === 'endDate' ? v : (v ?? ''));
-                  // The order error lives on endDate; keep it in step with either date.
-                  if (name !== 'signedDate' && form.formState.errors.endDate) void form.trigger('endDate');
+                  field.onChange(v ?? '');
+                  // The order error lives on expirationDate; keep it in step with either date.
+                  if (name !== 'signedDate' && form.formState.errors.expirationDate) {
+                    void form.trigger('expirationDate');
+                  }
                 }}
               />
             )}
@@ -378,71 +271,117 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
       </Field>
     );
     return (
-      <SectionCard
-        icon={Calendar}
-        title={lo.gc.form.sectionDates}
-        description={lo.gc.form.sectionDatesDesc}
-      >
+      <SectionCard icon={Calendar} title={lo.gc.form.sectionDates} description={lo.gc.form.sectionDatesDesc}>
         <div className={GRID}>
-          {dateField('signedDate', f.signedDate, true)}
-          {dateField('effectiveDate', f.effectiveDate, true)}
-          {dateField('endDate', f.endDate, false)}
-          <Field name="termText" label={f.termText} error={msg(errors.termText)}>
-            {(c) => <Input {...c} {...register('termText')} />}
+          {dateField('signedDate', f.signedDate)}
+          {dateField('effectiveDate', f.effectiveDate)}
+          {dateField('expirationDate', f.expirationDate)}
+          <Field name="durationText" label={f.durationText} error={msg(errors.durationText)}>
+            {(c) => <Input {...c} {...register('durationText')} />}
           </Field>
-          <TermSuggestion form={form} />
+          <Field name="durationMonths" label={f.durationMonths} error={msg(errors.durationMonths)}>
+            {(c) => (
+              <Controller
+                control={control}
+                name="durationMonths"
+                render={({ field }) => (
+                  <NumberInput control={c} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+                )}
+              />
+            )}
+          </Field>
         </div>
       </SectionCard>
     );
   }
 
   if (group === 'money') {
-    const valueErr = errors.value as EquityErrors['money'];
     return (
-      <SectionCard
-        icon={Coins}
-        title={lo.gc.form.sectionMoney}
-        description={lo.gc.form.sectionMoneyDesc}
-      >
+      <SectionCard icon={Coins} title={lo.gc.form.sectionMoney} description={lo.gc.form.sectionMoneyDesc}>
         <div className={GRID}>
           <Field
-            name="value"
-            label={f.value}
+            name="contractValue"
+            label={f.contractValue}
             wide
-            error={valueErr?.amount?.message ?? valueErr?.currency?.message ?? valueErr?.message}
+            error={msg(errors.contractValue) ?? msg(errors.currency)}
           >
             {(c) => (
               <Controller
                 control={control}
-                name="value"
+                name="contractValue"
                 render={({ field }) => (
                   <MoneyInput
                     id={c.id}
                     aria-invalid={c['aria-invalid']}
                     aria-describedby={c['aria-describedby']}
-                    currencies={[...GC_CURRENCIES]}
-                    value={field.value}
-                    onChange={field.onChange}
+                    currencies={[...GC_CURRENCIES] as Currency[]}
+                    value={
+                      field.value === null || Number.isNaN(field.value)
+                        ? null
+                        : { amount: field.value, currency: form.getValues('currency') ?? 'LAK' }
+                    }
+                    onChange={(m) => {
+                      field.onChange(m ? m.amount : null);
+                      form.setValue('currency', m ? (m.currency as Currency) : null, { shouldDirty: true });
+                    }}
                   />
                 )}
               />
             )}
           </Field>
-          <EquityField form={form} />
+          <Field
+            name="equityOrCapitalContribution"
+            label={f.equityOrCapitalContribution}
+            error={msg(errors.equityOrCapitalContribution)}
+          >
+            {(c) => <Input {...c} {...register('equityOrCapitalContribution')} />}
+          </Field>
+          <Field name="sharePercentage" label={f.sharePercentage} error={msg(errors.sharePercentage)}>
+            {(c) => (
+              <Controller
+                control={control}
+                name="sharePercentage"
+                render={({ field }) => (
+                  <NumberInput
+                    decimal
+                    control={c}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
+                )}
+              />
+            )}
+          </Field>
         </div>
       </SectionCard>
     );
   }
 
   return (
-    <SectionCard
-      icon={AlignLeft}
-      title={lo.gc.form.sectionNotes}
-      description={lo.gc.form.sectionNotesDesc}
-    >
+    <SectionCard icon={AlignLeft} title={lo.gc.form.sectionNotes} description={lo.gc.form.sectionNotesDesc}>
       <div className={GRID}>
-        <Field name="notes" label={f.notes} wide error={msg(errors.notes)}>
-          {(c) => <Textarea {...c} rows={3} {...register('notes')} />}
+        <Field name="implementer" label={f.implementer} error={msg(errors.implementer)}>
+          {(c) => <Input {...c} {...register('implementer')} />}
+        </Field>
+        <Field name="notifyDaysBefore" label={f.notifyDaysBefore} error={msg(errors.notifyDaysBefore)}>
+          {(c) => (
+            <Controller
+              control={control}
+              name="notifyDaysBefore"
+              render={({ field }) => (
+                <NumberInput
+                  control={c}
+                  value={field.value}
+                  onChange={(v) => field.onChange(v)}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+          )}
+        </Field>
+        <Field name="additionalDetails" label={f.additionalDetails} wide error={msg(errors.additionalDetails)}>
+          {(c) => <Textarea {...c} rows={3} {...register('additionalDetails')} />}
         </Field>
       </div>
     </SectionCard>

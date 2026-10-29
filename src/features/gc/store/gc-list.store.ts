@@ -3,12 +3,12 @@ import { isCanceledError, normalizeError } from '@/lib/api/errors';
 import { registerLogoutReset } from '@/lib/auth/logout-registry';
 import type { ApiError } from '@/types/api';
 import { gcService, type GcListQuery } from '../api/gc.service';
-import type { GeneralContract } from '../types';
+import type { Contract } from '../types';
 import { DEFAULT_GC_QUERY } from './gc-list-query';
 
 interface GcListState {
   query: GcListQuery;
-  items: GeneralContract[];
+  items: Contract[];
   total: number;
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: ApiError | null;

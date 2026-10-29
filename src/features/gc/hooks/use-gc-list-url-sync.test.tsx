@@ -27,17 +27,17 @@ beforeEach(() => {
 
 describe('useGcListUrlSync', () => {
   it('does not wipe incoming params on mount and fetches once with them', async () => {
-    nav.search = 'status=expired&page=2';
+    nav.search = 'status=EXPIRED&page=2';
     await act(async () => {
       renderHook(() => useGcListUrlSync());
     });
     expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'expired', page: 2 });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'EXPIRED', page: 2 });
   });
 
   it('mount parse replaces a stale store query', async () => {
-    useGcListStore.getState().setQuery({ q: 'old', status: 'active' });
+    useGcListStore.getState().setQuery({ q: 'old', status: 'ACTIVE' });
     await act(async () => {
       renderHook(() => useGcListUrlSync());
     });
@@ -50,72 +50,72 @@ describe('useGcListUrlSync', () => {
     });
     list.mockClear();
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'expiring' });
+      useGcListStore.getState().setQuery({ status: 'EXPIRING_SOON' });
     });
-    expect(nav.replace).toHaveBeenCalledWith('/contracts/list?status=expiring', {
+    expect(nav.replace).toHaveBeenCalledWith('/contracts/list?status=EXPIRING_SOON', {
       scroll: false,
     });
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'expiring' });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'EXPIRING_SOON' });
   });
 
   it('re-parses on back/forward without looping', async () => {
-    nav.search = 'status=expired';
+    nav.search = 'status=EXPIRED';
     const { rerender } = renderHook(() => useGcListUrlSync());
     await act(async () => {});
     list.mockClear();
     nav.replace.mockClear();
 
-    nav.search = 'type=epc&page=3';
+    nav.search = 'contractTypeId=4&page=3';
     await act(async () => {
       rerender();
     });
-    expect(useGcListStore.getState().query).toEqual({ ...DEFAULT_GC_QUERY, type: 'epc', page: 3 });
+    expect(useGcListStore.getState().query).toEqual({ ...DEFAULT_GC_QUERY, contractTypeId: 4, page: 3 });
     expect(list).toHaveBeenCalledTimes(1);
     expect(nav.replace).not.toHaveBeenCalled();
 
     // The echo of our own replace through useSearchParams is skipped.
     list.mockClear();
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'active' });
+      useGcListStore.getState().setQuery({ status: 'ACTIVE' });
     });
     expect(list).toHaveBeenCalledTimes(1);
-    nav.search = 'type=epc&status=active';
+    nav.search = 'contractTypeId=4&status=ACTIVE';
     await act(async () => {
       rerender();
     });
     expect(list).toHaveBeenCalledTimes(1);
-    expect(useGcListStore.getState().query.status).toBe('active');
+    expect(useGcListStore.getState().query.status).toBe('ACTIVE');
   });
 
   it('under StrictMode never replaces and fetches once', async () => {
-    nav.search = 'status=expired&page=2';
+    nav.search = 'status=EXPIRED&page=2';
     await act(async () => {
       renderHook(() => useGcListUrlSync(), { wrapper: StrictMode });
     });
     expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'expired', page: 2 });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'EXPIRED', page: 2 });
   });
 
   it('only ignores the echo of the last push; a later external navigation is adopted', async () => {
     const { rerender } = renderHook(() => useGcListUrlSync());
     await act(async () => {});
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'active' });
+      useGcListStore.getState().setQuery({ status: 'ACTIVE' });
     });
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'expired' });
+      useGcListStore.getState().setQuery({ status: 'EXPIRED' });
     });
-    nav.search = 'status=expired';
-    await act(async () => {
-      rerender();
-    });
-    nav.search = 'status=active';
+    nav.search = 'status=EXPIRED';
     await act(async () => {
       rerender();
     });
-    expect(useGcListStore.getState().query.status).toBe('active');
+    nav.search = 'status=ACTIVE';
+    await act(async () => {
+      rerender();
+    });
+    expect(useGcListStore.getState().query.status).toBe('ACTIVE');
   });
 
   it('afterDelete steps back a page and updates the URL', async () => {
@@ -142,23 +142,23 @@ describe('useGcListUrlSync', () => {
     const { rerender } = renderHook(() => useGcListUrlSync());
     await act(async () => {});
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'active' });
+      useGcListStore.getState().setQuery({ status: 'ACTIVE' });
     });
     await act(async () => {
-      useGcListStore.getState().setQuery({ status: 'expired' });
+      useGcListStore.getState().setQuery({ status: 'EXPIRED' });
     });
     const fetchesAfterPushes = list.mock.calls.length;
-    nav.search = 'status=active';
+    nav.search = 'status=ACTIVE';
     await act(async () => {
       rerender();
     });
-    nav.search = 'status=expired';
+    nav.search = 'status=EXPIRED';
     await act(async () => {
       rerender();
     });
-    expect(useGcListStore.getState().query.status).toBe('expired');
+    expect(useGcListStore.getState().query.status).toBe('EXPIRED');
     expect(list).toHaveBeenCalledTimes(fetchesAfterPushes);
-    expect(nav.replace).toHaveBeenLastCalledWith('/contracts/list?status=expired', {
+    expect(nav.replace).toHaveBeenLastCalledWith('/contracts/list?status=EXPIRED', {
       scroll: false,
     });
   });

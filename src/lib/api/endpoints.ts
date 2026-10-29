@@ -90,11 +90,6 @@ export const endpoints = {
     dashboard: '/ppa/dashboard',
     history: (id: string) => `/ppa/contracts/${id}/history`,
   },
-  gc: {
-    list: '/contracts',
-    detail: (id: string) => `/contracts/${id}`,
-    dashboard: '/contracts/dashboard',
-  },
   legal: {
     regulations: '/legal/regulations',
     regulation: (id: string) => `/legal/regulations/${encodeURIComponent(id)}`,

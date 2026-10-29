@@ -9,33 +9,46 @@ const FIELD_NAMES: ReadonlySet<string> = new Set(GC_FIELD_ORDER);
 export interface AppliedServerErrors {
   /** Form fields that received a server error, in visual order. */
   matched: GcFormFieldName[];
-  /** True when the server reported a key that is not a form field. */
+  /** True when the server reported something that is not tied to a form field. */
   unmatched: boolean;
   /** DOM id of the control to focus for the first matched field, or null. */
   focusId: string | null;
 }
 
 /**
- * Puts server `fieldErrors` onto the form. A duplicate contract number gets its Lao message;
- * keys that match no field are only reported through `unmatched` so the caller can show a banner.
+ * Puts server errors onto the form. A 409 is a duplicate contract number. Nest 400 bodies arrive as
+ * one line per violation ("title should not be empty"); a line whose first word is a form field is
+ * attached to it, anything else is reported through `unmatched` so the caller can show a banner.
  */
 export function applyGcServerErrors(form: UseFormReturn<GcFormValues>, err: ApiError): AppliedServerErrors {
   let unmatched = false;
-  const seen = new Set<GcFormFieldName>();
-  const errors: Record<string, unknown> = {};
-  for (const [key, message] of Object.entries(err.fieldErrors ?? {})) {
-    if (!FIELD_NAMES.has(key)) {
-      unmatched = true;
-      continue;
+  const found = new Map<GcFormFieldName, string>();
+
+  if (err.status === 409) {
+    found.set('contractNumber', lo.gc.errors.duplicateNo);
+  } else {
+    for (const [key, message] of Object.entries(err.fieldErrors ?? {})) {
+      if (FIELD_NAMES.has(key)) found.set(key as GcFormFieldName, message);
+      else unmatched = true;
     }
-    const name = key as GcFormFieldName;
-    const text =
-      name === 'contractNo' && message === 'DUPLICATE_CONTRACT_NO' ? lo.gc.errors.duplicateNo : message;
-    form.setError(name, { type: 'server', message: text });
-    errors[name] = { type: 'server', message: text };
-    seen.add(name);
+    if (err.status === 400 && err.message) {
+      for (const line of err.message.split('\n')) {
+        const key = line.trim().split(/\s+/)[0] ?? '';
+        if (FIELD_NAMES.has(key)) {
+          if (!found.has(key as GcFormFieldName)) found.set(key as GcFormFieldName, line.trim());
+        } else if (line.trim()) {
+          unmatched = true;
+        }
+      }
+    }
   }
-  const matched = GC_FIELD_ORDER.filter((n) => seen.has(n));
+
+  const errors: Record<string, unknown> = {};
+  for (const [name, message] of found) {
+    form.setError(name, { type: 'server', message });
+    errors[name] = { type: 'server', message };
+  }
+  const matched = GC_FIELD_ORDER.filter((n) => found.has(n));
   return {
     matched,
     unmatched,
