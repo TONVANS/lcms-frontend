@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RegulationDetailView } from '@/features/legal';
+import { LegalDocumentDetailView } from '@/features/legal';
 
 export const instant = false;
 
@@ -13,7 +13,7 @@ export default async function RegulationDetailPage({
 
   return (
     <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-2xl" />}>
-      <RegulationDetailView id={id} />
+      <LegalDocumentDetailView id={id} />
     </Suspense>
   );
 }

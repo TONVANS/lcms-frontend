@@ -1,350 +1,197 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { sumDual } from '@/features/legal/cases/lib/case-money';
-import { casesService } from '@/features/legal/cases/api/cases.service';
-import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
-import { CASE_STAGES, type CaseInput, type LegalCase } from '@/features/legal/cases/types';
-import { legalDashboardService } from '@/features/legal/dashboard/api/legal-dashboard.service';
-import { regulationsService } from '@/features/legal/regulations/api/regulations.service';
-import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
-import type { RegulationInput } from '@/features/legal/regulations/schemas/regulation.schema';
-import { REGULATION_TYPES, type Regulation } from '@/features/legal/regulations/types';
+import { legalCasesService } from '@/features/legal/cases/api/legal-cases.service';
+import { legalCasesMockDb } from '@/features/legal/cases/mocks/legal-cases.mock';
+import { CASE_TYPES, DISPUTE_STATUSES, type LegalCasePayload } from '@/features/legal/cases/types';
+import { legalDocumentsService } from '@/features/legal/documents/api/legal-documents.service';
+import { legalDocumentsMockDb } from '@/features/legal/documents/mocks/legal-documents.mock';
+import { DOC_STATUSES, DOC_TYPES, type LegalDocumentPayload } from '@/features/legal/documents/types';
+import { MOCK_DEPARTMENTS } from '@/features/lookups/mocks/lookups.mock';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 
-const toInput = (r: Regulation): RegulationInput => ({
-  title: r.title,
-  type: r.type,
-  typeOther: r.typeOther,
-  number: r.number,
-  issuedDate: r.issuedDate,
-  year: r.year,
-  purpose: r.purpose,
-  responsible: r.responsible,
-  unit: r.unit,
-  status: r.status,
-  externalLinks: [...r.externalLinks],
-});
-
-const input: RegulationInput = {
-  title: 'New regulation',
-  type: 'notice',
-  typeOther: null,
-  number: 'NEW-001/TEST',
-  issuedDate: '2026-10-01',
-  year: 2026,
-  purpose: null,
-  responsible: null,
-  unit: 'ict',
-  status: 'in_force',
-  externalLinks: [],
+const docInput: LegalDocumentPayload = {
+  docTitle: 'New doc',
+  docType: 'NOTIFICATION',
+  issueYear: 2026,
+  docNumberDate: 'No 1',
+  status: 'ACTIVE',
+  departmentId: MOCK_DEPARTMENTS[0].id,
+};
+const caseInput: LegalCasePayload = {
+  caseCode: 'NEW-001',
+  defendant: 'Someone',
+  caseType: 'CIVIL',
+  disputeStatus: 'APPEAL',
+  date: '2026-10-01',
+  damageLak: 100,
+  damageUsd: 0,
+  fineLak: 50,
+  fineUsd: 0,
+  recoveredLak: 0,
+  recoveredUsd: 0,
 };
 
 beforeEach(() => {
   installMocks(api, { delay: 0 });
   clearMockSession();
-  regulationsMockDb.reset(new Date());
-  casesMockDb.reset(new Date());
+  legalDocumentsMockDb.reset(new Date());
+  legalCasesMockDb.reset(new Date());
 });
 
-describe('legal regulations handlers', () => {
-  it('401 without session; 403 for create/edit/delete as legal.viewer; legal.editor can create', async () => {
-    await expect(regulationsService.list()).rejects.toMatchObject({ status: 401 });
-    setMockSession('legal.viewer', false);
-    const [first] = regulationsMockDb.all();
-    await expect(regulationsService.create(input)).rejects.toMatchObject({ status: 403 });
-    await expect(regulationsService.update(first.id, toInput(first))).rejects.toMatchObject({
-      status: 403,
-    });
-    await expect(regulationsService.remove(first.id)).rejects.toMatchObject({ status: 403 });
-    expect(regulationsMockDb.get(first.id)).toBeDefined();
-    setMockSession('legal.editor', false);
-    await expect(regulationsService.create(input)).resolves.toMatchObject({ number: input.number });
-  });
-
-  it('default list is 10 rows sorted by issuedDate desc, total 30', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await regulationsService.list();
-    expect(r.items).toHaveLength(10);
-    expect(r.total).toBe(30);
-    expect(r.page).toBe(1);
-    expect(r.pageSize).toBe(10);
-    const dates = r.items.map((x) => x.issuedDate);
-    expect(dates).toEqual([...dates].sort().reverse());
-  });
-
-  it('filters by type, unit and status, and combines them', async () => {
-    setMockSession('legal.viewer', false);
-    const all = regulationsMockDb.all();
-    const byType = await regulationsService.list({ type: 'decision', pageSize: 'all' });
-    expect(byType.total).toBe(all.filter((r) => r.type === 'decision').length);
-    expect(byType.items.every((r) => r.type === 'decision')).toBe(true);
-    const unit = all[0].unit;
-    const byUnit = await regulationsService.list({ unit, pageSize: 'all' });
-    expect(byUnit.total).toBe(all.filter((r) => r.unit === unit).length);
-    const byStatus = await regulationsService.list({ status: 'repealed', pageSize: 'all' });
-    expect(byStatus.total).toBe(all.filter((r) => r.status === 'repealed').length);
-    const combined = await regulationsService.list({
-      type: 'decision',
-      status: 'in_force',
-      pageSize: 'all',
-    });
-    expect(combined.total).toBe(
-      all.filter((r) => r.type === 'decision' && r.status === 'in_force').length,
-    );
-    expect(combined.total).toBeLessThan(byType.total + 1);
-  });
-
-  it('search trims spaces and matches number', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await regulationsService.list({ q: '  351/ ' });
-    expect(r.items.map((x) => x.id)).toContain('reg-1');
-  });
-
-  it('invalid params fall back to defaults', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await regulationsService.list({
-      type: 'bogus' as never,
-      pageSize: 7,
-      page: -1,
-      sort: 'x' as never,
-      order: 'sideways' as never,
-    });
-    expect(r.page).toBe(1);
-    expect(r.pageSize).toBe(10);
-    expect(r.total).toBe(30);
-    const dates = r.items.map((x) => x.issuedDate);
-    expect(dates).toEqual([...dates].sort().reverse());
-  });
-
-  it('pageSize=all returns every filtered row', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await regulationsService.list({ status: 'repealed', pageSize: 'all' });
-    expect(r.items.length).toBe(r.total);
-    expect(r.pageSize).toBe(r.total);
-    expect(r.page).toBe(1);
-    expect(r.total).toBeGreaterThan(0);
-    expect(r.items.every((x) => x.status === 'repealed')).toBe(true);
-  });
-
-  it('title sort uses Lao collation and ties break by id', async () => {
-    setMockSession('legal.editor', false);
-    const a = await regulationsService.create({ ...input, number: 'T-1', title: 'ເກ' });
-    const b = await regulationsService.create({ ...input, number: 'T-2', title: 'ຂ' });
-    const r = await regulationsService.list({ sort: 'title', order: 'asc', pageSize: 'all' });
-    const ids = r.items.map((x) => x.id);
-    expect(ids.indexOf(a.id)).toBeLessThan(ids.indexOf(b.id));
-    const same = await regulationsService.list({ sort: 'issuedDate', order: 'asc', pageSize: 'all' });
-    const tied = same.items.filter((x) => x.issuedDate === '2026-10-01').map((x) => x.id);
-    expect(tied).toEqual([...tied].sort());
-  });
-
-  it('POST with an existing number (different case, padded) returns 409 on number', async () => {
-    setMockSession('legal.editor', false);
-    await regulationsService.create({ ...input, number: 'abc-1/x' });
-    await expect(
-      regulationsService.create({ ...input, number: '  ABC-1/X ' }),
-    ).rejects.toMatchObject({
-      status: 409,
-      fieldErrors: { number: 'DUPLICATE_REGULATION_NO' },
-    });
-    const [first] = regulationsMockDb.all().filter((r) => r.id === 'reg-1');
-    await expect(regulationsService.create({ ...input, number: first.number })).rejects.toMatchObject({
-      status: 409,
-    });
-  });
-
-  it('PATCH keeping its own number succeeds; another record number is 409', async () => {
-    setMockSession('legal.editor', false);
-    const [first, second] = regulationsMockDb.all();
-    await expect(regulationsService.update(first.id, toInput(first))).resolves.toMatchObject({
-      id: first.id,
-    });
-    await expect(
-      regulationsService.update(second.id, { ...toInput(second), number: first.number }),
-    ).rejects.toMatchObject({ status: 409, fieldErrors: { number: 'DUPLICATE_REGULATION_NO' } });
-  });
-
-  it('GET returns an existing record; GET/PATCH/DELETE unknown id return NOT_FOUND', async () => {
-    setMockSession('legal.editor', false);
-    await expect(regulationsService.get('reg-1')).resolves.toMatchObject({ id: 'reg-1' });
-    const notFound = { status: 404, code: 'NOT_FOUND' };
-    await expect(regulationsService.get('nope')).rejects.toMatchObject(notFound);
-    await expect(regulationsService.update('nope', input)).rejects.toMatchObject(notFound);
-    await expect(regulationsService.remove('nope')).rejects.toMatchObject(notFound);
-  });
-
-  it('DELETE removes the record', async () => {
-    setMockSession('legal.editor', false);
-    await regulationsService.remove('reg-1');
-    await expect(regulationsService.get('reg-1')).rejects.toMatchObject({
-      status: 404,
-      code: 'NOT_FOUND',
-    });
-    expect(regulationsMockDb.all()).toHaveLength(29);
+describe('seed data', () => {
+  it('has at least 25 documents and cases covering every enum value', () => {
+    const docs = legalDocumentsMockDb.all();
+    const cases = legalCasesMockDb.all();
+    expect(docs.length).toBeGreaterThanOrEqual(25);
+    expect(cases.length).toBeGreaterThanOrEqual(25);
+    expect(new Set(docs.map((d) => d.docType))).toEqual(new Set(DOC_TYPES));
+    expect(new Set(docs.map((d) => d.status))).toEqual(new Set(DOC_STATUSES));
+    expect(new Set(cases.map((c) => c.caseType))).toEqual(new Set(CASE_TYPES));
+    expect(new Set(cases.map((c) => c.disputeStatus))).toEqual(new Set(DISPUTE_STATUSES));
+    expect(legalDocumentsMockDb.get('reg-1')).toBeDefined();
+    expect(legalDocumentsMockDb.get('reg-2')).toBeDefined();
+    expect(legalCasesMockDb.get('case-1')).toBeDefined();
+    expect(docs.some((d) => typeof d.issueYear === 'string')).toBe(true);
+    expect(cases.some((c) => typeof c.damageLak === 'string')).toBe(true);
   });
 });
 
-const sampleCaseInput: CaseInput = {
-  defendant: 'ທ້າວ ບຸນມີ',
-  allegation: 'ລັກສາຍໄຟຟ້າ',
-  handlingUnit: 'ສານປະຊາຊົນນະຄອນຫຼວງ',
-  caseType: 'criminal',
-  stage: 'first_instance',
-  damage: { lak: 10000000, usd: null },
-  fine: { lak: 2000000, usd: null },
-  recovered: { lak: 0, usd: null },
-  disputeDate: '2026-05-10',
-  progress: 'ກຳລັງດຳເນີນຄະດີ',
-};
+describe('legal documents handlers', () => {
+  it('401 without a session', async () => {
+    await expect(legalDocumentsService.list()).rejects.toMatchObject({ status: 401 });
+  });
 
-const toCaseInput = (c: LegalCase): CaseInput => ({
-  defendant: c.defendant,
-  allegation: c.allegation,
-  handlingUnit: c.handlingUnit,
-  caseType: c.caseType,
-  stage: c.stage,
-  damage: { ...c.damage },
-  fine: { ...c.fine },
-  recovered: { ...c.recovered },
-  disputeDate: c.disputeDate,
-  progress: c.progress,
+  it('403 for users without the legal-documents module, and for writes without the flag', async () => {
+    setMockSession('gc.user', false);
+    await expect(legalDocumentsService.list()).rejects.toMatchObject({ status: 403 });
+    setMockSession('legal.viewer', false);
+    await expect(legalDocumentsService.list()).resolves.toBeDefined();
+    await expect(legalDocumentsService.create(docInput)).rejects.toMatchObject({ status: 403 });
+    await expect(legalDocumentsService.update('reg-1', { docTitle: 'x' })).rejects.toMatchObject({ status: 403 });
+    await expect(legalDocumentsService.remove('reg-1')).rejects.toMatchObject({ status: 403 });
+    setMockSession('legal.editor', false);
+    await expect(legalDocumentsService.create(docInput)).resolves.toMatchObject({ docTitle: 'New doc' });
+  });
+
+  it('lists with envelope meta, paging and filters', async () => {
+    setMockSession('legal.user', false);
+    const res = await api.get('/legal-documents', { params: { page: 2, limit: 10 } });
+    expect(res.data.meta).toMatchObject({ total: legalDocumentsMockDb.all().length, page: 2, limit: 10 });
+    expect(res.data.meta.totalPages).toBe(Math.ceil(res.data.meta.total / 10));
+    expect(res.data.data).toHaveLength(10);
+
+    const manuals = await legalDocumentsService.list({ docType: 'MANUAL', pageSize: 100 });
+    expect(manuals.items.length).toBeGreaterThan(0);
+    expect(manuals.items.every((d) => d.docType === 'MANUAL')).toBe(true);
+    const inactive = await legalDocumentsService.list({ status: 'INACTIVE', pageSize: 100 });
+    expect(inactive.items.every((d) => d.status === 'INACTIVE')).toBe(true);
+    const dep = MOCK_DEPARTMENTS[1].id;
+    const byDep = await legalDocumentsService.list({ departmentId: dep, pageSize: 100 });
+    expect(byDep.items.length).toBeGreaterThan(0);
+    expect(byDep.items.every((d) => d.departmentId === dep)).toBe(true);
+    const year = legalDocumentsMockDb.all()[0].issueYear;
+    const byYear = await legalDocumentsService.list({ issueYear: Number(year), pageSize: 100 });
+    expect(byYear.items.every((d) => d.issueYear === Number(year))).toBe(true);
+    const search = await legalDocumentsService.list({ q: 'KPI' });
+    expect(search.items.map((d) => d.id)).toContain('reg-1');
+  });
+
+  it('create, get, patch (null clears), delete', async () => {
+    setMockSession('legal.user', false);
+    const created = await legalDocumentsService.create({ ...docInput, purpose: 'p' });
+    expect(created.department?.id).toBe(MOCK_DEPARTMENTS[0].id);
+    expect(await legalDocumentsService.get(created.id)).toMatchObject({ purpose: 'p' });
+    const patched = await legalDocumentsService.update(created.id, { purpose: null, docTitle: 'Renamed' });
+    expect(patched).toMatchObject({ purpose: null, docTitle: 'Renamed' });
+    await legalDocumentsService.remove(created.id);
+    await expect(legalDocumentsService.get(created.id)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('400 with a Nest-style message array when required fields are missing', async () => {
+    setMockSession('legal.user', false);
+    const err = await api.post('/legal-documents', { docType: 'MANUAL' }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 400 });
+    expect((err as { message: string }).message).toContain('docTitle should not be empty');
+    expect((err as { message: string }).message).toContain('departmentId');
+  });
+
+  it('dashboard returns totals, byType and byDepartment', async () => {
+    setMockSession('legal.viewer', false);
+    const d = await legalDocumentsService.dashboard();
+    const all = legalDocumentsMockDb.all();
+    expect(d.total).toBe(all.length);
+    expect(d.active + d.inactive).toBe(all.length);
+    expect(d.byType.reduce((s, t) => s + t.count, 0)).toBe(all.length);
+    expect(d.byDepartment.reduce((s, t) => s + t.count, 0)).toBe(all.length);
+    expect(d.byDepartment[0].name).not.toBe('');
+  });
 });
 
 describe('legal cases handlers', () => {
-  it('401 without session; 403 for create/edit/delete as legal.viewer; legal.editor can create', async () => {
-    await expect(casesService.list()).rejects.toMatchObject({ status: 401 });
+  it('401, 403 without the legal-cases module and 403 for viewer writes', async () => {
+    await expect(legalCasesService.list()).rejects.toMatchObject({ status: 401 });
+    setMockSession('ppa.user', false);
+    await expect(legalCasesService.list()).rejects.toMatchObject({ status: 403 });
     setMockSession('legal.viewer', false);
-    const [first] = casesMockDb.all();
-    await expect(casesService.create(sampleCaseInput)).rejects.toMatchObject({ status: 403 });
-    await expect(casesService.update(first.id, toCaseInput(first))).rejects.toMatchObject({
-      status: 403,
-    });
-    await expect(casesService.remove(first.id)).rejects.toMatchObject({ status: 403 });
-    expect(casesMockDb.get(first.id)).toBeDefined();
-    setMockSession('legal.editor', false);
-    await expect(casesService.create(sampleCaseInput)).resolves.toMatchObject({
-      defendant: sampleCaseInput.defendant,
-    });
+    await expect(legalCasesService.create(caseInput)).rejects.toMatchObject({ status: 403 });
+    await expect(legalCasesService.update('case-1', { defendant: 'x' })).rejects.toMatchObject({ status: 403 });
+    await expect(legalCasesService.remove('case-1')).rejects.toMatchObject({ status: 403 });
   });
 
-  it('default sort disputeDate desc with the null date last', async () => {
+  it('lists with filters and date range, items use internalId as id', async () => {
+    setMockSession('legal.user', false);
+    const all = await legalCasesService.list({ pageSize: 100 });
+    expect(all.total).toBeGreaterThanOrEqual(25);
+    expect(all.items.map((c) => c.id)).toContain('case-1');
+    const appeal = await legalCasesService.list({ disputeStatus: 'APPEAL', pageSize: 100 });
+    expect(appeal.items.length).toBeGreaterThan(0);
+    expect(appeal.items.every((c) => c.disputeStatus === 'APPEAL')).toBe(true);
+    const civil = await legalCasesService.list({ caseType: 'CIVIL', pageSize: 100 });
+    expect(civil.items.every((c) => c.caseType === 'CIVIL')).toBe(true);
+    const dates = all.items.map((c) => c.date!).sort();
+    const range = await legalCasesService.list({ startDate: dates[3], endDate: dates[10], pageSize: 100 });
+    expect(range.items.length).toBeGreaterThan(0);
+    expect(range.items.every((c) => c.date! >= dates[3] && c.date! <= dates[10])).toBe(true);
+    const dep = MOCK_DEPARTMENTS[2].id;
+    const byDep = await legalCasesService.list({ departmentId: dep, pageSize: 100 });
+    expect(byDep.items.every((c) => c.departmentId === dep)).toBe(true);
+    expect((await legalCasesService.list({ q: 'EDL-2026-005' })).items.map((c) => c.caseCode)).toContain('EDL-2026-005');
+  });
+
+  it('create computes totalDue server-side; patch recomputes it', async () => {
+    setMockSession('legal.user', false);
+    const created = await legalCasesService.create(caseInput);
+    expect(created).toMatchObject({ totalDueLak: 150, caseCode: 'NEW-001' });
+    const patched = await legalCasesService.update(created.id, { fineLak: 200, allegation: null });
+    expect(patched).toMatchObject({ totalDueLak: 300, allegation: null });
+    await legalCasesService.remove(created.id);
+    await expect(legalCasesService.get(created.id)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('409 on a duplicate caseCode (create and patch), not for the record itself', async () => {
+    setMockSession('legal.user', false);
+    const existing = legalCasesMockDb.get('case-2')!.caseCode;
+    await expect(legalCasesService.create({ ...caseInput, caseCode: existing })).rejects.toMatchObject({ status: 409 });
+    await expect(legalCasesService.update('case-1', { caseCode: existing })).rejects.toMatchObject({ status: 409 });
+    await expect(legalCasesService.update('case-2', { caseCode: existing })).resolves.toBeDefined();
+  });
+
+  it('400 with a message array on missing required fields', async () => {
+    setMockSession('legal.user', false);
+    const err = await api.post('/legal-cases', {}).catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 400 });
+    expect((err as { message: string }).message).toMatch(/caseCode/);
+    expect((err as { message: string }).message).toMatch(/date/);
+  });
+
+  it('dashboard returns per-status counts and LAK/USD totals', async () => {
     setMockSession('legal.viewer', false);
-    const r = await casesService.list();
-    expect(r.items).toHaveLength(10);
-    expect(r.total).toBe(24);
-    expect(r.page).toBe(1);
-    expect(r.pageSize).toBe(10);
-
-    const all = await casesService.list({ pageSize: 'all' });
-    expect(all.items.at(-1)?.disputeDate).toBeNull();
-    const nonNullDates = all.items.slice(0, -1).map((x) => x.disputeDate!);
-    expect(nonNullDates).toEqual([...nonNullDates].sort().reverse());
-
-    const asc = await casesService.list({ order: 'asc', pageSize: 'all' });
-    expect(asc.items.at(-1)?.disputeDate).toBeNull();
-    const nonNullAsc = asc.items.slice(0, -1).map((x) => x.disputeDate!);
-    expect(nonNullAsc).toEqual([...nonNullAsc].sort());
-  });
-
-  it('progress=finished returns only completed and closed', async () => {
-    setMockSession('legal.viewer', false);
-    const fin = await casesService.list({ progress: 'finished', pageSize: 'all' });
-    expect(fin.items.every((c) => c.stage === 'completed' || c.stage === 'closed')).toBe(true);
-    expect(fin.total).toBeGreaterThan(0);
-
-    const inProg = await casesService.list({ progress: 'in_progress', pageSize: 'all' });
-    expect(inProg.items.every((c) => c.stage !== 'completed' && c.stage !== 'closed')).toBe(true);
-    expect(fin.total + inProg.total).toBe(24);
-  });
-
-  it('stage=bogus falls back to no stage filter', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await casesService.list({ stage: 'bogus' as never, pageSize: 'all' });
-    expect(r.total).toBe(24);
-  });
-
-  it('q matches progress text', async () => {
-    setMockSession('legal.viewer', false);
-    const [withProgress] = casesMockDb
-      .all()
-      .filter((c) => c.progress !== null && c.progress.length > 5);
-    const snippet = withProgress.progress!.slice(0, 5);
-    const r = await casesService.list({ q: snippet });
-    expect(r.items.map((x) => x.id)).toContain(withProgress.id);
-  });
-
-  it('pageSize=all with caseType filter returns all matching rows', async () => {
-    setMockSession('legal.viewer', false);
-    const r = await casesService.list({ caseType: 'criminal', pageSize: 'all' });
-    expect(r.items.length).toBe(r.total);
-    expect(r.pageSize).toBe(r.total);
-    expect(r.page).toBe(1);
-    expect(r.total).toBe(casesMockDb.all().filter((c) => c.caseType === 'criminal').length);
-  });
-
-  it('POST ignores a client-sent caseNo and assigns one', async () => {
-    setMockSession('legal.editor', false);
-    const created = await casesService.create({
-      ...sampleCaseInput,
-      caseNo: 'LC-9999-999',
-    } as unknown as CaseInput);
-    expect(created.caseNo).not.toBe('LC-9999-999');
-    expect(created.caseNo).toMatch(/^LC-\d{4}-\d{3}$/);
-  });
-
-  it('PATCH and DELETE 404 for an unknown id', async () => {
-    setMockSession('legal.editor', false);
-    await expect(casesService.get('case-1')).resolves.toMatchObject({ id: 'case-1' });
-    const notFound = { status: 404, code: 'NOT_FOUND' };
-    await expect(casesService.get('nope')).rejects.toMatchObject(notFound);
-    await expect(casesService.update('nope', sampleCaseInput)).rejects.toMatchObject(notFound);
-    await expect(casesService.remove('nope')).rejects.toMatchObject(notFound);
-    await casesService.remove('case-1');
-    await expect(casesService.get('case-1')).rejects.toMatchObject(notFound);
-    expect(casesMockDb.all()).toHaveLength(23);
-  });
-});
-
-describe('legal dashboard handler', () => {
-  it('401 without session', async () => {
-    await expect(legalDashboardService.get()).rejects.toMatchObject({ status: 401 });
-  });
-
-  it('aggregates the seed', async () => {
-    setMockSession('legal.viewer', false);
-    const d = await legalDashboardService.get();
-
-    // Regulations assertions
-    expect(d.regulations.total).toBe(30);
-    const statusSum = Object.values(d.regulations.byStatus).reduce((a, b) => a + b, 0);
-    expect(statusSum).toBe(30);
-
-    expect(d.regulations.byType.map((t) => t.type)).toEqual(
-      expect.arrayContaining([...REGULATION_TYPES]),
-    );
-    expect(d.regulations.byType).toHaveLength(6);
-
-    expect(d.regulations.byUnit.length).toBe(d.regulations.unitCount);
-    for (const u of d.regulations.byUnit) {
-      expect(u.count).toBeGreaterThan(0);
-    }
-    for (let i = 1; i < d.regulations.byUnit.length; i++) {
-      expect(d.regulations.byUnit[i - 1].count).toBeGreaterThanOrEqual(d.regulations.byUnit[i].count);
-    }
-
-    // Cases assertions
-    expect(d.cases.total).toBe(24);
-    expect(d.cases.inProgress + d.cases.finished).toBe(24);
-    expect(d.cases.byStage.map((s) => s.stage)).toEqual([...CASE_STAGES]);
-
-    const allCases = casesMockDb.all();
-    const expectedDamage = sumDual(allCases.map((c) => c.damage));
-    const expectedFine = sumDual(allCases.map((c) => c.fine));
-    const expectedRecovered = sumDual(allCases.map((c) => c.recovered));
-
-    expect(d.cases.damage).toEqual(expectedDamage);
-    expect(d.cases.fine).toEqual(expectedFine);
-    expect(d.cases.recovered).toEqual(expectedRecovered);
+    const d = await legalCasesService.dashboard();
+    const all = legalCasesMockDb.all();
+    expect(d.total).toBe(all.length);
+    expect(d.byDisputeStatus.reduce((s, e) => s + e.count, 0)).toBe(all.length);
+    expect(d.lak.damage).toBe(all.reduce((s, c) => s + Number(c.damageLak), 0));
+    expect(d.lak.totalDue).toBeGreaterThanOrEqual(d.lak.damage);
   });
 });

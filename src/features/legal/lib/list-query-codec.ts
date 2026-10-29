@@ -1,16 +1,17 @@
 export interface ListQueryBase {
   page?: number;
-  pageSize?: number | 'all';
+  pageSize?: number;
   q?: string;
-  sort?: string;
-  order?: 'asc' | 'desc';
 }
 
 export interface QueryCodecSpec<Q extends ListQueryBase> {
-  defaults: Q & { page: number; pageSize: number; sort: string; order: 'asc' | 'desc' };
+  defaults: Q & { page: number; pageSize: number };
   /** Enum-valued filter params; unknown values fall back to unset. */
-  enums: { [K in keyof Q]?: readonly string[] };
-  sortKeys: readonly string[];
+  enums?: { [K in keyof Q]?: readonly string[] };
+  /** Integer-valued filter params (for example a year). */
+  ints?: readonly (keyof Q & string)[];
+  /** Free string filter params, accepted only when they match the given pattern. */
+  strings?: { [K in keyof Q]?: RegExp };
   pageSizes: readonly number[];
 }
 
@@ -21,9 +22,10 @@ export interface QueryCodec<Q extends ListQueryBase> {
 }
 
 export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q>): QueryCodec<Q> {
-  const { defaults, sortKeys, pageSizes } = spec;
-  const enumKeys = Object.keys(spec.enums) as (keyof Q & string)[];
-  const allowed = (k: keyof Q & string): readonly string[] => spec.enums[k] ?? [];
+  const { defaults, pageSizes } = spec;
+  const enums = (spec.enums ?? {}) as Record<string, readonly string[]>;
+  const strings = (spec.strings ?? {}) as Record<string, RegExp>;
+  const ints = (spec.ints ?? []) as readonly string[];
 
   function parse(sp: URLSearchParams): Q {
     const out: Record<string, unknown> = { ...(defaults as ListQueryBase) };
@@ -31,9 +33,17 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
     const q = sp.get('q')?.trim();
     if (q) out.q = q;
 
-    for (const k of enumKeys) {
+    for (const [k, allowed] of Object.entries(enums)) {
       const v = sp.get(k);
-      if (v !== null && allowed(k).includes(v)) out[k] = v;
+      if (v !== null && allowed.includes(v)) out[k] = v;
+    }
+    for (const [k, re] of Object.entries(strings)) {
+      const v = sp.get(k);
+      if (v !== null && re.test(v)) out[k] = v;
+    }
+    for (const k of ints) {
+      const v = sp.get(k);
+      if (v !== null && /^\d{1,9}$/.test(v)) out[k] = Number(v);
     }
 
     const pageRaw = sp.get('page');
@@ -51,29 +61,26 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
       const size = Number(sizeRaw);
       if (pageSizes.includes(size)) out.pageSize = size;
     }
-
-    const sort = sp.get('sort');
-    out.sort = sort !== null && sortKeys.includes(sort) ? sort : defaults.sort;
-    const order = sp.get('order');
-    out.order = order === 'asc' || order === 'desc' ? order : defaults.order;
     return out as Q;
   }
 
   function serialize(q: Q): string {
     const sp = new URLSearchParams();
+    const rec = q as Record<string, unknown>;
     const text = q.q?.trim();
     if (text) sp.set('q', text);
-    for (const k of enumKeys) {
-      const v = q[k];
+    for (const k of [...Object.keys(enums), ...Object.keys(strings)]) {
+      const v = rec[k];
       if (typeof v === 'string' && v) sp.set(k, v);
     }
+    for (const k of ints) {
+      const v = rec[k];
+      if (typeof v === 'number' && Number.isFinite(v)) sp.set(k, String(v));
+    }
     if (q.page !== undefined && q.page !== defaults.page) sp.set('page', String(q.page));
-    // 'all' is an export-only size and never reaches the URL.
-    if (typeof q.pageSize === 'number' && q.pageSize !== defaults.pageSize) {
+    if (q.pageSize !== undefined && q.pageSize !== defaults.pageSize) {
       sp.set('pageSize', String(q.pageSize));
     }
-    if (q.sort !== undefined && q.sort !== defaults.sort) sp.set('sort', q.sort);
-    if (q.order !== undefined && q.order !== defaults.order) sp.set('order', q.order);
     return sp.toString();
   }
 

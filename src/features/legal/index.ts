@@ -1,83 +1,100 @@
-export { LEGAL_UNITS, LEGAL_PAGE_SIZES, type LegalUnit } from './constants';
+export { LEGAL_PAGE_SIZES } from './constants';
+
+// Legal documents (route /legal/regulations)
 export {
-  REGULATION_TYPES,
-  REGULATION_STATUSES,
-  REGULATION_SORT_KEYS,
-  REGULATION_STATUS_TONE,
-  type RegulationType,
-  type RegulationStatus,
-  type RegulationSortKey,
-  type Regulation,
-} from './regulations/types';
+  DOC_TYPES,
+  DOC_STATUSES,
+  DOC_STATUS_TONE,
+  type DocType,
+  type DocStatus,
+  type LegalDocument,
+  type LegalDocumentPayload,
+  type LegalDocumentPatch,
+  type LegalDocumentsDashboard,
+} from './documents/types';
 export {
-  regulationsService,
-  type RegulationListQuery,
-} from './regulations/api/regulations.service';
+  legalDocumentsService,
+  toLegalDocumentListParams,
+  type LegalDocumentListQuery,
+} from './documents/api/legal-documents.service';
+export {
+  toLegalDocument,
+  toLegalDocumentPayload,
+  diffLegalDocumentPayload,
+  toLegalDocumentsDashboard,
+} from './documents/lib/legal-document-mapper';
+export {
+  legalDocumentFormSchema,
+  emptyLegalDocumentForm,
+  fromLegalDocument,
+  type LegalDocumentFormValues,
+} from './documents/schemas/legal-document.schema';
+export {
+  legalDocumentsQueryCodec,
+  useLegalDocumentsListStore,
+  useLegalDocumentsListUrlSync,
+} from './documents/store/legal-documents-list.store';
+export { buildLegalDocumentsCsv } from './documents/lib/legal-documents-csv';
+export { LegalDocumentsView } from './documents/components/legal-documents-view';
+export { LegalDocumentDetailView } from './documents/components/legal-document-detail-view';
+export {
+  LegalDocumentFormDialog,
+  type LegalDocumentFormDialogProps,
+} from './documents/components/legal-document-form-dialog';
+export { LegalDocumentFormFields } from './documents/components/legal-document-form-fields';
+export { LegalDocumentWizard } from './documents/components/legal-document-wizard';
+export { LegalDocumentsDashboardSection } from './documents/components/legal-documents-dashboard-section';
+
+// Legal cases (route /legal/cases)
 export {
   CASE_TYPES,
-  CASE_STAGES,
-  CASE_SORT_KEYS,
-  CASE_PROGRESS_FILTERS,
+  DISPUTE_STATUSES,
+  DISPUTE_STATUS_TONE,
   type CaseType,
-  type CaseStage,
-  type CaseSortKey,
-  type CaseProgressFilter,
-  type DualAmount,
-  type DualTotals,
+  type DisputeStatus,
   type LegalCase,
-  type CaseInput,
+  type LegalCasePayload,
+  type LegalCasePatch,
+  type LegalCasesDashboard,
+  type MoneyTotals,
 } from './cases/types';
 export {
-  casesService,
-  type CaseListQuery,
-} from './cases/api/cases.service';
+  legalCasesService,
+  toLegalCaseListParams,
+  type LegalCaseListQuery,
+} from './cases/api/legal-cases.service';
 export {
-  casesQueryCodec,
-  useCasesListStore,
-  useCasesListUrlSync,
-} from './cases/store/cases-list.store';
-export { isCaseFinished, caseTotal, sumDual, CASE_STAGE_TONE } from './cases/lib/case-money';
+  toLegalCase,
+  toLegalCasePayload,
+  diffLegalCasePayload,
+  toLegalCasesDashboard,
+  caseTotalDue,
+  isCaseFinished,
+} from './cases/lib/legal-case-mapper';
+export {
+  legalCaseFormSchema,
+  emptyLegalCaseForm,
+  fromLegalCase,
+  type LegalCaseFormValues,
+} from './cases/schemas/legal-case.schema';
+export {
+  legalCasesQueryCodec,
+  useLegalCasesListStore,
+  useLegalCasesListUrlSync,
+} from './cases/store/legal-cases-list.store';
+export { buildLegalCasesCsv } from './cases/lib/legal-cases-csv';
+export { LegalCasesView } from './cases/components/legal-cases-view';
+export { LegalCaseDetailView } from './cases/components/legal-case-detail-view';
+export { LegalCaseFormDialog, type LegalCaseFormDialogProps } from './cases/components/legal-case-form-dialog';
+export { LegalCaseFormFields } from './cases/components/legal-case-form-fields';
+export { LegalCaseWizard } from './cases/components/legal-case-wizard';
+export { LegalCasesDashboardSection } from './cases/components/legal-cases-dashboard-section';
+
+// Shared
 export { createQueryCodec, type ListQueryBase, type QueryCodec } from './lib/list-query-codec';
 export { createListStore, type ListState } from './lib/create-list-store';
 export { useListUrlSync } from './lib/use-list-url-sync';
-export {
-  regulationsQueryCodec,
-  useRegulationsListStore,
-  useRegulationsListUrlSync,
-} from './regulations/store/regulations-list.store';
-export { buildRegulationsCsv } from './regulations/lib/regulations-csv';
-export { uploadStaged } from './lib/upload-staged';
-export { RegulationFormDialog, type RegulationFormDialogProps } from './regulations/components/regulation-form-dialog';
-export { RegulationFormFields } from './regulations/components/regulation-form-fields';
-export { RegulationsView } from './regulations/components/regulations-view';
-export {
-  regulationFormSchema,
-  emptyRegulationForm,
-  toRegulationPayload,
-  fromRegulation,
-  yearOf,
-  type RegulationFormValues,
-  type RegulationInput,
-} from './regulations/schemas/regulation.schema';
-export { RegulationDetailView } from './regulations/components/regulation-detail-view';
-export { DualAmountField, type DualAmountFieldProps } from './cases/components/dual-amount-field';
-export { CaseFormFields, type CaseFormFieldsProps } from './cases/components/case-form-fields';
-export { CaseFormDialog, type CaseFormDialogProps } from './cases/components/case-form-dialog';
-export {
-  caseFormSchema,
-  emptyCaseForm,
-  toCasePayload,
-  fromCase,
-  type CaseFormValues,
-} from './cases/schemas/case.schema';
-export { buildCasesCsv } from './cases/lib/cases-csv';
-export { CasesView } from './cases/components/cases-view';
-export { CaseDetailView } from './cases/components/case-detail-view';
 export { LegalSearch, type LegalSearchProps } from './lib/legal-search';
-export { legalDashboardService } from './dashboard/api/legal-dashboard.service';
-export { type LegalDashboard } from './dashboard/types';
+export { uploadStaged } from './lib/upload-staged';
 export { LegalDashboardView } from './dashboard/components/legal-dashboard-view';
 export { LegalNewView } from './components/legal-new-view';
-export { RegulationWizard } from './regulations/components/regulation-wizard';
-export { CaseWizard } from './cases/components/case-wizard';
-export { applyRegulationServerErrors, type AppliedRegulationServerErrors } from './regulations/lib/regulation-server-errors';

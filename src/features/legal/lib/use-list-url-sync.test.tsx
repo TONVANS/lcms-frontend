@@ -1,12 +1,12 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { regulationsService } from '../regulations/api/regulations.service';
+import { legalDocumentsService } from '../documents/api/legal-documents.service';
 import {
-  regulationsQueryCodec as codec,
-  useRegulationsListStore as store,
-  useRegulationsListUrlSync,
-} from '../regulations/store/regulations-list.store';
+  legalDocumentsQueryCodec as codec,
+  useLegalDocumentsListStore as store,
+  useLegalDocumentsListUrlSync,
+} from '../documents/store/legal-documents-list.store';
 import { useListUrlSync } from './use-list-url-sync';
 
 const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
@@ -24,23 +24,23 @@ beforeEach(() => {
   nav.replace = vi.fn();
   store.getState().reset();
   list = vi
-    .spyOn(regulationsService, 'list')
+    .spyOn(legalDocumentsService, 'list')
     .mockResolvedValue({ items: [], page: 1, pageSize: 10, total: 0 });
 });
 
 describe('useListUrlSync (regulations)', () => {
   it('does not wipe incoming params on mount and fetches once with them', async () => {
-    nav.search = 'status=repealed&page=2';
+    nav.search = 'status=INACTIVE&page=2';
     await act(async () => {
-      renderHook(() => useRegulationsListUrlSync());
+      renderHook(() => useLegalDocumentsListUrlSync());
     });
     expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'repealed', page: 2 });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'INACTIVE', page: 2 });
   });
 
   it('mount parse replaces a stale store query', async () => {
-    store.getState().setQuery({ q: 'old', status: 'repealed' });
+    store.getState().setQuery({ q: 'old', status: 'INACTIVE' });
     await act(async () => {
       renderHook(() => useListUrlSync(store, codec));
     });
@@ -53,72 +53,72 @@ describe('useListUrlSync (regulations)', () => {
     });
     list.mockClear();
     await act(async () => {
-      store.getState().setQuery({ status: 'repealed' });
+      store.getState().setQuery({ status: 'INACTIVE' });
     });
-    expect(nav.replace).toHaveBeenCalledWith('/legal/regulations?status=repealed', {
+    expect(nav.replace).toHaveBeenCalledWith('/legal/regulations?status=INACTIVE', {
       scroll: false,
     });
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'repealed' });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'INACTIVE' });
   });
 
   it('re-parses on back/forward without looping', async () => {
-    nav.search = 'status=repealed';
+    nav.search = 'status=INACTIVE';
     const { rerender } = renderHook(() => useListUrlSync(store, codec));
     await act(async () => {});
     list.mockClear();
     nav.replace.mockClear();
 
-    nav.search = 'type=rule&page=3';
+    nav.search = 'docType=MANUAL&page=3';
     await act(async () => {
       rerender();
     });
-    expect(store.getState().query).toEqual({ ...codec.defaults, type: 'rule', page: 3 });
+    expect(store.getState().query).toEqual({ ...codec.defaults, docType: 'MANUAL', page: 3 });
     expect(list).toHaveBeenCalledTimes(1);
     expect(nav.replace).not.toHaveBeenCalled();
 
     // The echo of our own replace through useSearchParams is skipped.
     list.mockClear();
     await act(async () => {
-      store.getState().setQuery({ status: 'in_force' });
+      store.getState().setQuery({ status: 'ACTIVE' });
     });
     expect(list).toHaveBeenCalledTimes(1);
-    nav.search = 'type=rule&status=in_force';
+    nav.search = 'docType=MANUAL&status=ACTIVE';
     await act(async () => {
       rerender();
     });
     expect(list).toHaveBeenCalledTimes(1);
-    expect(store.getState().query.status).toBe('in_force');
+    expect(store.getState().query.status).toBe('ACTIVE');
   });
 
   it('under StrictMode never replaces and fetches once', async () => {
-    nav.search = 'status=repealed&page=2';
+    nav.search = 'status=INACTIVE&page=2';
     await act(async () => {
       renderHook(() => useListUrlSync(store, codec), { wrapper: StrictMode });
     });
     expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'repealed', page: 2 });
+    expect(list.mock.calls[0]![0]).toMatchObject({ status: 'INACTIVE', page: 2 });
   });
 
   it('only ignores the echo of the last push; a later external navigation is adopted', async () => {
     const { rerender } = renderHook(() => useListUrlSync(store, codec));
     await act(async () => {});
     await act(async () => {
-      store.getState().setQuery({ status: 'in_force' });
+      store.getState().setQuery({ status: 'ACTIVE' });
     });
     await act(async () => {
-      store.getState().setQuery({ status: 'repealed' });
+      store.getState().setQuery({ status: 'INACTIVE' });
     });
-    nav.search = 'status=repealed';
-    await act(async () => {
-      rerender();
-    });
-    nav.search = 'status=in_force';
+    nav.search = 'status=INACTIVE';
     await act(async () => {
       rerender();
     });
-    expect(store.getState().query.status).toBe('in_force');
+    nav.search = 'status=ACTIVE';
+    await act(async () => {
+      rerender();
+    });
+    expect(store.getState().query.status).toBe('ACTIVE');
   });
 
   it('afterDelete steps back a page and updates the URL', async () => {
@@ -145,23 +145,23 @@ describe('useListUrlSync (regulations)', () => {
     const { rerender } = renderHook(() => useListUrlSync(store, codec));
     await act(async () => {});
     await act(async () => {
-      store.getState().setQuery({ status: 'in_force' });
+      store.getState().setQuery({ status: 'ACTIVE' });
     });
     await act(async () => {
-      store.getState().setQuery({ status: 'repealed' });
+      store.getState().setQuery({ status: 'INACTIVE' });
     });
     const fetchesAfterPushes = list.mock.calls.length;
-    nav.search = 'status=in_force';
+    nav.search = 'status=ACTIVE';
     await act(async () => {
       rerender();
     });
-    nav.search = 'status=repealed';
+    nav.search = 'status=INACTIVE';
     await act(async () => {
       rerender();
     });
-    expect(store.getState().query.status).toBe('repealed');
+    expect(store.getState().query.status).toBe('INACTIVE');
     expect(list).toHaveBeenCalledTimes(fetchesAfterPushes);
-    expect(nav.replace).toHaveBeenLastCalledWith('/legal/regulations?status=repealed', {
+    expect(nav.replace).toHaveBeenLastCalledWith('/legal/regulations?status=INACTIVE', {
       scroll: false,
     });
   });

@@ -3,9 +3,8 @@ import { MOCK_ALERTS } from '@/features/alerts/mocks/alerts.mock';
 import { deriveGcStatus } from '@/features/gc/lib/derive-status';
 import { buildGcAlerts } from '@/features/gc/lib/alerts';
 import { gcMockDb } from '@/features/gc/mocks/gc.mock';
-import { isCaseFinished } from '@/features/legal/cases/lib/case-money';
-import { casesMockDb } from '@/features/legal/cases/mocks/cases.mock';
-import { regulationsMockDb } from '@/features/legal/regulations/mocks/regulations.mock';
+import { legalCasesMockDb } from '@/features/legal/cases/mocks/legal-cases.mock';
+import { legalDocumentsMockDb } from '@/features/legal/documents/mocks/legal-documents.mock';
 import type { HomeSummary } from '@/features/home/types';
 import { MOCK_MODULE_STATS } from '@/features/home/mocks/home.mock';
 import { getAccessibleModules } from '@/lib/auth/permissions';
@@ -25,10 +24,10 @@ function gcStats(): HomeSummary['modules'][number] {
 }
 
 function legalStats(): HomeSummary['modules'][number] {
-  const regs = regulationsMockDb.all();
-  const cases = casesMockDb.all();
-  const inForceRegs = regs.filter((r) => r.status === 'in_force').length;
-  const inProgressCases = cases.filter((c) => !isCaseFinished(c.stage)).length;
+  const regs = legalDocumentsMockDb.all();
+  const cases = legalCasesMockDb.all();
+  const inForceRegs = regs.filter((r) => r.status === 'ACTIVE').length;
+  const inProgressCases = cases.filter((c) => c.disputeStatus !== 'CLOSED' && c.disputeStatus !== 'RESOLVED').length;
   return {
     module: 'legal',
     total: regs.length + cases.length,
