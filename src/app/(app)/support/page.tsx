@@ -1,12 +1,5 @@
-import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { lo } from '@/lib/i18n/lo';
+import { SupportView } from '@/features/support';
 
 export default function SupportPage() {
-  return (
-    <>
-      <PageHeader title={lo.support.title} />
-      <EmptyState title={lo.common.underConstruction} />
-    </>
-  );
+  return <SupportView />;
 }
