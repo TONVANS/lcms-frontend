@@ -102,7 +102,7 @@ function RegulationFormBody({ regulation, onOpenChange, onSaved, busyRef, onBusy
       if (!regulation && canCreate && staged.length > 0) {
         const { failed } = await uploadStaged(
           staged.map((s) => s.file),
-          'legal-regulation',
+          'legal-documents',
           saved.id,
         );
         if (failed.length > 0) toast.error(L.uploadFailed(failed.map((f) => f.name).join(', ')));

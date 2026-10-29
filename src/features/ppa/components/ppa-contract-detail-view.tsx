@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
 import { GlassCard } from '@/components/shared/glass-card';
 import { KpiCard } from '@/components/shared/kpi-card';
-import { ContractStatusBadge } from '@/components/shared/status-badge';
+import { LegacyContractStatusBadge } from '@/components/shared/status-badge';
 import { Timeline, type TimelineItem } from '@/components/shared/timeline';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -191,7 +191,7 @@ export function PpaContractDetailView({ id }: PpaContractDetailViewProps) {
         />
         <KpiCard
           label={lo.ppa.fields.status}
-          value={<ContractStatusBadge status={contract.status} />}
+          value={<LegacyContractStatusBadge status={contract.status} />}
           variant={contract.status === 'expiring' ? 'warning' : 'default'}
           index={3}
         />
@@ -318,7 +318,7 @@ export function PpaContractDetailView({ id }: PpaContractDetailViewProps) {
               </h3>
             </div>
             <DocumentManager
-              entityType="ppa"
+              module="power-contracts"
               entityId={contract.id}
               canUpload={canUpload}
               canDownload={canDownload}

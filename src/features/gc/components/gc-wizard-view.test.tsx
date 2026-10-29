@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import NewPage from '@/app/(app)/contracts/new/page';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
-import { documentsService, type DocumentFile } from '@/features/documents';
+import { type Attachment, documentsService } from '@/features/documents';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { setMockSession } from '@/lib/auth/session';
@@ -269,10 +269,10 @@ describe('GcWizardView review and submit', () => {
     expect(dt.nextElementSibling).toHaveTextContent(lo.gc.openEnded);
   });
 
-  it('submits, uploads staged files with entityType gc, and navigates to the detail page', async () => {
+  it('submits, uploads staged files to the contracts module, and navigates to the detail page', async () => {
     const user = userEvent.setup();
     const create = vi.spyOn(gcService, 'create');
-    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as Attachment);
     render(<GcWizardView />);
     await toReview(user);
     await user.upload(fileInput(), [pdf('a.pdf'), pdf('b.pdf')]);
@@ -282,9 +282,9 @@ describe('GcWizardView review and submit', () => {
     const created = await create.mock.results[0].value;
     expect(nav.replace).toHaveBeenCalledWith(`/contracts/${created.id}`);
     expect(upload).toHaveBeenCalledTimes(2);
-    expect(upload.mock.calls.map((c) => [c[0].name, c[1], c[2]])).toEqual([
-      ['a.pdf', 'gc', created.id],
-      ['b.pdf', 'gc', created.id],
+    expect(upload.mock.calls.map((c) => [c[2].name, c[0], c[1]])).toEqual([
+      ['a.pdf', 'contracts', created.id],
+      ['b.pdf', 'contracts', created.id],
     ]);
     expect(toast.success).toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
@@ -293,8 +293,8 @@ describe('GcWizardView review and submit', () => {
   it('a failed upload still creates once, toasts the failed file and navigates', async () => {
     const user = userEvent.setup();
     const create = vi.spyOn(gcService, 'create');
-    vi.spyOn(documentsService, 'upload').mockImplementation((file) =>
-      file.name === 'bad.pdf' ? Promise.reject(new Error('boom')) : Promise.resolve({} as DocumentFile),
+    vi.spyOn(documentsService, 'upload').mockImplementation((_m, _id, file) =>
+      file.name === 'bad.pdf' ? Promise.reject(new Error('boom')) : Promise.resolve({} as Attachment),
     );
     render(<GcWizardView />);
     await toReview(user);
@@ -315,7 +315,7 @@ describe('GcWizardView review and submit', () => {
     const create = vi.spyOn(gcService, 'create');
     let release!: () => void;
     vi.spyOn(documentsService, 'upload').mockImplementation(
-      () => new Promise((r) => (release = () => r({} as DocumentFile))),
+      () => new Promise((r) => (release = () => r({} as Attachment))),
     );
     render(<GcWizardView />);
     await toReview(user);
@@ -344,7 +344,7 @@ describe('GcWizardView review and submit', () => {
   it('two synchronous clicks on submit create exactly once', async () => {
     const user = userEvent.setup();
     const create = vi.spyOn(gcService, 'create');
-    vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    vi.spyOn(documentsService, 'upload').mockResolvedValue({} as Attachment);
     render(<GcWizardView />);
     await toReview(user);
     const btn = submitBtn();
@@ -375,7 +375,7 @@ describe('GcWizardView review and submit', () => {
 
   it('a staged file can be removed before submit', async () => {
     const user = userEvent.setup();
-    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as Attachment);
     render(<GcWizardView />);
     await toReview(user);
     await user.upload(fileInput(), [pdf('a.pdf'), pdf('b.pdf')]);
@@ -384,7 +384,7 @@ describe('GcWizardView review and submit', () => {
     await user.click(submitBtn());
     await waitFor(() => expect(nav.replace).toHaveBeenCalled());
     expect(upload).toHaveBeenCalledTimes(1);
-    expect(upload.mock.calls[0][0].name).toBe('b.pdf');
+    expect(upload.mock.calls[0][2].name).toBe('b.pdf');
   });
 
   it('rejects files of an unsupported type and does not stage them', async () => {

@@ -1,114 +1,143 @@
 import type MockAdapter from 'axios-mock-adapter';
-import { MOCK_DOCUMENTS } from '@/features/documents/mocks/documents.mock';
-import type { DocumentFile } from '@/features/documents/types';
+import {
+  MOCK_ATTACHMENTS,
+  MOCK_PDF_BYTES,
+  mockPngBytes,
+} from '@/features/documents/mocks/documents.mock';
 import { hasPermission } from '@/lib/auth/permissions';
-import type { ModuleKey, Permission, User } from '@/types/domain';
+import type { AttachmentModule, ModuleKey, Permission, User } from '@/types/domain';
 import { getMockSessionUser } from '../session';
 
-let documents = [...MOCK_DOCUMENTS];
-/** Real File objects for documents uploaded in this session; seeded documents have none. */
-const uploaded = new Map<string, File>();
+interface Stored {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  uploadedBy: string;
+  /** Real file for attachments uploaded in this session; seeded ones synthesise a blob. */
+  file?: File;
+}
 
-/** entityType -> owning module. Unknown types map to null and are always refused. */
-function moduleOf(entityType: string): ModuleKey | null {
-  if (entityType === 'gc' || entityType === 'gc-contract') return 'gc';
-  if (entityType.startsWith('ppa')) return 'ppa';
-  if (entityType.startsWith('legal')) return 'legal';
+const MODULE_KEY: Record<AttachmentModule, ModuleKey> = {
+  contracts: 'gc',
+  'legal-documents': 'legal',
+  'legal-cases': 'legal',
+  'power-contracts': 'ppa',
+};
+
+const store = new Map<string, Stored[]>();
+const keyOf = (module: AttachmentModule, entityId: string) => `${module}::${entityId}`;
+
+for (const s of MOCK_ATTACHMENTS) {
+  const k = keyOf(s.module, s.entityId);
+  store.set(k, [...(store.get(k) ?? []), s]);
+}
+
+const NEST = {
+  401: { statusCode: 401, message: 'Unauthorized', error: 'Unauthorized' },
+  403: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' },
+  404: { statusCode: 404, message: 'Attachment not found', error: 'Not Found' },
+} as const;
+
+const MODULES = '(contracts|legal-documents|legal-cases|power-contracts)';
+const LIST_RE = new RegExp(`^/${MODULES}/([^/?]+)/attachments$`);
+const PREVIEW_RE = new RegExp(`^/${MODULES}/attachments/([^/?]+)/preview$`);
+const DOWNLOAD_RE = new RegExp(`^/${MODULES}/attachments/([^/?]+)/download$`);
+const ITEM_RE = new RegExp(`^/${MODULES}/attachments/([^/?]+)$`);
+
+const param = (v: string) => decodeURIComponent(v);
+
+function find(module: AttachmentModule, attId: string): { list: Stored[]; item: Stored } | null {
+  for (const [k, list] of store) {
+    if (!k.startsWith(`${module}::`)) continue;
+    const item = list.find((a) => a.id === attId);
+    if (item) return { list, item };
+  }
   return null;
 }
 
-function can(user: User, entityType: string, permission: Permission): boolean {
-  const m = moduleOf(entityType);
-  return m !== null && hasPermission(user, m, permission);
+function blobOf(a: Stored): Blob {
+  if (a.file) return a.file;
+  const bytes = a.mimeType.startsWith('image/') ? mockPngBytes() : MOCK_PDF_BYTES;
+  return new Blob([bytes as BlobPart], { type: a.mimeType });
 }
 
-const UNAUTHENTICATED: [number, unknown] = [401, { code: 'UNAUTHENTICATED', message: '' }];
-const FORBIDDEN: [number, unknown] = [403, { code: 'FORBIDDEN', message: '' }];
+/** Live-like raw shape: numeric size as a string (Prisma BigInt), uploader as a nested user. */
+const toRaw = (a: Stored) => ({
+  id: a.id,
+  originalName: a.fileName,
+  mimeType: a.mimeType,
+  fileSize: String(a.fileSize),
+  createdAt: a.createdAt,
+  uploadedBy: { fullName: a.uploadedBy },
+});
 
-export function register(mock: MockAdapter) {
-  // GET /documents?entityType=&entityId=
-  mock.onGet(/^\/documents(\?.*)?$/).reply((config) => {
-    const user = getMockSessionUser();
-    if (!user) return UNAUTHENTICATED;
-    const params = new URLSearchParams(config.url?.split('?')[1] ?? '');
-    const entityType = params.get('entityType');
-    const entityId = params.get('entityId');
+type Guard = [number, unknown] | null;
 
-    if (entityType && !can(user, entityType, 'view')) return FORBIDDEN;
+function guard(module: AttachmentModule, permission: Permission): { user: User } | { error: Guard } {
+  const user = getMockSessionUser();
+  if (!user) return { error: [401, NEST[401]] };
+  if (!hasPermission(user, MODULE_KEY[module], permission)) return { error: [403, NEST[403]] };
+  return { user };
+}
 
-    let filtered = documents;
-    if (entityType) {
-      filtered = filtered.filter((d) => d.entityType === entityType);
-    } else {
-      filtered = filtered.filter((d) => can(user, d.entityType, 'view'));
-    }
-    if (entityId) {
-      filtered = filtered.filter((d) => d.entityId === entityId);
-    }
-    return [200, filtered];
+export function register(mock: MockAdapter): void {
+  // GET /:module/:id/attachments
+  mock.onGet(LIST_RE).reply((config) => {
+    const [, module, id] = LIST_RE.exec(config.url ?? '')!;
+    const g = guard(module as AttachmentModule, 'view');
+    if ('error' in g) return g.error!;
+    const items = store.get(keyOf(module as AttachmentModule, param(id))) ?? [];
+    return [200, { data: items.map(toRaw) }];
   });
 
-  // GET /documents/:id/download
-  mock.onGet(/^\/documents\/[^/]+\/download$/).reply((config) => {
-    const user = getMockSessionUser();
-    if (!user) return UNAUTHENTICATED;
-    const id = config.url?.split('/')[2];
-    const doc = documents.find((d) => d.id === id);
-    if (!doc) return [404, { code: 'NOT_FOUND', message: '' }];
-    if (!can(user, doc.entityType, 'download')) return FORBIDDEN;
-    const stored = uploaded.get(doc.id);
-    return [200, stored ?? new Blob([`Mock content of ${doc.name}`], { type: doc.mime })];
-  });
-
-  // POST /documents
-  mock.onPost('/documents').reply((config) => {
-    const user = getMockSessionUser();
-    if (!user) return UNAUTHENTICATED;
-    let name = 'Uploaded-Document.pdf';
-    let mime = 'application/pdf';
-    let size = 1024 * 1024 * 2.5;
-    let entityType = 'ppa';
-    let entityId = 'ppa-1';
-    let file: File | null = null;
-
-    if (config.data instanceof FormData) {
-      file = config.data.get('file') as File | null;
-      if (file) {
-        name = file.name;
-        mime = file.type || 'application/octet-stream';
-        size = file.size;
-      }
-      entityType = (config.data.get('entityType') as string) || entityType;
-      entityId = (config.data.get('entityId') as string) || entityId;
-    }
-    if (!can(user, entityType, 'create')) return FORBIDDEN;
-
-    const newDoc: DocumentFile = {
-      id: `doc-${Date.now()}`,
-      name,
-      mime,
-      size,
-      version: '1.0',
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: user.username,
-      entityType,
-      entityId,
+  // POST /:module/:id/attachments  (multipart field `file`)
+  mock.onPost(LIST_RE).reply((config) => {
+    const [, module, id] = LIST_RE.exec(config.url ?? '')!;
+    const g = guard(module as AttachmentModule, 'create');
+    if ('error' in g) return g.error!;
+    const file = config.data instanceof FormData ? (config.data.get('file') as File | null) : null;
+    const created: Stored = {
+      id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      fileName: file?.name ?? 'Uploaded-Document.pdf',
+      mimeType: file?.type || 'application/pdf',
+      fileSize: file?.size ?? 0,
+      createdAt: new Date().toISOString(),
+      uploadedBy: g.user.fullName,
+      file: file ?? undefined,
     };
-    if (file) uploaded.set(newDoc.id, file);
-    documents.unshift(newDoc);
-    return [201, newDoc];
+    const k = keyOf(module as AttachmentModule, param(id));
+    store.set(k, [created, ...(store.get(k) ?? [])]);
+    return [201, { data: toRaw(created) }];
   });
 
-  // DELETE /documents/:id
-  mock.onDelete(/^\/documents\/[^/]+$/).reply((config) => {
-    const user = getMockSessionUser();
-    if (!user) return UNAUTHENTICATED;
-    const id = config.url?.split('/').pop();
-    const doc = documents.find((d) => d.id === id);
-    if (!doc) return [404, { code: 'NOT_FOUND', message: '' }];
-    if (!can(user, doc.entityType, 'delete')) return FORBIDDEN;
-    documents = documents.filter((d) => d.id !== id);
-    uploaded.delete(doc.id);
-    return [204];
+  // GET /:module/attachments/:attId/preview
+  mock.onGet(PREVIEW_RE).reply((config) => {
+    const [, module, attId] = PREVIEW_RE.exec(config.url ?? '')!;
+    const g = guard(module as AttachmentModule, 'view');
+    if ('error' in g) return g.error!;
+    const hit = find(module as AttachmentModule, param(attId));
+    return hit ? [200, blobOf(hit.item)] : [404, NEST[404]];
+  });
+
+  // GET /:module/attachments/:attId/download
+  mock.onGet(DOWNLOAD_RE).reply((config) => {
+    const [, module, attId] = DOWNLOAD_RE.exec(config.url ?? '')!;
+    const g = guard(module as AttachmentModule, 'download');
+    if ('error' in g) return g.error!;
+    const hit = find(module as AttachmentModule, param(attId));
+    return hit ? [200, blobOf(hit.item)] : [404, NEST[404]];
+  });
+
+  // DELETE /:module/attachments/:attId
+  mock.onDelete(ITEM_RE).reply((config) => {
+    const [, module, attId] = ITEM_RE.exec(config.url ?? '')!;
+    const g = guard(module as AttachmentModule, 'delete');
+    if ('error' in g) return g.error!;
+    const hit = find(module as AttachmentModule, param(attId));
+    if (!hit) return [404, NEST[404]];
+    hit.list.splice(hit.list.indexOf(hit.item), 1);
+    return [200, { data: { success: true } }];
   });
 }

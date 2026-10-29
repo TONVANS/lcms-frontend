@@ -215,11 +215,11 @@ describe('RegulationFormDialog', () => {
     expect(row).toHaveFocus();
   });
 
-  it('create with staged files uploads them as legal-regulation after create; a failed upload shows the partial-failure toast and still calls onSaved', async () => {
+  it('create with staged files uploads them to legal-documents after create; a failed upload shows the partial-failure toast and still calls onSaved', async () => {
     const user = userEvent.setup();
     const upload = vi
       .spyOn(documentsService, 'upload')
-      .mockImplementation((f) => (f.name === 'bad.pdf' ? Promise.reject(new Error('x')) : Promise.resolve({} as never)));
+      .mockImplementation((_m, _id, f) => (f.name === 'bad.pdf' ? Promise.reject(new Error('x')) : Promise.resolve({} as never)));
     const { onSaved } = setup();
     await fillRequired(user, 'NEW-003/TEST');
     const input = screen.getByLabelText(lo.dropzone.prompt);
@@ -232,8 +232,8 @@ describe('RegulationFormDialog', () => {
     const created = onSaved.mock.calls[0]![0] as Regulation;
     expect(upload).toHaveBeenCalledTimes(2);
     for (const call of upload.mock.calls) {
-      expect(call[1]).toBe('legal-regulation');
-      expect(call[2]).toBe(created.id);
+      expect(call[0]).toBe('legal-documents');
+      expect(call[1]).toBe(created.id);
     }
     expect(toast.error).toHaveBeenCalledWith(L.uploadFailed('bad.pdf'));
   });

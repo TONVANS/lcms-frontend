@@ -21,7 +21,7 @@ export function PpaDocumentsView() {
       />
 
       <GlassCard accent="ppa" className="p-6">
-        <DocumentManager entityType="ppa" entityId="all"
+        <DocumentManager module="power-contracts" entityId="all"
           canUpload={canUpload}
           canDownload={canDownload}
           canDelete={canDelete}

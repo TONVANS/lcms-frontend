@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
-import { documentsService, type DocumentFile } from '@/features/documents';
+import { type Attachment, documentsService } from '@/features/documents';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { setMockSession } from '@/lib/auth/session';
@@ -122,10 +122,10 @@ describe('RegulationWizard', () => {
     expect(dd(F.status)).toHaveTextContent(lo.legal.regulationStatus.in_force);
   });
 
-  it('submit creates, uploads staged files as legal-regulation, and routes to detail', async () => {
+  it('submit creates, uploads staged files to legal-documents, and routes to detail', async () => {
     const user = userEvent.setup();
     const create = vi.spyOn(regulationsService, 'create');
-    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    const upload = vi.spyOn(documentsService, 'upload').mockResolvedValue({} as Attachment);
 
     render(<RegulationWizard />);
     await toReview(user, 'REG-WZ-200');
@@ -134,7 +134,7 @@ describe('RegulationWizard', () => {
     await user.click(submitBtn());
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-    expect(upload).toHaveBeenCalledWith(expect.any(File), 'legal-regulation', expect.any(String));
+    expect(upload).toHaveBeenCalledWith('legal-documents', expect.any(String), expect.any(File));
     await waitFor(() => expect(nav.push).toHaveBeenCalledTimes(1));
     const createdId = (await create.mock.results[0].value).id;
     expect(nav.push).toHaveBeenCalledWith(`/legal/regulations/${createdId}`);
@@ -144,7 +144,7 @@ describe('RegulationWizard', () => {
   it('double-click on submit creates once (synchronous busyRef lock)', async () => {
     const user = userEvent.setup();
     const create = vi.spyOn(regulationsService, 'create');
-    vi.spyOn(documentsService, 'upload').mockResolvedValue({} as DocumentFile);
+    vi.spyOn(documentsService, 'upload').mockResolvedValue({} as Attachment);
 
     render(<RegulationWizard />);
     await toReview(user, 'REG-WZ-300');

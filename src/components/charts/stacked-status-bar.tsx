@@ -1,17 +1,17 @@
 'use client';
 
 import { DOT_TONE_CLASS } from '@/components/shared/status-badge';
-import { STATUS_META, type StatusTone } from '@/lib/constants/status';
+import { LEGACY_STATUS_META, STATUS_META, type StatusTone } from '@/lib/constants/status';
 import { formatNumber } from '@/lib/utils/number';
 import { cn } from '@/lib/utils/cn';
-import type { ContractStatus } from '@/types/domain';
+import type { LegacyContractStatus } from '@/types/domain';
 
-export interface StatusSegment<S extends string = ContractStatus> {
+export interface StatusSegment<S extends string = LegacyContractStatus> {
   status: S;
   count: number;
 }
 
-export interface StackedStatusBarProps<S extends string = ContractStatus> {
+export interface StackedStatusBarProps<S extends string = LegacyContractStatus> {
   data: StatusSegment<S>[];
   total?: number;
   className?: string;
@@ -23,7 +23,7 @@ export interface StackedStatusBarProps<S extends string = ContractStatus> {
 
 const TONE_COLOR = DOT_TONE_CLASS;
 
-export function StackedStatusBar<S extends string = ContractStatus>({
+export function StackedStatusBar<S extends string = LegacyContractStatus>({
   data,
   total,
   className,
@@ -31,9 +31,10 @@ export function StackedStatusBar<S extends string = ContractStatus>({
   getTone,
 }: StackedStatusBarProps<S>) {
   const metaOf = (status: S): { label: string; tone: StatusTone } => {
-    const meta = (STATUS_META as Record<string, { label: string; tone: StatusTone } | undefined>)[
-      status
-    ];
+    const meta = ({ ...LEGACY_STATUS_META, ...STATUS_META } as Record<
+      string,
+      { label: string; tone: StatusTone } | undefined
+    >)[status];
     return {
       label: getLabel ? getLabel(status) : (meta?.label ?? status),
       tone: getTone ? getTone(status) : (meta?.tone ?? 'slate'),

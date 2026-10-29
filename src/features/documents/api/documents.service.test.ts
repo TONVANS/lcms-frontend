@@ -4,40 +4,43 @@ import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { documentsService } from './documents.service';
 
+beforeEach(() => {
+  installMocks(api, { delay: 0 });
+  setMockSession('gc.user', false);
+});
+afterEach(() => clearMockSession());
+
 describe('documentsService', () => {
-  beforeEach(() => {
-    installMocks(api, { delay: 0 });
+  it('list maps attachments for a module + entity', async () => {
+    const items = await documentsService.list('contracts', 'gc-001');
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]).toMatchObject({
+      id: expect.any(String),
+      fileName: expect.stringMatching(/\.pdf$/),
+      mimeType: 'application/pdf',
+      fileSize: expect.any(Number),
+    });
+  });
+
+  it('upload posts multipart field "file" and returns the mapped attachment', async () => {
+    const file = new File(['hello'], 'new.pdf', { type: 'application/pdf' });
+    const att = await documentsService.upload('contracts', 'gc-002', file);
+    expect(att).toMatchObject({ fileName: 'new.pdf', mimeType: 'application/pdf', fileSize: 5 });
+    const list = await documentsService.list('contracts', 'gc-002');
+    expect(list.map((a) => a.id)).toContain(att.id);
+  });
+
+  it('preview and download resolve to Blobs', async () => {
+    const [first] = await documentsService.list('contracts', 'gc-001');
+    await expect(documentsService.preview('contracts', first.id)).resolves.toBeInstanceOf(Blob);
+    await expect(documentsService.download('contracts', first.id)).resolves.toBeInstanceOf(Blob);
+  });
+
+  it('remove deletes the attachment', async () => {
     setMockSession('ppa.user', false);
-  });
-  afterEach(() => {
-    clearMockSession();
-  });
-
-  it('lists documents for an entity', async () => {
-    const docs = await documentsService.list('ppa', 'ppa-1');
-    expect(docs.length).toBeGreaterThan(0);
-    expect(docs[0].entityType).toBe('ppa');
-  });
-
-  it('uploads a document', async () => {
-    const file = new File(['content'], 'test-contract.pdf', { type: 'application/pdf' });
-    const uploaded = await documentsService.upload(file, 'ppa', 'ppa-1');
-    expect(uploaded.name).toBe('test-contract.pdf');
-    expect(uploaded.id).toBeDefined();
-  });
-
-  it('deletes a document', async () => {
-    await expect(documentsService.delete('doc-1')).resolves.not.toThrow();
-  });
-
-  it('routes list, download and delete to distinct mock handlers', async () => {
-    const docs = await documentsService.list('ppa', 'ppa-1');
-    expect(docs.every((d) => d.entityId === 'ppa-1')).toBe(true);
-    const blob = await documentsService.download('doc-3');
-    expect(blob).toBeInstanceOf(Blob);
-    expect(blob.type).toContain('wordprocessingml');
-    await documentsService.delete('doc-2');
-    const after = await documentsService.list('ppa', 'ppa-1');
-    expect(after.find((d) => d.id === 'doc-2')).toBeUndefined();
+    const file = new File(['x'], 'tmp.pdf', { type: 'application/pdf' });
+    const att = await documentsService.upload('power-contracts', 'ppa-9', file);
+    await documentsService.remove('power-contracts', att.id);
+    expect(await documentsService.list('power-contracts', 'ppa-9')).toEqual([]);
   });
 });

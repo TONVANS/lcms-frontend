@@ -38,11 +38,24 @@ export interface User {
 export interface Department {
   id: string;
   name: string;
+  code: string | null;
 }
+
+export interface ContractTypeOption {
+  id: number;
+  nameLo: string;
+  nameEn: string | null;
+}
+
+export type Currency = 'LAK' | 'USD' | 'CNY';
+
+/** Backend contract status (computed server-side). */
+export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'TERMINATED';
 
 export type EnergyType = 'hydro' | 'solar' | 'wind' | 'coal' | 'biomass';
 
-export type ContractStatus =
+/** Pre-backend status; GC/PPA use it until Tasks 6/9 migrate them. */
+export type LegacyContractStatus =
   | 'draft'
   | 'negotiating'
   | 'pending_cod'
@@ -62,16 +75,21 @@ export interface KeyEvent {
   date: string;
 }
 
-export interface DocumentFile {
+export interface Attachment {
   id: string;
-  name: string;
-  mime: string;
-  size: number;
-  version: string;
-  uploadedAt: string;
-  uploadedBy: string;
-  entityType: string;
-  entityId: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  uploadedBy: string | null;
+}
+
+export interface HistoryEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  userName: string | null;
+  changes: { field: string; label: string; oldValue: string | null; newValue: string | null }[];
 }
 
 export interface Alert {

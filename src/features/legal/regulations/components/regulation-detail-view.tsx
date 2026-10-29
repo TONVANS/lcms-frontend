@@ -247,7 +247,7 @@ function LoadedDetail({
       <GlassCard as="section" aria-labelledby="regulation-docs-heading" className="min-w-0">
         <SectionTitle id="regulation-docs-heading">{F.documents}</SectionTitle>
         <DocumentManager
-          entityType="legal-regulation"
+          module="legal-documents"
           entityId={regulation.id}
           canUpload={canCreate}
           canDownload={canDownload}

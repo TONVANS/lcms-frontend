@@ -1,1 +1,1 @@
-export type { DocumentFile } from '@/types/domain';
+export type { Attachment, AttachmentModule } from '@/types/domain';

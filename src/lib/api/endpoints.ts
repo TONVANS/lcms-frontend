@@ -102,13 +102,4 @@ export const endpoints = {
     case: (id: string) => `/legal/cases/${encodeURIComponent(id)}`,
     dashboard: '/legal/dashboard',
   },
-  documents: {
-    list: (entityType: string, entityId: string) => `/documents?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`,
-    upload: '/documents',
-    detail: (id: string) => `/documents/${id}`,
-    download: (id: string) => `/documents/${id}/download`,
-  },
-  lookups: {
-    departments: '/lookups/departments',
-  },
 } as const;

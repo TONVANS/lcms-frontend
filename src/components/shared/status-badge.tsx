@@ -1,5 +1,5 @@
-import { STATUS_META, type StatusTone } from '@/lib/constants/status';
-import type { ContractStatus } from '@/types/domain';
+import { LEGACY_STATUS_META, STATUS_META, type StatusTone } from '@/lib/constants/status';
+import type { ContractStatus, LegacyContractStatus } from '@/types/domain';
 import { cn } from '@/lib/utils/cn';
 
 // Design.md section 2.5 (badge bg/text, dot): light values first, dark via dark: variant.
@@ -43,5 +43,11 @@ export function StatusBadge({ tone, label }: { tone: StatusTone; label: string }
 
 export function ContractStatusBadge({ status }: { status: ContractStatus }) {
   const meta = STATUS_META[status];
+  return <StatusBadge tone={meta.tone} label={meta.label} />;
+}
+
+/** Pre-backend statuses (GC/PPA until they migrate). */
+export function LegacyContractStatusBadge({ status }: { status: LegacyContractStatus }) {
+  const meta = LEGACY_STATUS_META[status];
   return <StatusBadge tone={meta.tone} label={meta.label} />;
 }

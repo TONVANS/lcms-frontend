@@ -240,7 +240,7 @@ function LoadedDetail({
           {lo.gc.fields.documents}
         </h2>
         <DocumentManager
-          entityType="gc"
+          module="contracts"
           entityId={contract.id}
           canUpload={canCreate}
           canDownload={canDownload}

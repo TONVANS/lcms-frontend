@@ -11,7 +11,7 @@ import { CountdownBadge } from '@/components/shared/countdown-badge';
 import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
 import { FilterChips } from '@/components/shared/filter-chips';
 import { SearchInput } from '@/components/shared/search-input';
-import { ContractStatusBadge } from '@/components/shared/status-badge';
+import { LegacyContractStatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { lo } from '@/lib/i18n/lo';
 import { formatDate } from '@/lib/utils/date';
@@ -135,7 +135,7 @@ export function PpaContractsView() {
     {
       id: 'status',
       header: lo.ppa.fields.status,
-      cell: (row) => <ContractStatusBadge status={row.status} />,
+      cell: (row) => <LegacyContractStatusBadge status={row.status} />,
     },
     {
       id: 'endDate',

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { lo } from '@/lib/i18n/lo';
 import { formatDate } from '@/lib/utils/date';
 import { cn } from '@/lib/utils/cn';
@@ -8,7 +9,7 @@ export interface TimelineItem {
   id: string;
   date?: string;
   title: string;
-  description?: string;
+  description?: ReactNode;
   status?: 'done' | 'current' | 'future';
 }
 
@@ -48,9 +49,9 @@ export function Timeline({ items, className }: TimelineProps) {
               )}
               <span className="text-sm font-medium text-[var(--text-strong)]">{item.title}</span>
               {item.description && (
-                <span className="text-xs leading-relaxed text-[var(--text-muted)]">
+                <div className="text-xs leading-relaxed text-[var(--text-muted)]">
                   {item.description}
-                </span>
+                </div>
               )}
             </div>
           </li>

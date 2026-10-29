@@ -339,7 +339,7 @@ export function RegulationWizard() {
       if (staged.length > 0) {
         const { failed } = await uploadStaged(
           staged.map((s) => s.file),
-          'legal-regulation',
+          'legal-documents',
           id,
         );
         if (failed.length > 0) {

@@ -1,4 +1,4 @@
-import type { Alert, ContractStatus, EnergyType, KeyEvent } from '@/types/domain';
+import type { Alert, EnergyType, KeyEvent, LegacyContractStatus as ContractStatus } from '@/types/domain';
 
 export type { EnergyType, ContractStatus, KeyEvent };
 

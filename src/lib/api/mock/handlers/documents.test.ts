@@ -9,66 +9,54 @@ beforeEach(() => {
   clearMockSession();
 });
 
-it('401 without a session', async () => {
-  await expect(documentsService.list('ppa', 'ppa-1')).rejects.toMatchObject({ status: 401 });
+const pdf = () => new File(['x'], 'a.pdf', { type: 'application/pdf' });
+
+it('401 without a session, with a Nest-style body', async () => {
+  await expect(documentsService.list('contracts', 'gc-001')).rejects.toMatchObject({ status: 401 });
 });
 
-describe('documents permissions', () => {
-  const gcDocId = 'doc-gc-1';
-
-  it('download needs the download permission', async () => {
+describe('attachments permissions', () => {
+  it('download needs the download permission; preview only needs view', async () => {
     setMockSession('gc.editor', false);
-    await expect(documentsService.download(gcDocId)).rejects.toMatchObject({ status: 403 });
+    const [first] = await documentsService.list('contracts', 'gc-001');
+    await expect(documentsService.preview('contracts', first.id)).resolves.toBeInstanceOf(Blob);
+    await expect(documentsService.download('contracts', first.id)).rejects.toMatchObject({ status: 403 });
     setMockSession('gc.user', false);
-    await expect(documentsService.download(gcDocId)).resolves.toBeInstanceOf(Blob);
+    await expect(documentsService.download('contracts', first.id)).resolves.toBeInstanceOf(Blob);
   });
 
   it('list needs view; upload needs create; delete needs delete', async () => {
     setMockSession('ppa.user', false);
-    await expect(documentsService.list('gc', 'gc-001')).rejects.toMatchObject({ status: 403 });
+    await expect(documentsService.list('contracts', 'gc-001')).rejects.toMatchObject({ status: 403 });
     setMockSession('gc.viewer', false);
-    await expect(documentsService.list('gc', 'gc-001')).resolves.toHaveLength(1);
-    const file = new File(['x'], 'a.pdf', { type: 'application/pdf' });
-    await expect(documentsService.upload(file, 'gc', 'gc-001')).rejects.toMatchObject({
-      status: 403,
-    });
-    await expect(documentsService.delete(gcDocId)).rejects.toMatchObject({ status: 403 });
+    const [first] = await documentsService.list('contracts', 'gc-001');
+    await expect(documentsService.upload('contracts', 'gc-001', pdf())).rejects.toMatchObject({ status: 403 });
+    await expect(documentsService.remove('contracts', first.id)).rejects.toMatchObject({ status: 403 });
     setMockSession('gc.editor', false);
-    await expect(documentsService.upload(file, 'gc', 'gc-001')).resolves.toMatchObject({
-      entityType: 'gc',
-    });
-    await expect(documentsService.delete(gcDocId)).resolves.not.toThrow();
+    await expect(documentsService.upload('contracts', 'gc-001', pdf())).resolves.toMatchObject({ fileName: 'a.pdf' });
+    await expect(documentsService.remove('contracts', first.id)).resolves.toBeUndefined();
   });
 
-  it('upload records the real mime and size, and download returns the uploaded file', async () => {
-    setMockSession('gc.user', false);
-    const file = new File(['hello world'], 'notes.txt', { type: 'text/plain' });
-    const doc = await documentsService.upload(file, 'gc', 'gc-002');
-    expect(doc).toMatchObject({ name: 'notes.txt', mime: 'text/plain', size: file.size });
-    expect(await documentsService.download(doc.id)).toBe(file);
-
-    const untyped = new File(['x'], 'blob.bin');
-    const doc2 = await documentsService.upload(untyped, 'gc', 'gc-002');
-    expect(doc2.mime).toBe('application/octet-stream');
-  });
-
-  it('download still serves seeded documents with generated content', async () => {
-    setMockSession('gc.user', false);
-    const blob = await documentsService.download('doc-gc-2'); // doc-gc-1 is deleted by an earlier test
-    expect(blob).toBeInstanceOf(Blob);
-    expect(blob.type).toBe('application/pdf');
-  });
-
-  it('delete of an unknown id is 404 after the auth check', async () => {
-    await expect(documentsService.delete('nope')).rejects.toMatchObject({ status: 401 });
-    setMockSession('gc.editor', false);
-    await expect(documentsService.delete('nope')).rejects.toMatchObject({ status: 404 });
-  });
-
-  it('ppa documents keep working for ppa users', async () => {
+  it('maps every module to its UI module key', async () => {
+    setMockSession('legal.user', false);
+    await expect(documentsService.list('legal-documents', 'reg-1')).resolves.toHaveLength(2);
+    await expect(documentsService.list('legal-cases', 'case-1')).resolves.toBeDefined();
+    await expect(documentsService.list('power-contracts', 'ppa-1')).rejects.toMatchObject({ status: 403 });
     setMockSession('ppa.user', false);
-    await expect(documentsService.download('doc-3')).resolves.toBeInstanceOf(Blob);
+    await expect(documentsService.list('power-contracts', 'ppa-1')).resolves.toHaveLength(2);
+  });
+
+  it('upload keeps the real mime/size and the returned blob has the file type', async () => {
     setMockSession('gc.user', false);
-    await expect(documentsService.download('doc-3')).rejects.toMatchObject({ status: 403 });
+    const png = new File(['hello world'], 'pic.png', { type: 'image/png' });
+    const att = await documentsService.upload('contracts', 'gc-003', png);
+    expect(att).toMatchObject({ fileName: 'pic.png', mimeType: 'image/png', fileSize: png.size });
+    const blob = await documentsService.preview('contracts', att.id);
+    expect(blob.type).toBe('image/png');
+  });
+
+  it('404 for an unknown attachment', async () => {
+    setMockSession('gc.user', false);
+    await expect(documentsService.download('contracts', 'nope')).rejects.toMatchObject({ status: 404 });
   });
 });

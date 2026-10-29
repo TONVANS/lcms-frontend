@@ -348,7 +348,7 @@ export function GcWizardView() {
       }
       const id = createdIdRef.current;
       const results = await Promise.allSettled(
-        staged.map((s) => documentsService.upload(s.file, 'gc', id)),
+        staged.map((s) => documentsService.upload('contracts', id, s.file)),
       );
       const failed = staged.filter((_, i) => results[i].status === 'rejected');
       // The user should learn about failed files even if they already navigated away.

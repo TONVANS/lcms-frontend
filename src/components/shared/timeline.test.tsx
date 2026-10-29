@@ -26,4 +26,9 @@ describe('Timeline', () => {
     expect(li[1]).toHaveTextContent(lo.timeline.status.current);
     expect(li[2]).toHaveTextContent(lo.timeline.status.future);
   });
+
+  it('accepts rich descriptions', () => {
+    render(<Timeline items={[{ id: 'r', title: 't', description: <ul><li>detail</li></ul> }]} />);
+    expect(screen.getByText('detail')).toBeInTheDocument();
+  });
 });

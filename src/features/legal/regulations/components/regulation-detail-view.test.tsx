@@ -142,7 +142,7 @@ describe('RegulationDetailView', () => {
   });
 
   it.each(['legal.viewer', 'legal.editor', 'legal.user'])(
-    'DocumentManager gets legal-regulation and permissions for %s',
+    'DocumentManager gets legal-documents and permissions for %s',
     async (username) => {
       session(username);
       const me = MOCK_USERS.find((u) => u.username === username)!;
@@ -150,7 +150,7 @@ describe('RegulationDetailView', () => {
       render(<RegulationDetailView id="reg-1" />);
       await screen.findByRole('heading', { level: 1, name: r.title });
       const props = vi.mocked(DocumentManager).mock.calls.at(-1)![0];
-      expect(props.entityType).toBe('legal-regulation');
+      expect(props.module).toBe('legal-documents');
       expect(props.entityId).toBe('reg-1');
       const can = (p: 'create' | 'download' | 'delete') => hasPermission(me, 'legal', p);
       expect(props.canUpload).toBe(can('create'));

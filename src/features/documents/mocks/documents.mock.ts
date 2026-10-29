@@ -1,103 +1,61 @@
-import type { DocumentFile } from '../types';
+import type { AttachmentModule } from '@/types/domain';
 
-export const MOCK_DOCUMENTS: DocumentFile[] = [
-  {
-    id: 'doc-1',
-    name: 'PPA-NamTheun2-Agreement-Signed.pdf',
-    mime: 'application/pdf',
-    size: 4520000,
-    version: '1.0',
-    uploadedAt: '2026-01-15T10:00:00Z',
-    uploadedBy: 'admin',
-    entityType: 'ppa',
-    entityId: 'ppa-1',
-  },
-  {
-    id: 'doc-2',
-    name: 'Environmental-Impact-Assessment-NT2.pdf',
-    mime: 'application/pdf',
-    size: 12400000,
-    version: '2.1',
-    uploadedAt: '2026-02-01T14:30:00Z',
-    uploadedBy: 'ppa.user',
-    entityType: 'ppa',
-    entityId: 'ppa-1',
-  },
-  {
-    id: 'doc-3',
-    name: 'Technical-Specifications-NamNgum1.docx',
-    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    size: 2150000,
-    version: '1.2',
-    uploadedAt: '2026-02-20T09:15:00Z',
-    uploadedBy: 'ppa.user',
-    entityType: 'ppa',
-    entityId: 'ppa-2',
-  },
-  {
-    id: 'doc-4',
-    name: 'Tariff-Calculation-Sheet.xlsx',
-    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    size: 890000,
-    version: '1.0',
-    uploadedAt: '2026-03-05T11:00:00Z',
-    uploadedBy: 'admin',
-    entityType: 'ppa',
-    entityId: 'ppa-3',
-  },
-  {
-    id: 'doc-gc-1',
-    name: 'GC-2026-001-Contract-Signed.pdf',
-    mime: 'application/pdf',
-    size: 3200000,
-    version: '1.0',
-    uploadedAt: '2026-03-10T09:00:00Z',
-    uploadedBy: 'gc.user',
-    entityType: 'gc',
-    entityId: 'gc-001',
-  },
-  {
-    id: 'doc-gc-2',
-    name: 'GC-2026-004-Annex-A.pdf',
-    mime: 'application/pdf',
-    size: 910000,
-    version: '1.0',
-    uploadedAt: '2026-03-12T13:20:00Z',
-    uploadedBy: 'gc.editor',
-    entityType: 'gc',
-    entityId: 'gc-004',
-  },
-  {
-    id: 'doc-reg-1',
-    name: 'Regulation-351-KPIs-Signed.pdf',
-    mime: 'application/pdf',
-    size: 1280000,
-    version: '1.0',
-    uploadedAt: '2026-06-23T09:00:00Z',
-    uploadedBy: 'legal.user',
-    entityType: 'legal-regulation',
-    entityId: 'reg-1',
-  },
-  {
-    id: 'doc-reg-2',
-    name: 'Regulation-351-KPIs-Annex.pdf',
-    mime: 'application/pdf',
-    size: 640000,
-    version: '1.0',
-    uploadedAt: '2026-06-23T09:30:00Z',
-    uploadedBy: 'legal.user',
-    entityType: 'legal-regulation',
-    entityId: 'reg-1',
-  },
-  {
-    id: 'doc-reg-3',
-    name: 'Regulation-Personnel-Appointment.pdf',
-    mime: 'application/pdf',
-    size: 450000,
-    version: '1.0',
-    uploadedAt: '2026-07-05T10:15:00Z',
-    uploadedBy: 'legal.user',
-    entityType: 'legal-regulation',
-    entityId: 'reg-2',
-  },
+/** Smallest valid single-page PDF. */
+export const MOCK_PDF_BYTES: Uint8Array = new TextEncoder().encode(
+  '%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n' +
+    'trailer<</Root 1 0 R/Size 4>>\n%%EOF\n',
+);
+
+/** 1x1 transparent PNG. */
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+export function mockPngBytes(): Uint8Array {
+  const bin = atob(PNG_BASE64);
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+export interface MockAttachmentSeed {
+  id: string;
+  module: AttachmentModule;
+  entityId: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  uploadedBy: string;
+}
+
+const pdf = (
+  id: string,
+  module: AttachmentModule,
+  entityId: string,
+  fileName: string,
+  fileSize: number,
+  createdAt: string,
+  uploadedBy: string,
+): MockAttachmentSeed => ({
+  id,
+  module,
+  entityId,
+  fileName,
+  mimeType: 'application/pdf',
+  fileSize,
+  createdAt,
+  uploadedBy,
+});
+
+/** Seeded for ids the existing GC / legal / PPA mocks use. */
+export const MOCK_ATTACHMENTS: MockAttachmentSeed[] = [
+  pdf('att-ppa-1-a', 'power-contracts', 'ppa-1', 'PPA-NamTheun2-Agreement-Signed.pdf', 4520000, '2026-01-15T10:00:00.000Z', 'admin'),
+  pdf('att-ppa-1-b', 'power-contracts', 'ppa-1', 'Environmental-Impact-Assessment-NT2.pdf', 12400000, '2026-02-01T14:30:00.000Z', 'ppa.user'),
+  pdf('att-ppa-2-a', 'power-contracts', 'ppa-2', 'Technical-Specifications-NamNgum1.pdf', 2150000, '2026-02-20T09:15:00.000Z', 'ppa.user'),
+  pdf('att-gc-001-a', 'contracts', 'gc-001', 'GC-2026-001-Contract-Signed.pdf', 3200000, '2026-03-10T09:00:00.000Z', 'gc.user'),
+  pdf('att-gc-004-a', 'contracts', 'gc-004', 'GC-2026-004-Annex-A.pdf', 910000, '2026-03-12T13:20:00.000Z', 'gc.editor'),
+  pdf('att-reg-1-a', 'legal-documents', 'reg-1', 'Regulation-351-KPIs-Signed.pdf', 1280000, '2026-06-23T09:00:00.000Z', 'legal.user'),
+  pdf('att-reg-1-b', 'legal-documents', 'reg-1', 'Regulation-351-KPIs-Annex.pdf', 640000, '2026-06-23T09:30:00.000Z', 'legal.user'),
+  pdf('att-reg-2-a', 'legal-documents', 'reg-2', 'Regulation-Personnel-Appointment.pdf', 450000, '2026-07-05T10:15:00.000Z', 'legal.user'),
+  pdf('att-case-1-a', 'legal-cases', 'case-1', 'Case-1-Court-Summons.pdf', 530000, '2026-07-10T08:45:00.000Z', 'legal.user'),
 ];

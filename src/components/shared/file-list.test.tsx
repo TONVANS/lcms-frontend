@@ -23,4 +23,14 @@ describe('FileList', () => {
     await user.click(screen.getByRole('button', { name: lo.dropzone.deleteFile('ppa-contract.pdf') }));
     expect(onDelete).toHaveBeenCalledWith(files[0]);
   });
+
+  it('shows the uploader and calls onPreview', async () => {
+    const user = userEvent.setup();
+    const onPreview = vi.fn();
+    const files = [{ id: 'f-2', name: 'b.pdf', size: 10, uploadedBy: 'Somchai' }];
+    render(<FileList files={files} onPreview={onPreview} />);
+    expect(screen.getByText(/Somchai/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: lo.dropzone.previewFile('b.pdf') }));
+    expect(onPreview).toHaveBeenCalledWith(files[0]);
+  });
 });

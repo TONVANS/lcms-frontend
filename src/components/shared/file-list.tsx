@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, File, FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
+import { Download, Eye, File, FileSpreadsheet, FileText, Trash2 } from 'lucide-react';
 import { BADGE_TONE_CLASS } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { lo } from '@/lib/i18n/lo';
@@ -14,11 +14,13 @@ export interface FileItem {
   size: number;
   mime?: string;
   uploadedAt?: string;
+  uploadedBy?: string | null;
   url?: string;
 }
 
 export interface FileListProps {
   files: FileItem[];
+  onPreview?: (file: FileItem) => void;
   onDownload?: (file: FileItem) => void;
   onDelete?: (file: FileItem) => void;
   className?: string;
@@ -66,7 +68,7 @@ function formatBytes(bytes: number): string {
   return `${formatNumber(val, 1)} ${sizes[i]}`;
 }
 
-export function FileList({ files, onDownload, onDelete, className }: FileListProps) {
+export function FileList({ files, onPreview, onDownload, onDelete, className }: FileListProps) {
   if (files.length === 0) {
     return (
       <div className="py-6 text-center text-xs text-[var(--text-muted)]">
@@ -105,11 +107,24 @@ export function FileList({ files, onDownload, onDelete, className }: FileListPro
                 <p className="text-[11px] tabular-nums text-[var(--text-muted)]">
                   {formatBytes(file.size)}
                   {file.uploadedAt && ` • ${formatDate(file.uploadedAt)}`}
+                  {file.uploadedBy && ` • ${file.uploadedBy}`}
                 </p>
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
+              {onPreview && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={lo.dropzone.previewFile(file.name)}
+                  onClick={() => onPreview(file)}
+                  className="size-11 text-[var(--text-secondary)] hover:text-[var(--text)]"
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
               {onDownload && (
                 <Button
                   type="button"
