@@ -4,11 +4,11 @@ import { Calendar, ChevronRight } from 'lucide-react';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { FadeIn } from '@/components/shared/fade-in';
-import { lo } from '@/lib/i18n/lo';
 import { MODULES } from '@/lib/constants/modules';
+import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
-import type { Alert } from '@/types/domain';
+import type { UpcomingItem } from '../types';
 import { CHIP_CLASS } from './module-card';
 
 const STAGGER_LIMIT = 10;
@@ -23,25 +23,20 @@ function Row({ index, children }: { index: number; children: ReactNode }) {
   );
 }
 
-export function UpcomingList({ alerts }: { alerts: Alert[] }) {
-  if (alerts.length === 0) {
-    return (
-      <EmptyState
-        title={lo.home.noUpcoming}
-        description="ທຸກສັນຍາ ແລະ ພັນທະຢູ່ໃນກຳນົດເວລາປົກກະຕິ ບໍ່ມີລາຍການໃກ້ໝົດອາຍຸໃນ 30 ມື້ນີ້"
-      />
-    );
+export function UpcomingList({ items }: { items: UpcomingItem[] }) {
+  if (items.length === 0) {
+    return <EmptyState title={lo.home.noUpcoming} description={lo.home.noUpcomingDesc} />;
   }
 
   return (
     <ul className="flex flex-col gap-2.5">
-      {alerts.map((a, i) => {
+      {items.map((a, i) => {
         const meta = MODULES[a.module];
         const Icon = meta.icon;
         return (
-          <Row key={a.id} index={i}>
+          <Row key={a.key} index={i}>
             <Link
-              href={meta.href}
+              href={a.href}
               className="group flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[14px] border border-border/40 bg-[var(--surface-inset)]/70 px-4 py-3.5 transition-all duration-200 hover:border-primary/30 hover:bg-[var(--surface-inset)] hover:shadow-sm"
             >
               <div className="flex min-w-0 flex-1 items-center gap-3 basis-64">
@@ -54,17 +49,20 @@ export function UpcomingList({ alerts }: { alerts: Alert[] }) {
                 >
                   <Icon aria-hidden="true" className="size-4" />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-strong group-hover:text-primary transition-colors">
-                  {a.title}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-text-strong transition-colors group-hover:text-primary">
+                    {a.title}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">{a.number}</span>
                 </span>
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
                   <Calendar aria-hidden="true" className="size-3.5 text-muted-foreground/70" />
-                  <span>{formatDate(a.dueDate)}</span>
+                  <span>{formatDate(a.expirationDate)}</span>
                 </span>
-                <CountdownBadge days={daysLeft(a.dueDate)} />
+                <CountdownBadge days={daysLeft(a.expirationDate)} />
                 <ChevronRight
                   aria-hidden="true"
                   className="size-4 text-muted-foreground/50 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-primary"

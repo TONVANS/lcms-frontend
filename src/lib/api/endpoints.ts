@@ -75,13 +75,4 @@ export const endpoints = {
   auditLogs: {
     list: '/audit-logs',
   },
-
-  // ---- Legacy (pre-backend) keys ----
-  home: {
-    summary: '/home/summary',
-  },
-  alerts: {
-    list: '/alerts',
-    read: (id: string) => `/alerts/${id}/read`,
-  },
 } as const;
