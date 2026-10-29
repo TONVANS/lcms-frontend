@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/shared/glass-card';
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { formatNumber } from '@/lib/utils/number';
 import type { ModuleKey } from '@/types/domain';
-import type { ModuleStats } from '../types';
+import type { ModuleCardVm } from '../types';
 
 // Tinted chip recipe (Design.md section 2.4): 12% fill, 30% border, accent text.
 export const CHIP_CLASS: Record<ModuleKey, string> = {
@@ -23,28 +24,22 @@ const EYEBROW_CLASS: Record<ModuleKey, string> = {
 };
 
 const SUBTITLES: Record<ModuleKey, string> = {
-  ppa: lo.home.ppaSubtitle ?? 'ສັນຍາຊື້-ຂາຍໄຟຟ້າ & ພະລັງງານ',
-  gc: lo.home.gcSubtitle ?? 'ສັນຍາທົ່ວໄປ, ການຄ້າ & ຈັດຊື້-ຈັດຈ້າງ',
-  legal: lo.home.legalSubtitle ?? 'ນິຕິກຳ, ລະບຽບການ & ຄະດີຄວາມ',
+  ppa: lo.home.ppaSubtitle,
+  gc: lo.home.gcSubtitle,
+  legal: lo.home.legalSubtitle,
 };
 
 interface ModuleCardProps {
   module: ModuleKey;
-  stats?: ModuleStats;
+  card?: ModuleCardVm;
+  /** Set when the module's dashboards failed to load. */
+  onRetry?: () => void;
 }
 
-export function ModuleCard({ module, stats }: ModuleCardProps) {
+export function ModuleCard({ module, card, onRetry }: ModuleCardProps) {
   const meta = MODULES[module];
   const Icon = meta.icon;
-  const items: Array<{
-    label: string;
-    value: number | undefined;
-    indicator?: 'neutral' | 'emerald' | 'amber';
-  }> = [
-    { label: lo.home.stats.total, value: stats?.total, indicator: 'neutral' },
-    { label: lo.home.stats.active, value: stats?.active, indicator: 'emerald' },
-    { label: lo.home.stats.expiring, value: stats?.expiring, indicator: 'amber' },
-  ];
+  const metrics = card?.metrics ?? [];
 
   return (
     <GlassCard
@@ -94,26 +89,34 @@ export function ModuleCard({ module, stats }: ModuleCardProps) {
           {meta.name}
         </h2>
 
-        {/* Metric Pods */}
-        <dl className="grid grid-cols-3 gap-2.5 pt-1">
-          {items.map(({ label, value, indicator }) => (
-            <div
-              key={label}
-              className="flex flex-col justify-center rounded-xl bg-[var(--surface-inset)]/60 px-3 py-2.5 border border-white/5 transition-colors group-hover:bg-[var(--surface-inset)]"
-            >
-              <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-              <dd className="mt-1 flex items-center gap-1.5 text-xl font-bold text-text-strong tabular-nums">
-                {indicator === 'emerald' && (value ?? 0) > 0 ? (
-                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
-                ) : null}
-                {indicator === 'amber' && (value ?? 0) > 0 ? (
-                  <span className="size-1.5 rounded-full bg-amber-400 shrink-0 animate-pulse" aria-hidden="true" />
-                ) : null}
-                <span>{value === undefined ? '—' : formatNumber(value)}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
+        {onRetry ? (
+          <div role="alert" className="flex flex-col items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">
+            <p>{lo.home.moduleLoadError}</p>
+            <Button variant="secondary" size="sm" onClick={onRetry}>
+              {lo.common.retry}
+            </Button>
+          </div>
+        ) : (
+          <dl className={cn('grid gap-2.5 pt-1', metrics.length === 4 ? 'grid-cols-2' : 'grid-cols-3')}>
+            {metrics.map(({ id, label, value, tone }) => (
+              <div
+                key={id}
+                className="flex flex-col justify-center rounded-xl bg-[var(--surface-inset)]/60 px-3 py-2.5 border border-white/5 transition-colors group-hover:bg-[var(--surface-inset)]"
+              >
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 flex items-center gap-1.5 text-xl font-bold text-text-strong tabular-nums">
+                  {tone === 'emerald' && value > 0 ? (
+                    <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden="true" />
+                  ) : null}
+                  {tone === 'amber' && value > 0 ? (
+                    <span className="size-1.5 rounded-full bg-amber-400 shrink-0" aria-hidden="true" />
+                  ) : null}
+                  <span>{formatNumber(value)}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
 
       {/* Action CTA */}

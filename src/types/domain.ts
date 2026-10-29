@@ -91,14 +91,3 @@ export interface HistoryEntry {
   userName: string | null;
   changes: { field: string; label: string; oldValue: string | null; newValue: string | null }[];
 }
-
-export interface Alert {
-  id: string;
-  module: ModuleKey;
-  entityType: string;
-  entityId: string;
-  title: string;
-  dueDate: string;
-  daysLeft: number;
-  read: boolean;
-}
