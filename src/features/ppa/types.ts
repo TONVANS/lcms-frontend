@@ -1,83 +1,66 @@
-import type { Alert, EnergyType, KeyEvent, LegacyContractStatus as ContractStatus } from '@/types/domain';
+import type { ContractStatus, Currency } from '@/types/domain';
 
-export type { EnergyType, ContractStatus, KeyEvent };
+export type { ContractStatus, Currency };
 
-export interface PpaDeveloper {
+export const POWER_CONTRACT_TYPES = ['PURCHASE', 'SALE'] as const;
+export type PowerContractType = (typeof POWER_CONTRACT_TYPES)[number];
+
+export const POWER_STATUSES: readonly ContractStatus[] = [
+  'DRAFT',
+  'ACTIVE',
+  'EXPIRING_SOON',
+  'EXPIRED',
+  'TERMINATED',
+];
+
+export const POWER_CAPACITY_UNITS = ['MW', 'kW'] as const;
+export type CapacityUnit = (typeof POWER_CAPACITY_UNITS)[number];
+
+export const POWER_CURRENCIES: readonly Currency[] = ['LAK', 'USD', 'CNY'];
+
+export const POWER_PAGE_SIZES = [10, 20, 50] as const;
+
+/** Mapped model of a backend power contract (numbers and dates already coerced). */
+export interface PowerContract {
   id: string;
-  name: string;
-}
-
-export interface PpaContract {
-  id: string;
-  contractNo: string;
+  contractType: PowerContractType;
+  contractNumber: string;
   projectName: string;
-  developer: PpaDeveloper;
-  energyType: EnergyType;
-  capacityMw: number;
-  tariffUsCentPerKwh: number;
-  annualEnergyGwh?: number | null;
-  market: 'domestic' | 'export';
-  signedDate?: string;
-  codDate?: string;
-  endDate?: string;
-  termYears?: number;
+  projectTypeOrCustomer: string;
+  durationText: string | null;
+  durationMonths: number | null;
+  signedDate: string | null;
+  effectiveDate: string | null;
+  expirationDate: string | null;
+  installedCapacity: string | null;
+  capacityValue: number | null;
+  capacityUnit: CapacityUnit | null;
+  projectLocation: string | null;
+  tariff: string | null;
+  tariffValue: number | null;
+  tariffCurrency: Currency | null;
+  additionalDetails: string | null;
+  notifyDaysBefore: number | null;
   status: ContractStatus;
-  ownerUserId: string;
-  nextEvent?: KeyEvent;
-  alertDays: number[];
-  notes?: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
-export interface PpaContractInput {
-  contractNo: string;
-  projectName: string;
-  developerName: string;
-  energyType: EnergyType;
-  capacityMw: number;
-  tariffUsCentPerKwh: number;
-  annualEnergyGwh?: number | null;
-  market: 'domestic' | 'export';
-  signedDate?: string;
-  codDate?: string;
-  endDate?: string;
-  termYears?: number;
+export interface PowerContractsDashboard {
+  total: number;
+  byStatus: { status: ContractStatus; count: number }[];
+  purchaseCount: number;
+  saleCount: number;
+  totalCapacityMw: number;
+  byProjectType: { projectType: string; count: number; capacityMw: number }[];
+  expiringSoon: PowerContract[];
+}
+
+export interface PowerListQuery {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  contractType?: PowerContractType;
   status?: ContractStatus;
-  alertDays?: number[];
-  notes?: string;
-}
-
-export interface PpaDashboardSummary {
-  kpis: {
-    totalContracts: number;
-    activeCapacityMw: number;
-    expiringCount: number;
-    avgTariff: number;
-  };
-  energyBreakdown: Array<{
-    energyType: EnergyType;
-    label: string;
-    count: number;
-    capacityMw: number;
-    percentage: number;
-  }>;
-  statusBreakdown: Array<{
-    status: ContractStatus;
-    count: number;
-  }>;
-  monthlyExpiring: Array<{
-    month: string;
-    count: number;
-  }>;
-  upcomingAlerts: Alert[];
-}
-
-export interface PpaFilterState {
-  q: string;
-  status: string;
-  energyType: string;
-  market: string;
-  page: number;
-  pageSize: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
+  projectTypeOrCustomer?: string;
 }

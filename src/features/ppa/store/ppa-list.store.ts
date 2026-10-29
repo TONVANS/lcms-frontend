@@ -3,119 +3,77 @@ import { isCanceledError, normalizeError } from '@/lib/api/errors';
 import { registerLogoutReset } from '@/lib/auth/logout-registry';
 import type { ApiError } from '@/types/api';
 import { ppaService } from '../api/ppa.service';
-import type { PpaContract, PpaFilterState } from '../types';
+import type { PowerContract, PowerListQuery } from '../types';
+import { DEFAULT_POWER_QUERY } from './ppa-list-query';
 
 interface PpaListState {
-  filters: PpaFilterState;
-  items: PpaContract[];
+  query: PowerListQuery;
+  items: PowerContract[];
   total: number;
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: ApiError | null;
-  setFilter<K extends keyof PpaFilterState>(key: K, value: PpaFilterState[K]): void;
-  setFilters(partial: Partial<PpaFilterState>): void;
-  resetFilters(): void;
+  /** Patch semantics: any patch without `page` resets page to 1. */
+  setQuery(patch: Partial<PowerListQuery>): void;
+  /** Replace semantics: the whole query becomes the defaults plus `q`. */
+  replaceQuery(q: PowerListQuery): void;
   fetch(): Promise<void>;
+  afterDelete(): Promise<void>;
   reset(): void;
 }
 
-const defaultFilters: PpaFilterState = {
-  q: '',
-  status: 'all',
-  energyType: 'all',
-  market: 'all',
-  page: 1,
-  pageSize: 10,
-};
-
-let generation = 0;
-
-export const usePpaListStore = create<PpaListState>()((set, get) => ({
-  filters: { ...defaultFilters },
+const initial = (): Pick<PpaListState, 'query' | 'items' | 'total' | 'status' | 'error'> => ({
+  query: { ...DEFAULT_POWER_QUERY },
   items: [],
   total: 0,
   status: 'idle',
   error: null,
+});
 
-  setFilter(key, value) {
-    set((state) => ({
-      filters: {
-        ...state.filters,
-        [key]: value,
-        // Reset to page 1 if any filter besides page changed
-        page: key === 'page' ? (value as number) : 1,
-      },
-    }));
-    get().fetch();
+// Every fetch and reset bumps it; a response from an older generation is dropped.
+let generation = 0;
+
+export const usePpaListStore = create<PpaListState>()((set, get) => ({
+  ...initial(),
+
+  setQuery(patch) {
+    set((s) => ({ query: { ...s.query, ...patch, page: patch.page ?? 1 } }));
   },
 
-  setFilters(partial) {
-    set((state) => ({
-      filters: {
-        ...state.filters,
-        ...partial,
-        page: partial.page ?? (partial.q !== undefined || partial.status !== undefined || partial.energyType !== undefined ? 1 : state.filters.page),
-      },
-    }));
-    get().fetch();
-  },
-
-  resetFilters() {
-    set({ filters: { ...defaultFilters } });
-    get().fetch();
+  replaceQuery(q) {
+    set({ query: { ...DEFAULT_POWER_QUERY, ...q } });
   },
 
   async fetch() {
     const gen = ++generation;
+    const prev = { status: get().status, error: get().error };
     set({ status: 'loading', error: null });
-
     try {
-      const { filters } = get();
-      const res = await ppaService.list({
-        q: filters.q || undefined,
-        status: filters.status !== 'all' ? filters.status : undefined,
-        page: filters.page,
-        pageSize: filters.pageSize,
-        sort: filters.sort,
-        order: filters.order,
-      });
-
+      const res = await ppaService.list(get().query);
       if (gen !== generation) return;
-
-      // Also filter by energyType & market if service returned unfiltered (in mock mode service handles it)
-      let items = res.items;
-      if (filters.energyType && filters.energyType !== 'all') {
-        items = items.filter((i) => i.energyType === filters.energyType);
-      }
-      if (filters.market && filters.market !== 'all') {
-        items = items.filter((i) => i.market === filters.market);
-      }
-
-      set({
-        items,
-        total: res.total,
-        status: 'ready',
-        error: null,
-      });
+      set({ items: res.items, total: res.total, status: 'ready', error: null });
     } catch (e) {
       if (gen !== generation) return;
-      if (isCanceledError(e)) return;
+      if (isCanceledError(e)) {
+        const status = prev.status === 'loading' ? (get().items.length > 0 ? 'ready' : 'idle') : prev.status;
+        set({ status, error: prev.error });
+        return;
+      }
+      set({ status: 'error', error: normalizeError(e) });
+    }
+  },
 
-      set({
-        status: 'error',
-        error: normalizeError(e),
-      });
+  async afterDelete() {
+    await get().fetch();
+    const { items, query } = get();
+    if (items.length === 0 && (query.page ?? 1) > 1) {
+      set({ query: { ...query, page: (query.page ?? 1) - 1 } });
+      await get().fetch();
     }
   },
 
   reset() {
     generation += 1;
-    set({
-      filters: { ...defaultFilters },
-      items: [],
-      total: 0,
-      status: 'idle',
-      error: null,
-    });
+    set(initial());
   },
 }));
 

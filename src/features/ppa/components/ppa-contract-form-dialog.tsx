@@ -1,354 +1,187 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Zap } from 'lucide-react';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Loader2, Zap } from 'lucide-react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useForm, type FieldErrors } from 'react-hook-form';
+import { toast } from 'sonner';
+import { AlertBanner } from '@/components/shared/alert-banner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { useProjectTypes } from '@/features/lookups';
+import { useReturnFocus } from '@/hooks/use-return-focus';
+import { normalizeError } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
-import { ppaSchema, type PpaFormValues } from '../schemas/ppa.schema';
-import type { EnergyType, PpaContract } from '../types';
+import { ppaService } from '../api/ppa.service';
+import {
+  diffPayload,
+  emptyPowerForm,
+  fromPowerContract,
+  toPowerContractPayload,
+  type PowerFormValues,
+} from '../schemas/ppa.schema';
+import type { PowerContract } from '../types';
+import { PpaFormFieldGroup, firstInvalidFieldId } from './ppa-contract-form-fields';
+import { applyPpaServerError, makePowerResolver } from './ppa-form-support';
 
 export interface PpaContractFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: PpaFormValues) => Promise<void>;
-  initialData?: PpaContract;
+  contract?: PowerContract;
+  onSaved: (c: PowerContract) => void;
 }
 
-export function PpaContractFormDialog({
-  open,
-  onOpenChange,
-  onSubmit,
-  initialData,
-}: PpaContractFormDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+function focusById(id: string | null): void {
+  if (id) document.getElementById(id)?.focus();
+}
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-    reset,
-  } = useForm<PpaFormValues>({
-    resolver: zodResolver(ppaSchema),
-    defaultValues: initialData
-      ? {
-          contractNo: initialData.contractNo,
-          projectName: initialData.projectName,
-          developerName: initialData.developer.name,
-          energyType: initialData.energyType,
-          capacityMw: initialData.capacityMw,
-          tariffUsCentPerKwh: initialData.tariffUsCentPerKwh,
-          annualEnergyGwh: initialData.annualEnergyGwh ?? undefined,
-          market: initialData.market,
-          signedDate: initialData.signedDate ?? '',
-          codDate: initialData.codDate ?? '',
-          endDate: initialData.endDate ?? '',
-          termYears: initialData.termYears ?? 25,
-          status: initialData.status,
-          notes: initialData.notes ?? '',
-        }
-      : {
-          contractNo: '',
-          projectName: '',
-          developerName: '',
-          energyType: 'hydro',
-          capacityMw: 100,
-          tariffUsCentPerKwh: 5.5,
-          market: 'domestic',
-          signedDate: '2026-01-01',
-          codDate: '2027-01-01',
-          endDate: '2052-01-01',
-          termYears: 25,
-          status: 'active',
-          notes: '',
-        },
+interface BodyProps {
+  contract?: PowerContract;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (c: PowerContract) => void;
+  busyRef: RefObject<boolean>;
+  onBusyChange: (busy: boolean) => void;
+}
+
+/** Mounted fresh each time the dialog opens (and per contract), so no value leaks between openings. */
+function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyChange }: BodyProps) {
+  const projectTypes = useProjectTypes();
+  const initial = contract?.projectTypeOrCustomer ?? '';
+
+  const form = useForm<PowerFormValues>({
+    resolver: makePowerResolver({ types: projectTypes.items, ready: projectTypes.status === 'ready', initial }),
+    defaultValues: contract ? fromPowerContract(contract) : emptyPowerForm(),
+    shouldFocusError: false,
   });
+  const { handleSubmit, formState } = form;
+  const [banner, setBanner] = useState<string | null>(null);
+  const alive = useRef(true);
 
-  const energyType = watch('energyType');
-  const market = watch('market');
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
-  const onFormSubmit = async (data: PpaFormValues) => {
-    setIsSubmitting(true);
+  const onInvalid = (errors: FieldErrors<PowerFormValues>) => focusById(firstInvalidFieldId(errors));
+
+  const onValid = async (values: PowerFormValues) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    onBusyChange(true);
+    setBanner(null);
     try {
-      await onSubmit(data);
-      reset();
+      const payload = toPowerContractPayload(values);
+      const saved = contract
+        ? await ppaService.update(contract.id, diffPayload(payload, contract))
+        : await ppaService.create(payload);
+      busyRef.current = false;
+      onBusyChange(false);
+      onSaved(saved);
+      if (!alive.current) return;
+      toast.success(lo.ppa.form.saved);
       onOpenChange(false);
     } catch (e) {
-      console.error(e);
+      if (!alive.current) return;
+      const applied = applyPpaServerError(form, normalizeError(e));
+      focusById(applied.focusId);
+      if (applied.banner) setBanner(applied.banner);
     } finally {
-      setIsSubmitting(false);
+      busyRef.current = false;
+      onBusyChange(false);
     }
   };
 
+  const saving = formState.isSubmitting;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[760px] overflow-y-auto rounded-[24px] border border-[var(--border-glass)] bg-[var(--surface-modal)] p-6 sm:p-8 shadow-2xl backdrop-blur-2xl">
-        <DialogHeader className="flex flex-row items-center gap-3 border-b border-[var(--border-subtle)] pb-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--ppa)]/40 bg-[var(--ppa)]/10 text-[var(--ppa)]">
-            <Zap className="h-5 w-5" />
+    <form
+      noValidate
+      aria-busy={saving}
+      onSubmit={(e) => {
+        void handleSubmit(onValid, onInvalid)(e);
+      }}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
+        <PpaFormFieldGroup group="general" form={form} />
+        <PpaFormFieldGroup group="dates" form={form} />
+        <PpaFormFieldGroup group="tech" form={form} />
+        <PpaFormFieldGroup group="notes" form={form} />
+        {banner ? <AlertBanner tone="rose" title={banner} /> : null}
+      </div>
+
+      <DialogFooter className="mx-0 mb-0 flex shrink-0 items-center justify-between border-t border-(--border-subtle) bg-white/[0.02] px-6 py-4 sm:px-8">
+        <span className="hidden text-xs text-(--text-muted) sm:inline">{lo.ppa.form.requiredHint}</span>
+        <div className="ml-auto flex items-center gap-2.5">
+          <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
+            {lo.ppa.form.cancel}
+          </Button>
+          <Button type="submit" disabled={saving} className="min-w-28 gap-2">
+            {saving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                <span>{lo.ppa.form.saving}</span>
+              </>
+            ) : (
+              lo.ppa.form.save
+            )}
+          </Button>
+        </div>
+      </DialogFooter>
+    </form>
+  );
+}
+
+export function PpaContractFormDialog({ open, onOpenChange, contract, onSaved }: PpaContractFormDialogProps) {
+  const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const returnFocus = useReturnFocus(open);
+
+  // A request in flight cannot be abandoned: closing is ignored until it settles.
+  const handleOpenChange = (next: boolean) => {
+    if (!next && busyRef.current) return;
+    onOpenChange(next);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        showCloseButton={!busy}
+        onCloseAutoFocus={returnFocus}
+        className="flex max-h-[90vh] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-[26px] border border-(--border-glass) bg-(image:--surface-modal) p-0 shadow-2xl sm:max-w-[780px]"
+      >
+        <DialogHeader className="flex shrink-0 flex-row items-center gap-3.5 border-b border-(--border-subtle) px-6 py-4.5 sm:px-8">
+          <div
+            aria-hidden="true"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-(--ppa)/30 bg-(--ppa)/15 text-(--ppa) shadow-xs"
+          >
+            <Zap className="size-5.5" />
           </div>
-          <div>
-            <DialogTitle className="font-serif text-xl font-semibold text-[var(--text-strong)]">
-              {initialData ? lo.ppa.actions.edit : lo.ppa.actions.createModal}
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle className="font-serif text-xl font-semibold text-(--text-strong)">
+              {contract ? lo.ppa.form.editTitle : lo.ppa.form.createTitle}
             </DialogTitle>
-            <p className="text-xs text-[var(--text-muted)]">
-              {lo.ppa.subtitle}
-            </p>
+            <DialogDescription className="text-xs text-(--text-muted)">
+              {lo.ppa.form.requiredHint}
+            </DialogDescription>
           </div>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit(onFormSubmit)} className="flex flex-col gap-5 py-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Contract No */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="contractNo" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.contractNo} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="contractNo"
-                {...register('contractNo')}
-                placeholder="PPA-EDL-2026-..."
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.contractNo && (
-                <span className="text-[11px] text-rose-400">{errors.contractNo.message}</span>
-              )}
-            </div>
-
-            {/* Project Name */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="projectName" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.projectName} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="projectName"
-                {...register('projectName')}
-                placeholder="ເຂື່ອນໄຟຟ້າ..."
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.projectName && (
-                <span className="text-[11px] text-rose-400">{errors.projectName.message}</span>
-              )}
-            </div>
-
-            {/* Developer Name */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="developerName" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.developer} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="developerName"
-                {...register('developerName')}
-                placeholder="ຊື່ບໍລິສັດ/ຜູ້ພັດທະນາ"
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.developerName && (
-                <span className="text-[11px] text-rose-400">{errors.developerName.message}</span>
-              )}
-            </div>
-
-            {/* Energy Type */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="energyType" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.energyType} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Select
-                value={energyType}
-                onValueChange={(val) => setValue('energyType', val as EnergyType)}
-              >
-                <SelectTrigger id="energyType" className="bg-[var(--surface-input)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hydro">{lo.energy.hydro}</SelectItem>
-                  <SelectItem value="solar">{lo.energy.solar}</SelectItem>
-                  <SelectItem value="wind">{lo.energy.wind}</SelectItem>
-                  <SelectItem value="coal">{lo.energy.coal}</SelectItem>
-                  <SelectItem value="biomass">{lo.energy.biomass}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Capacity MW */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="capacityMw" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.capacityMw} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="capacityMw"
-                type="number"
-                step="any"
-                {...register('capacityMw', { valueAsNumber: true })}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.capacityMw && (
-                <span className="text-[11px] text-rose-400">{errors.capacityMw.message}</span>
-              )}
-            </div>
-
-            {/* Tariff US cents */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="tariffUsCentPerKwh" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.tariff} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="tariffUsCentPerKwh"
-                type="number"
-                step="any"
-                {...register('tariffUsCentPerKwh', { valueAsNumber: true })}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.tariffUsCentPerKwh && (
-                <span className="text-[11px] text-rose-400">{errors.tariffUsCentPerKwh.message}</span>
-              )}
-            </div>
-
-            {/* Annual Energy GWh */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="annualEnergyGwh" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.annualEnergyGwh}
-              </Label>
-              <Input
-                id="annualEnergyGwh"
-                type="number"
-                step="any"
-                {...register('annualEnergyGwh', { valueAsNumber: true })}
-                className="bg-[var(--surface-input)]"
-              />
-            </div>
-
-            {/* Market */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="market" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.market} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Select
-                value={market}
-                onValueChange={(val) => setValue('market', val as 'domestic' | 'export')}
-              >
-                <SelectTrigger id="market" className="bg-[var(--surface-input)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="domestic">{lo.market.domestic}</SelectItem>
-                  <SelectItem value="export">{lo.market.export}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Signed Date */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="signedDate" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.signedDate} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="signedDate"
-                type="date"
-                {...register('signedDate')}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.signedDate && (
-                <span className="text-[11px] text-rose-400">{errors.signedDate.message}</span>
-              )}
-            </div>
-
-            {/* COD Date */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="codDate" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.codDate} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="codDate"
-                type="date"
-                {...register('codDate')}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.codDate && (
-                <span className="text-[11px] text-rose-400">{errors.codDate.message}</span>
-              )}
-            </div>
-
-            {/* End Date */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="endDate" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.endDate} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="endDate"
-                type="date"
-                {...register('endDate')}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.endDate && (
-                <span className="text-[11px] text-rose-400">{errors.endDate.message}</span>
-              )}
-            </div>
-
-            {/* Term Years */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="termYears" className="text-xs text-[var(--text-secondary)]">
-                {lo.ppa.fields.termYears} <span className="text-[#d4b37a]">*</span>
-              </Label>
-              <Input
-                id="termYears"
-                type="number"
-                {...register('termYears', { valueAsNumber: true })}
-                className="bg-[var(--surface-input)]"
-              />
-              {errors.termYears && (
-                <span className="text-[11px] text-rose-400">{errors.termYears.message}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="notes" className="text-xs text-[var(--text-secondary)]">
-              {lo.ppa.fields.notes}
-            </Label>
-            <Textarea
-              id="notes"
-              {...register('notes')}
-              rows={3}
-              placeholder="ໝາຍເຫດເພີ່ມເຕີມ..."
-              className="bg-[var(--surface-input)]"
-            />
-          </div>
-
-          <DialogFooter className="mt-4 flex flex-row items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={isSubmitting}
-              onClick={() => onOpenChange(false)}
-            >
-              {lo.ppa.actions.cancel}
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? lo.common.loading : lo.ppa.actions.save}
-            </Button>
-          </DialogFooter>
-        </form>
+        <PpaContractFormBody
+          key={contract?.id ?? 'new'}
+          contract={contract}
+          onOpenChange={handleOpenChange}
+          onSaved={onSaved}
+          busyRef={busyRef}
+          onBusyChange={setBusy}
+        />
       </DialogContent>
     </Dialog>
   );
