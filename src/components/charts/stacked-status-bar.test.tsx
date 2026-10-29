@@ -4,17 +4,17 @@ import { lo } from '@/lib/i18n/lo';
 import { StackedStatusBar } from './stacked-status-bar';
 
 const data = [
-  { status: 'active' as const, count: 15 },
-  { status: 'negotiating' as const, count: 5 },
-  { status: 'expiring' as const, count: 2 },
+  { status: 'ACTIVE' as const, count: 15 },
+  { status: 'DRAFT' as const, count: 5 },
+  { status: 'EXPIRING_SOON' as const, count: 2 },
 ];
 
 describe('StackedStatusBar', () => {
   it('renders status legend and counts', () => {
     render(<StackedStatusBar data={data} />);
-    expect(screen.getByText(lo.status.active)).toBeInTheDocument();
+    expect(screen.getByText(lo.status.ACTIVE)).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
-    expect(screen.getByText(lo.status.negotiating)).toBeInTheDocument();
+    expect(screen.getByText(lo.status.DRAFT)).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 });
@@ -24,18 +24,18 @@ describe('StackedStatusBar a11y and motion', () => {
     render(
       <StackedStatusBar
         data={[
-          { status: 'active', count: 3 },
-          { status: 'expired', count: 1 },
+          { status: 'ACTIVE', count: 3 },
+          { status: 'EXPIRED', count: 1 },
         ]}
       />,
     );
     expect(screen.getByRole('img')).toHaveAccessibleName(
-      expect.stringContaining(`${lo.status.active} 3`),
+      expect.stringContaining(`${lo.status.ACTIVE} 3`),
     );
   });
 
   it('uses Design.md colours in dots and has no transition on segments', () => {
-    const { container } = render(<StackedStatusBar data={[{ status: 'active', count: 3 }]} />);
+    const { container } = render(<StackedStatusBar data={[{ status: 'ACTIVE', count: 3 }]} />);
     expect(container.innerHTML).toContain('bg-[#059669]');
     expect(container.innerHTML).toContain('dark:bg-[#34D399]');
     expect(container.innerHTML).not.toContain('transition');
@@ -44,8 +44,8 @@ describe('StackedStatusBar a11y and motion', () => {
 
 describe('StackedStatusBar custom label and tone', () => {
   const gc = [
-    { status: 'expiring', count: 2 },
-    { status: 'expired', count: 1 },
+    { status: 'EXPIRING_SOON', count: 2 },
+    { status: 'EXPIRED', count: 1 },
   ];
 
   it('uses getLabel for legend, summary and tooltip', () => {
@@ -56,11 +56,11 @@ describe('StackedStatusBar custom label and tone', () => {
         getTone={() => 'rose'}
       />,
     );
-    expect(screen.getByText('custom-expiring')).toBeInTheDocument();
+    expect(screen.getByText('custom-EXPIRING_SOON')).toBeInTheDocument();
     expect(screen.getByRole('img')).toHaveAccessibleName(
-      expect.stringContaining('custom-expired 1'),
+      expect.stringContaining('custom-EXPIRED 1'),
     );
-    expect(screen.getByTitle(/^custom-expired: 1/)).toBeInTheDocument();
+    expect(screen.getByTitle(/^custom-EXPIRED: 1/)).toBeInTheDocument();
   });
 
   it('uses getTone for the segment and dot colours', () => {
@@ -72,7 +72,7 @@ describe('StackedStatusBar custom label and tone', () => {
   });
 
   it('keeps STATUS_META defaults when no props are given', () => {
-    render(<StackedStatusBar data={[{ status: 'active', count: 3 }]} />);
-    expect(screen.getByText(lo.status.active)).toBeInTheDocument();
+    render(<StackedStatusBar data={[{ status: 'ACTIVE', count: 3 }]} />);
+    expect(screen.getByText(lo.status.ACTIVE)).toBeInTheDocument();
   });
 });

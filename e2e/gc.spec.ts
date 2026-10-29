@@ -1,5 +1,4 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { SUPPORT_CONTACTS, supportMailHref, supportTelHref } from '../src/config/support';
 import { STATUS_META } from '../src/lib/constants/status';
 import { lo } from '../src/lib/i18n/lo';
 import { loginAs } from './helpers';
@@ -207,7 +206,7 @@ test.describe('alerts and dashboard', () => {
     const marks = page.getByRole('button', { name: new RegExp(`^${lo.gc.alerts.markRead}`) });
     await expect(marks.first()).toBeVisible();
 
-    const bell = page.getByRole('link', { name: new RegExp(`^${lo.topbar.notifications}`) });
+    const bell = page.getByRole('button', { name: new RegExp(`^${lo.topbar.notifications}`) });
     const bellCount = async (): Promise<number> => {
       const name = (await bell.getAttribute('aria-label')) ?? '';
       const m = name.match(/(\d+)/);
@@ -245,21 +244,13 @@ test.describe('alerts and dashboard', () => {
     await expect(dataRows(page)).toHaveCount(kpiValue);
   });
 
-  test('support dialog opens from the user menu with tel and mailto links', async ({ page }) => {
+  test('support item in the user menu navigates to the support page', async ({ page }) => {
     await loginAs(page, 'gc.user');
     await page.goto('/contracts');
     await page.getByRole('button', { name: lo.topbar.userMenu }).click();
     await page.getByRole('menuitem', { name: lo.support.menu }).click();
-    const dialog = page.getByRole('dialog', { name: lo.support.title });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('link', { name: SUPPORT_CONTACTS.phone })).toHaveAttribute(
-      'href',
-      supportTelHref(SUPPORT_CONTACTS.phone),
-    );
-    await expect(dialog.getByRole('link', { name: SUPPORT_CONTACTS.email })).toHaveAttribute(
-      'href',
-      supportMailHref(SUPPORT_CONTACTS.email),
-    );
+    await expect(page).toHaveURL(/\/support$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });
 

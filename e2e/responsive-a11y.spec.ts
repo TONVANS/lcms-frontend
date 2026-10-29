@@ -45,7 +45,7 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
     await expect(page.getByRole('heading', { name: lo.gc.dashboard.byType })).toBeVisible();
   }
   if (path === '/ppa') {
-    await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: lo.ppa.dashboard.byProjectType })).toBeVisible();
   }
   if (path === '/contracts/alerts') {
     await expect(
@@ -57,10 +57,10 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
     await expect(page.getByRole('heading', { level: 2, name: lo.legal.dashboard.regulationsSection })).toBeVisible();
   }
   if (path === '/legal/regulations') {
-    await page.getByRole('link', { name: /^\d+\// }).first().waitFor();
+    await page.locator('a[href^="/legal/regulations/"]').first().waitFor();
   }
   if (path === '/legal/cases') {
-    await page.getByRole('link', { name: /^LC-/ }).first().waitFor();
+    await page.locator('a[href^="/legal/cases/"]').first().waitFor();
   }
   if (path === '/legal/new') {
     await expect(page.getByRole('heading', { level: 1, name: lo.legal.wizard.title })).toBeVisible();

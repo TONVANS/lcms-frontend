@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { lo } from '../src/lib/i18n/lo';
-import { loginAs } from './helpers';
+import { closeMainNav, loginAs, openMainNav } from './helpers';
 
 const SEED_REG_ID = 'reg-1';
 const SEED_REG_DOC_NAME = 'Regulation-351-KPIs-Signed.pdf';
@@ -25,11 +25,12 @@ test.describe('legal permissions', () => {
 
     // Sidebar navigation check: viewer sees exactly 3 Legal items (overview, regulations, cases), no createLegal item
     await page.goto('/legal');
-    const mainMenu = page.getByRole('navigation', { name: lo.nav.mainMenu });
+    const mainMenu = await openMainNav(page);
     await expect(mainMenu.getByRole('link', { name: lo.nav.dashboard })).toBeVisible();
     await expect(mainMenu.getByRole('link', { name: lo.nav.regulations })).toBeVisible();
     await expect(mainMenu.getByRole('link', { name: lo.nav.cases })).toBeVisible();
     await expect(mainMenu.getByRole('link', { name: lo.nav.createLegal })).toHaveCount(0);
+    await closeMainNav(page);
 
     // Both dashboard sections render for a user holding both SystemModules
     await expect(page.getByRole('heading', { level: 2, name: lo.legal.dashboard.regulationsSection })).toBeVisible();
@@ -73,7 +74,7 @@ test.describe('legal permissions', () => {
   test('legal.editor: sees 4 Legal sidebar items including create', async ({ page }) => {
     await loginAs(page, 'legal.editor');
     await page.goto('/legal');
-    const mainMenu = page.getByRole('navigation', { name: lo.nav.mainMenu });
+    const mainMenu = await openMainNav(page);
     await expect(mainMenu.getByRole('link', { name: lo.nav.dashboard })).toBeVisible();
     await expect(mainMenu.getByRole('link', { name: lo.nav.regulations })).toBeVisible();
     await expect(mainMenu.getByRole('link', { name: lo.nav.cases })).toBeVisible();

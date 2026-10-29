@@ -20,13 +20,6 @@ export const lo = {
   },
   roles: { ADMIN: 'ຜູ້ດູແລລະບົບ', MAIN_USER: 'ຜູ້ໃຊ້ຫຼັກ', EDITOR: 'ຜູ້ແກ້ໄຂ', VIEWER: 'ຜູ້ເບິ່ງ' },
   status: {
-    active: 'ມີຜົນບັງຄັບໃຊ້',
-    negotiating: 'ກຳລັງເຈລະຈາ',
-    pending_cod: 'ລໍຖ້າ COD',
-    expiring: 'ໃກ້ໝົດອາຍຸ',
-    expired: 'ໝົດອາຍຸ',
-    draft: 'ຮ່າງ',
-    terminated: 'ຍົກເລີກ',
     DRAFT: 'ຮ່າງ',
     ACTIVE: 'ມີຜົນບັງຄັບໃຊ້',
     EXPIRING_SOON: 'ໃກ້ໝົດອາຍຸ',
@@ -289,17 +282,6 @@ export const lo = {
   },
   timeline: {
     status: { done: 'ສຳເລັດແລ້ວ', current: 'ປັດຈຸບັນ', future: 'ຈະມາເຖິງ' },
-  },
-  energy: {
-    hydro: 'ພະລັງງານນ້ຳ',
-    solar: 'ພະລັງງານແສງຕາເວັນ',
-    wind: 'ພະລັງງານລົມ',
-    coal: 'ຖ່ານຫີນ',
-    biomass: 'ຊີວະມວນ',
-  },
-  market: {
-    domestic: 'ພາຍໃນປະເທດ',
-    export: 'ສົ່ງອອກ',
   },
   ppa: {
     title: 'ສັນຍາຊື້-ຂາຍໄຟຟ້າ',

@@ -52,27 +52,9 @@ export type Currency = 'LAK' | 'USD' | 'CNY';
 /** Backend contract status (computed server-side). */
 export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'TERMINATED';
 
-export type EnergyType = 'hydro' | 'solar' | 'wind' | 'coal' | 'biomass';
-
-/** Pre-backend status; GC/PPA use it until Tasks 6/9 migrate them. */
-export type LegacyContractStatus =
-  | 'draft'
-  | 'negotiating'
-  | 'pending_cod'
-  | 'active'
-  | 'expiring'
-  | 'expired'
-  | 'terminated';
-
 export interface Money {
   amount: number;
   currency: 'LAK' | 'USD' | 'THB' | 'CNY';
-}
-
-export interface KeyEvent {
-  type: string;
-  label: string;
-  date: string;
 }
 
 export interface Attachment {

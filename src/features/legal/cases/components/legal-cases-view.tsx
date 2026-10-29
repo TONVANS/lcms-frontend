@@ -286,30 +286,34 @@ export function LegalCasesView() {
                 allLabel={L.allDepartments}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="case-start-date" className="text-xs text-(--text-muted)">
-                {L.startDate}
-              </Label>
-              <div className="w-40">
-                <DatePicker
-                  id="case-start-date"
-                  clearable
-                  value={query.startDate ?? null}
-                  max={query.endDate}
-                  onChange={(d) => setQuery({ startDate: d ?? undefined })}
-                />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="case-start-date" className="text-xs text-(--text-muted)">
+                  {L.startDate}
+                </Label>
+                <div className="w-40">
+                  <DatePicker
+                    id="case-start-date"
+                    clearable
+                    value={query.startDate ?? null}
+                    max={query.endDate}
+                    onChange={(d) => setQuery({ startDate: d ?? undefined })}
+                  />
+                </div>
               </div>
-              <Label htmlFor="case-end-date" className="text-xs text-(--text-muted)">
-                {L.endDate}
-              </Label>
-              <div className="w-40">
-                <DatePicker
-                  id="case-end-date"
-                  clearable
-                  value={query.endDate ?? null}
-                  min={query.startDate}
-                  onChange={(d) => setQuery({ endDate: d ?? undefined })}
-                />
+              <div className="flex items-center gap-2">
+                <Label htmlFor="case-end-date" className="text-xs text-(--text-muted)">
+                  {L.endDate}
+                </Label>
+                <div className="w-40">
+                  <DatePicker
+                    id="case-end-date"
+                    clearable
+                    value={query.endDate ?? null}
+                    min={query.startDate}
+                    onChange={(d) => setQuery({ endDate: d ?? undefined })}
+                  />
+                </div>
               </div>
             </div>
             {hasFilters ? (
