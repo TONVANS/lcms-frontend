@@ -1,12 +1,5 @@
-import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { lo } from '@/lib/i18n/lo';
+import { UsersView } from '@/features/users';
 
 export default function AdminUsersPage() {
-  return (
-    <>
-      <PageHeader title={lo.admin.users} />
-      <EmptyState title={lo.common.underConstruction} />
-    </>
-  );
+  return <UsersView />;
 }
