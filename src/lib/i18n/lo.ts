@@ -14,9 +14,9 @@ export const lo = {
     showing: (x: number | string, y: number) => `ສະແດງ ${x} ຈາກ ${y}`,
   },
   modules: {
-    ppa: 'ສັນຍາຊື້-ຂາຍພະລັງງານ',
+    ppa: 'ສັນຍາຊື້-ຂາຍໄຟຟ້າ',
     gc: 'ສັນຍາທົ່ວໄປ',
-    legal: 'ນິຕິກຳ, ຈັດຊື້-ຈັດຈ້າງ ແລະ ຄະດີ',
+    legal: 'ນິຕິກຳ ແລະ ແກ້ໄຂຂໍ້ຂັດແຍ່ງ',
   },
   roles: { ADMIN: 'ຜູ້ດູແລລະບົບ', MAIN_USER: 'ຜູ້ໃຊ້ຫຼັກ', EDITOR: 'ຜູ້ແກ້ໄຂ', VIEWER: 'ຜູ້ເບິ່ງ' },
   status: {
@@ -128,6 +128,9 @@ export const lo = {
     searchLabel: 'ຄົ້ນຫາ',
     unread: 'ຍັງບໍ່ໄດ້ອ່ານ',
     breadcrumb: 'ເສັ້ນທາງນຳທາງ',
+    menu: 'ເປີດເມນູນຳທາງ',
+    seeAll: 'ເບິ່ງທັງໝົດ',
+    latestNotifications: 'ການແຈ້ງເຕືອນຫຼ້າສຸດ',
   },
   notifications: {
     filterLabel: 'ແຫຼ່ງການແຈ້ງເຕືອນ',
@@ -183,7 +186,17 @@ export const lo = {
     hearings: 'ນັດໄຕ່ສວນ',
     modulesSection: 'ໂມດູນ',
     mainMenu: 'ເມນູຫຼັກ',
-    moduleSwitcher: 'ສະຫຼັບໂມດູນ',
+    allModules: 'ໂມດູນທັງໝົດ',
+    commonSection: 'ເມນູທົ່ວໄປ',
+    notifications: 'ການແຈ້ງເຕືອນ',
+    support: 'ຊ່ວຍເຫຼືອ',
+  },
+  admin: {
+    section: 'ຜູ້ດູແລລະບົບ',
+    users: 'ຈັດການຜູ້ໃຊ້',
+    auditLogs: 'ບັນທຶກການໃຊ້ງານ',
+    contractTypes: 'ປະເພດສັນຍາ',
+    departments: 'ພະແນກ',
   },
   table: {
     prev: 'ກ່ອນໜ້າ',

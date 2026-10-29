@@ -31,33 +31,11 @@ describe('SupportDialog', () => {
 });
 
 describe('UserMenu support item', () => {
-  async function openFromMenu() {
+  it('links to the support page instead of opening a dialog', async () => {
     const user = userEvent.setup();
     render(<UserMenu />);
-    const trigger = screen.getByRole('button', { name: lo.topbar.userMenu });
-    await user.click(trigger);
-    await user.click(await screen.findByRole('menuitem', { name: lo.support.menu }));
-    const dialog = await screen.findByRole('dialog', { name: lo.support.title });
-    return { user, trigger, dialog };
-  }
-
-  it('opens the dialog after the menu closes; Escape restores pointer events and focus', async () => {
-    const { user, trigger, dialog } = await openFromMenu();
-    expect(dialog).toBeVisible();
-    expect(screen.queryByRole('menu')).toBeNull();
-
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(document.body.style.pointerEvents).not.toBe('none');
-    await waitFor(() => expect(trigger).toHaveFocus());
-  });
-
-  it('the close button also restores pointer events and focus', async () => {
-    const { user, trigger } = await openFromMenu();
-    await user.click(screen.getByRole('button', { name: lo.common.close }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(document.body.style.pointerEvents).not.toBe('none');
-    await waitFor(() => expect(trigger).toHaveFocus());
+    await user.click(screen.getByRole('button', { name: lo.topbar.userMenu }));
+    expect(await screen.findByRole('menuitem', { name: lo.support.menu })).toHaveAttribute('href', '/support');
   });
 
   describe('does not open without choosing the support item', () => {

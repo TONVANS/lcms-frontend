@@ -1,44 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { Menu } from 'lucide-react';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
-import { SearchInput } from '@/components/shared/search-input';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { Breadcrumbs } from './breadcrumbs';
-import { NotificationBell } from './notification-bell';
+import { NotificationMenu } from './notification-menu';
 import { UserMenu } from './user-menu';
 
 interface TopbarProps {
-  unreadCount: number;
   variant: 'module' | 'home';
+  /** Mobile sidebar sheet state; the menu button is hidden from md up. */
+  menuOpen?: boolean;
+  menuControlsId?: string;
+  onMenuClick?: () => void;
 }
 
-export function Topbar({ unreadCount, variant }: TopbarProps) {
-  // Phase 1: search is local state only; no submit behaviour yet.
-  const [query, setQuery] = useState('');
+export function Topbar({ variant, menuOpen = false, menuControlsId, onMenuClick }: TopbarProps) {
   const home = variant === 'home';
 
   return (
     <header
       className={cn(
-        'flex animate-fade-in-down flex-wrap items-center justify-between gap-3 rounded-[20px] px-4 py-3',
+        'animate-fade-in-down flex flex-wrap items-center justify-between gap-3 rounded-[20px] px-4 py-3',
         home
-          ? '[--focus-ring:#d4b37a] border border-[var(--sidebar-border)] bg-[image:var(--surface-navy)] text-[#e8eef9]'
+          ? 'border border-[var(--sidebar-border)] bg-[image:var(--surface-navy)] text-[#e8eef9] [--focus-ring:#d4b37a]'
           : 'glass',
       )}
     >
-      <Breadcrumbs tone={home ? 'navy' : 'default'} />
+      <div className="flex min-w-0 items-center gap-2">
+        {onMenuClick ? (
+          <button
+            type="button"
+            aria-label={lo.topbar.menu}
+            aria-expanded={menuOpen}
+            aria-controls={menuControlsId}
+            onClick={onMenuClick}
+            className={cn(
+              'inline-flex size-11 shrink-0 items-center justify-center rounded-xl border transition-colors duration-150 md:hidden',
+              home
+                ? 'border-white/20 bg-white/10 text-white hover:bg-white/20'
+                : 'border-border bg-secondary text-foreground hover:bg-muted',
+            )}
+          >
+            <Menu aria-hidden="true" className="size-5" />
+          </button>
+        ) : null}
+        <Breadcrumbs tone={home ? 'navy' : 'default'} />
+      </div>
       <div className="flex items-center gap-2">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder={lo.common.search}
-          aria-label={lo.topbar.searchLabel}
-          className="hidden w-[280px] md:block"
-        />
         <ThemeToggle />
-        <NotificationBell unreadCount={unreadCount} />
+        <NotificationMenu />
         <UserMenu />
       </div>
     </header>

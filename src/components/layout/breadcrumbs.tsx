@@ -15,6 +15,16 @@ import { MODULE_NAV, getModuleFromPath, isNavItemActive } from '@/config/navigat
 import { MODULES } from '@/lib/constants/modules';
 import { lo } from '@/lib/i18n/lo';
 
+const SEGMENT_LABELS: Record<string, string> = {
+  admin: lo.admin.section,
+  users: lo.admin.users,
+  'audit-logs': lo.admin.auditLogs,
+  'contract-types': lo.admin.contractTypes,
+  departments: lo.admin.departments,
+  support: lo.nav.support,
+  notifications: lo.nav.notifications,
+};
+
 interface Crumb {
   label: string;
   href?: string;
@@ -35,6 +45,21 @@ export function Breadcrumbs({ tone = 'default' }: { tone?: 'default' | 'navy' })
     if (deeper) crumbs.push({ label: item.label });
   }
 
+  if (!moduleKey) {
+    const segments = pathname
+      .split('/')
+      .filter(Boolean)
+      .filter((seg) => seg in SEGMENT_LABELS);
+    segments.forEach((seg, i) => {
+      const last = i === segments.length - 1;
+      // /admin has no page of its own, so it is a plain label.
+      crumbs.push({
+        label: SEGMENT_LABELS[seg],
+        href: last || seg === 'admin' ? undefined : `/${seg}`,
+      });
+    });
+  }
+
   const navy = tone === 'navy';
 
   return (
@@ -47,7 +72,9 @@ export function Breadcrumbs({ tone = 'default' }: { tone?: 'default' | 'navy' })
               {i > 0 ? <BreadcrumbSeparator /> : null}
               <BreadcrumbItem>
                 {last || !c.href ? (
-                  <BreadcrumbPage className={navy ? 'text-white' : undefined}>{c.label}</BreadcrumbPage>
+                  <BreadcrumbPage className={navy ? 'text-white' : undefined}>
+                    {c.label}
+                  </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild className={navy ? 'hover:text-white' : undefined}>
                     <Link href={c.href}>{c.label}</Link>

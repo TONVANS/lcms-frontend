@@ -39,3 +39,15 @@ for (const username of ['gc.user', 'gc.editor', 'gc.viewer'] as const) {
     await expect(page.getByText(lo.forbidden.title).first()).toBeVisible();
   });
 }
+
+test('non-admin is redirected away from /admin/users', async ({ page }) => {
+  await loginAs(page, 'gc.user');
+  await page.goto('/admin/users');
+  await expect(page).toHaveURL(/\/forbidden$/);
+});
+
+test('admin reaches the admin placeholder pages', async ({ page }) => {
+  await loginAs(page, 'admin');
+  await page.goto('/admin/users');
+  await expect(page.getByRole('heading', { level: 1, name: lo.admin.users })).toBeVisible();
+});

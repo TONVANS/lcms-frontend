@@ -122,3 +122,19 @@ test.describe('gc detail layout', () => {
     expect(tracks).toBe(testInfo.project.name === 'mobile' ? 1 : 2);
   });
 });
+
+test.describe('sidebar navigation', () => {
+  test('menu button opens the sidebar sheet on mobile, inline sidebar on desktop', async ({ page }, testInfo) => {
+    await loginAs(page, 'gc.user');
+    await page.goto('/contracts');
+    const nav = page.getByRole('navigation', { name: lo.nav.mainMenu });
+    if (testInfo.project.name === 'mobile') {
+      await expect(nav).toBeHidden();
+      await page.getByRole('button', { name: lo.topbar.menu }).click();
+      await expect(page.getByRole('dialog').getByRole('navigation', { name: lo.nav.mainMenu })).toBeVisible();
+    } else {
+      await expect(nav).toBeVisible();
+      await expect(page.getByRole('button', { name: lo.topbar.menu })).toBeHidden();
+    }
+  });
+});
