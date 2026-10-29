@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/features/auth';
 import { MOCK_USERS } from '@/features/auth/mocks/auth.mock';
+import { supportService } from '@/features/support';
 import { lo } from '@/lib/i18n/lo';
 import { SupportDialog } from './support-dialog';
 import { UserMenu } from './user-menu';
@@ -27,6 +28,25 @@ describe('SupportDialog', () => {
       'href',
       'mailto:support@lcms.example',
     );
+  });
+});
+
+describe('SupportDialog with API contacts', () => {
+  it('renders channels from the API and falls back to static contacts when empty', async () => {
+    const spy = vi.spyOn(supportService, 'contacts').mockResolvedValueOnce([
+      { id: '1', channelName: 'Line', contactInfo: '+856 20 9999 8888', description: null, sortOrder: 1, isActive: true },
+      { id: '2', channelName: 'Office', contactInfo: 'Floor 3', description: null, sortOrder: 2, isActive: true },
+    ]);
+    const { unmount } = render(<SupportDialog open onOpenChange={() => {}} />);
+    expect(await screen.findByText('Line')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '+856 20 9999 8888' })).toHaveAttribute('href', 'tel:+8562099998888');
+    expect(screen.getByText('Floor 3')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /support@lcms.example/ })).toBeNull();
+    unmount();
+    spy.mockResolvedValueOnce([]);
+    render(<SupportDialog open onOpenChange={() => {}} />);
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('link', { name: /support@lcms.example/ })).toBeInTheDocument();
   });
 });
 
