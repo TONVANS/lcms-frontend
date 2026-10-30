@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().min(1).default('LCMS'),
-  NEXT_PUBLIC_API_MODE: z.enum(['mock', 'live']).default('mock'),
+  NEXT_PUBLIC_API_MODE: z.enum(['mock', 'live']).default('live'),
   NEXT_PUBLIC_API_BASE_URL: z
     .string()
     .min(1)

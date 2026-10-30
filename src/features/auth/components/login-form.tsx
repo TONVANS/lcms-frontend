@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { toast } from 'sonner';
+
 import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,6 +51,7 @@ export function LoginForm({ next, reason }: LoginFormProps) {
     }
     const user = useAuthStore.getState().user;
     if (!user) return;
+    toast.success(lo.auth.loginSuccess);
     router.replace(getSafeNext(next) ?? getLandingRoute(user));
   });
 
@@ -160,12 +162,6 @@ export function LoginForm({ next, reason }: LoginFormProps) {
             {lo.auth.remember}
           </Label>
         </div>
-        <Link
-          href="/forgot-password"
-          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline hover:text-primary/90 transition-colors"
-        >
-          {lo.auth.forgot}
-        </Link>
       </FadeIn>
 
       <FadeIn variant="up-sm" index={4} className="space-y-4 pt-1">

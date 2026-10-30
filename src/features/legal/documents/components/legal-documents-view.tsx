@@ -179,6 +179,7 @@ export function LegalDocumentsView() {
     try {
       const rows = await legalDocumentsService.listAll(useLegalDocumentsListStore.getState().query);
       downloadCsv(`${lo.legal.regulations.csv.filePrefix}${csvStamp()}.csv`, buildLegalDocumentsCsv(rows));
+      toast.success(lo.common.exportSuccess);
     } catch (e) {
       const text = toUserMessage(normalizeError(e));
       if (text) toast.error(text);

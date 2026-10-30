@@ -143,6 +143,7 @@ export function DocumentManager({
       document.body.appendChild(a);
       a.click();
       a.remove();
+      toast.success(lo.common.exportSuccess);
     } catch (err) {
       toast.error(errorText(err));
     } finally {

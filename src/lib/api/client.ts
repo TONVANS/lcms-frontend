@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { env } from '@/config/env';
 import { installInterceptors } from './interceptors';
-import { installMocks } from './mock';
 
 let unauthorizedHandler: () => void = () => {};
 
@@ -19,6 +18,3 @@ export const api = axios.create({
 
 installInterceptors(api, { onUnauthorized: () => unauthorizedHandler() });
 
-if (env.NEXT_PUBLIC_API_MODE === 'mock') {
-  installMocks(api);
-}

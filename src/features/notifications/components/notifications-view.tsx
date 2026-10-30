@@ -3,7 +3,8 @@
 import { CheckCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
@@ -128,7 +129,10 @@ export function NotificationsView() {
       actions={
         <Button
           variant="secondary"
-          onClick={() => void useNotificationsStore.getState().markAllRead()}
+          onClick={async () => {
+            await useNotificationsStore.getState().markAllRead();
+            toast.success(lo.notifications.allMarkedRead);
+          }}
           disabled={unreadCount === 0}
         >
           <CheckCheck className="size-4" aria-hidden="true" />
@@ -262,7 +266,10 @@ export function NotificationsView() {
                       variant="ghost"
                       size="icon"
                       aria-label={`${lo.notifications.markRead}: ${n.title}`}
-                      onClick={() => void useNotificationsStore.getState().markRead(n)}
+                      onClick={async () => {
+                        await useNotificationsStore.getState().markRead(n);
+                        toast.success(lo.notifications.markedRead);
+                      }}
                       className="min-h-11 min-w-11"
                     >
                       <CheckCheck className="size-4" aria-hidden="true" />

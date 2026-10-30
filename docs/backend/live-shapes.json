@@ -1,0 +1,676 @@
+{
+  "generatedAt": "2026-10-30T07:00:44.884Z",
+  "api": "https://likely-ecology-refused-letters.trycloudflare.com/api",
+  "results": {
+    "POST /auth/login": {
+      "path": "/auth/login",
+      "status": 200,
+      "shape": {
+        "accessToken": "<redacted>",
+        "user": {
+          "id": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+          "employeeCode": "string:ADMIN-001",
+          "fullName": "string:System Administrator",
+          "role": "string:ADMIN",
+          "canView": "boolean",
+          "canUpload": "boolean",
+          "canEdit": "boolean",
+          "canDelete": "boolean",
+          "canDownload": "boolean",
+          "department": "string:IT Department",
+          "division": "null",
+          "unit": "null",
+          "accessibleModules": {
+            "__array": 9,
+            "first": "string:contracts"
+          }
+        }
+      }
+    },
+    "GET /auth/me": {
+      "path": "/auth/me",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນໂປຣໄຟລ໌ສຳເລັດ",
+        "data": {
+          "userId": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+          "id": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+          "empCode": "string:ADMIN-001",
+          "username": "string:admin",
+          "fullName": "string:System Administrator",
+          "department": "string:IT Department",
+          "division": "null",
+          "unit": "null",
+          "position": "string:Admin",
+          "role": "string:ADMIN",
+          "canView": "boolean",
+          "canUpload": "boolean",
+          "canEdit": "boolean",
+          "canDelete": "boolean",
+          "canDownload": "boolean",
+          "accessibleModules": {
+            "__array": 9,
+            "first": "string:contracts"
+          }
+        }
+      }
+    },
+    "GET /contracts": {
+      "path": "/contracts?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນສຳເລັດ",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        },
+        "data": {
+          "__array": 1,
+          "first": {
+            "id": "string:2cbd7128-f8d1-45e6-96a9-12149544045c",
+            "title": "string:ສັນຍາ ບໍລິການ O&M ລະບົບສາຍສົ່ງ 230kV",
+            "contractTypeId": "number",
+            "contractNumber": "string:EDL-OM-2026/001",
+            "durationText": "string:5 ປີ",
+            "durationMonths": "null",
+            "signedDate": "string:2026-01-15T00:00:00.000Z",
+            "effectiveDate": "string:2026-02-01T00:00:00.000Z",
+            "expirationDate": "string:2031-01-31T00:00:00.000Z",
+            "contractValue": "string:5000000000",
+            "currency": "string:LAK",
+            "equityOrCapitalContribution": "string:100%",
+            "sharePercentage": "null",
+            "implementer": "string:ພະແນກສັນຍາທົ່ວໄປ ແລະ ຝ່າຍບຳລຸງຮັກສາ",
+            "additionalDetails": "string:ສັນຍາບໍລິການບຳລຸງຮັກສາ ແລະ ດຳເນີນງານລະບົ...",
+            "status": "string:ACTIVE",
+            "notifyDaysBefore": "number",
+            "isExpiryNotified": "boolean",
+            "lastNotifiedAt": "null",
+            "createdById": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+            "updatedById": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+            "createdAt": "string:2026-10-26T07:44:52.776Z",
+            "updatedAt": "string:2026-10-26T10:10:19.531Z",
+            "deletedAt": "null",
+            "contractType": {
+              "id": "number",
+              "nameLo": "string:ສັນຍາ ບໍລິການ O&M",
+              "nameEn": "null"
+            },
+            "createdBy": {
+              "fullName": "string:System Administrator"
+            },
+            "_count": {
+              "attachments": "number"
+            }
+          }
+        }
+      }
+    },
+    "GET /legal-documents": {
+      "path": "/legal-documents?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການນິຕິກຳສຳເລັດ",
+        "data": {
+          "__array": 0,
+          "first": null
+        },
+        "pagination": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        }
+      }
+    },
+    "GET /legal-cases": {
+      "path": "/legal-cases?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການຄະດີສຳເລັດ",
+        "data": {
+          "__array": 0,
+          "first": null
+        },
+        "pagination": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        }
+      }
+    },
+    "GET /power-contracts": {
+      "path": "/power-contracts?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການສັນຍາຊື້-ຂາຍໄຟຟ້າສຳເລັດ",
+        "data": {
+          "__array": 0,
+          "first": null
+        },
+        "pagination": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        }
+      }
+    },
+    "GET /users": {
+      "path": "/users?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍຊື່ຜູ້ໃຊ້ສຳເລັດ",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        },
+        "data": {
+          "__array": 2,
+          "first": {
+            "id": "string:69048bb1-466f-425c-a880-c73d38d23be3",
+            "employeeCode": "string:41067",
+            "username": "string:41067",
+            "email": "string:41067@edl.com.la",
+            "fullName": "string:ເກດສະຫວັນ ໂສລະພົມ",
+            "department": "string:ຝ່າຍກົດໝາຍ-ສັນຍາ",
+            "division": "string:ພະແນກນິຕິກຳ ແລະ ແກ້ໄຂຂໍ້ຂັດແຍ່ງ  (ຝກສ)",
+            "unit": "string:",
+            "position": "string:ຫົວໜ້າພະແນກ",
+            "phone": "string:02028248883",
+            "role": "string:MAIN_USER",
+            "canView": "boolean",
+            "canUpload": "boolean",
+            "canEdit": "boolean",
+            "canDelete": "boolean",
+            "canDownload": "boolean",
+            "isActive": "boolean",
+            "lastLoginAt": "string:2026-10-27T08:18:29.058Z",
+            "createdAt": "string:2026-10-27T08:18:10.269Z"
+          }
+        }
+      }
+    },
+    "GET /audit-logs": {
+      "path": "/audit-logs?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງປະຫວັດ Audit Logs ສຳເລັດ",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        },
+        "data": {
+          "__array": 2,
+          "first": {
+            "id": "string:0e96b0eb-8cc8-4d3a-8902-002122ae79fe",
+            "userId": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+            "contractId": "null",
+            "powerContractId": "null",
+            "action": "string:USER_PERMISSION_CHANGE",
+            "oldValues": "null",
+            "newValues": {
+              "role": "string:MAIN_USER",
+              "canEdit": "boolean",
+              "canView": "boolean",
+              "fullName": "string:ເກດສະຫວັນ ໂສລະພົມ",
+              "canDelete": "boolean",
+              "canUpload": "boolean",
+              "canDownload": "boolean",
+              "syncedEmployeeCode": "string:41067"
+            },
+            "ipAddress": "null",
+            "createdAt": "string:2026-10-27T08:18:10.274Z",
+            "user": {
+              "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ",
+              "employeeCode": "string:44652",
+              "department": "string:ຝ່າຍເຕັກໂນໂລຊີ ການສື່ສານ ຂໍ້ມູນຂ່າວສານ"
+            },
+            "contract": "null"
+          }
+        }
+      }
+    },
+    "GET /support/tickets": {
+      "path": "/support/tickets?page=1&limit=2",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການແຈ້ງບັນຫາສຳເລັດ",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        },
+        "data": {
+          "__array": 0,
+          "first": null
+        }
+      }
+    },
+    "GET /contracts/dashboard": {
+      "path": "/contracts/dashboard",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນ Dashboard ສຳເລັດ",
+        "data": {
+          "summary": {
+            "totalContracts": "number",
+            "expiringSoonCount": "number",
+            "expiredCount": "number"
+          },
+          "statusChart": {
+            "__array": 1,
+            "first": {
+              "status": "string:ACTIVE",
+              "count": "number"
+            }
+          },
+          "currencyChart": {
+            "__array": 1,
+            "first": {
+              "currency": "string:LAK",
+              "count": "number"
+            }
+          },
+          "valueByCurrency": {
+            "__array": 1,
+            "first": {
+              "currency": "string:LAK",
+              "totalValue": "string:5000000000"
+            }
+          },
+          "typeChart": {
+            "__array": 1,
+            "first": {
+              "contractTypeId": "number",
+              "nameLo": "string:ສັນຍາ ບໍລິການ O&M",
+              "nameEn": "null",
+              "count": "number"
+            }
+          }
+        }
+      }
+    },
+    "GET /legal-documents/dashboard": {
+      "path": "/legal-documents/dashboard",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນ Dashboard ນິຕິກຳສຳເລັດ",
+        "data": {
+          "summary": {
+            "totalDocuments": "number",
+            "activeDocuments": "number",
+            "inactiveDocuments": "number",
+            "totalDepartmentsWithDocuments": "number"
+          },
+          "donutChart": {
+            "__array": 0,
+            "first": null
+          },
+          "departmentBarChart": {
+            "__array": 17,
+            "first": {
+              "id": "string:ec02c807-b382-4f92-8d63-ab646ea66e93",
+              "name": "string:ຄະນະກຳມະການຄຸ້ມຄອງໂຄງການ",
+              "code": "string:206",
+              "count": "number"
+            }
+          }
+        }
+      }
+    },
+    "GET /legal-cases/dashboard": {
+      "path": "/legal-cases/dashboard",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນ Dashboard ຄະດີສຳເລັດ",
+        "data": {
+          "summary": {
+            "totalCases": "number",
+            "inProgressCases": "number",
+            "resolvedCases": "number"
+          },
+          "financialSummary": {
+            "totalDamageLak": "number",
+            "totalDamageUsd": "number",
+            "totalFineLak": "number",
+            "totalFineUsd": "number",
+            "totalDueLak": "number",
+            "totalDueUsd": "number",
+            "totalRecoveredLak": "number",
+            "totalRecoveredUsd": "number"
+          },
+          "statusDonutChart": {
+            "__array": 0,
+            "first": null
+          },
+          "typeDonutChart": {
+            "__array": 0,
+            "first": null
+          },
+          "departmentBarChart": {
+            "__array": 17,
+            "first": {
+              "id": "string:ec02c807-b382-4f92-8d63-ab646ea66e93",
+              "name": "string:ຄະນະກຳມະການຄຸ້ມຄອງໂຄງການ",
+              "code": "string:206",
+              "count": "number"
+            }
+          }
+        }
+      }
+    },
+    "GET /power-contracts/dashboard": {
+      "path": "/power-contracts/dashboard",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນສະຖິຕິ Dashboard ສັນຍາຊື້-ຂາຍໄຟ...",
+        "data": {
+          "total": "number",
+          "expiringSoonCount": "number",
+          "expiredCount": "number",
+          "byStatus": {
+            "__array": 0,
+            "first": null
+          },
+          "byContractType": {
+            "purchaseCount": "number",
+            "saleCount": "number",
+            "totalCapacityPurchase": "number",
+            "totalCapacitySale": "number"
+          },
+          "byProjectType": {
+            "__array": 0,
+            "first": null
+          },
+          "totalInstalledCapacity": "number",
+          "expiringSoonList": {
+            "__array": 0,
+            "first": null
+          }
+        }
+      }
+    },
+    "GET /contract-types/dropdown": {
+      "path": "/contract-types/dropdown",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນປະເພດສັນຍາສຳລັບ Dropdown ສຳເລັດ",
+        "total": "number",
+        "data": {
+          "__array": 14,
+          "first": {
+            "id": "number",
+            "value": "number",
+            "nameLo": "string:ສັນຍາ ບໍລິການ O&M",
+            "nameEn": "null",
+            "label": "string:ສັນຍາ ບໍລິການ O&M"
+          }
+        }
+      }
+    },
+    "GET /departments/dropdown": {
+      "path": "/departments/dropdown",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນຫ້ອງການ/ຝ່າຍສຳລັບ Dropdown ສຳເລ...",
+        "total": "number",
+        "data": {
+          "__array": 17,
+          "first": {
+            "id": "string:ec02c807-b382-4f92-8d63-ab646ea66e93",
+            "value": "string:ec02c807-b382-4f92-8d63-ab646ea66e93",
+            "name": "string:ຄະນະກຳມະການຄຸ້ມຄອງໂຄງການ",
+            "code": "string:206",
+            "label": "string:ຄະນະກຳມະການຄຸ້ມຄອງໂຄງການ (206)"
+          }
+        }
+      }
+    },
+    "GET /power-contracts/project-types": {
+      "path": "/power-contracts/project-types",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການ 5 ປະເພດໂຄງການສັນຍາຊື້ໄຟຟ້າສຳເລ...",
+        "data": {
+          "__array": 6,
+          "first": {
+            "id": "string:HYDRO",
+            "nameLo": "string:ໄຟຟ້ານໍ້າຕົກ",
+            "nameEn": "string:Hydropower",
+            "description": "string:ໂຄງການຜະລິດໄຟຟ້າຈາກພະລັງງານນ້ຳຕົກ / ເຂື່..."
+          }
+        }
+      }
+    },
+    "GET /notifications": {
+      "path": "/notifications",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງການແຈ້ງເຕືອນສຳເລັດ",
+        "unreadCount": "number",
+        "total": "number",
+        "data": {
+          "__array": 0,
+          "first": null
+        }
+      }
+    },
+    "GET /power-notifications": {
+      "path": "/power-notifications",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການແຈ້ງເຕືອນສັນຍາຊື້-ຂາຍໄຟຟ້າສຳເລັ...",
+        "data": {
+          "__array": 0,
+          "first": null
+        }
+      }
+    },
+    "GET /support/contacts": {
+      "path": "/support/contacts",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນຊ່ອງທາງຕິດຕໍ່ສຳເລັດ",
+        "data": {
+          "__array": 2,
+          "first": {
+            "id": "number",
+            "channelName": "string:ສາຍດ່ວນ IT Support ພະແນກສັນຍາ",
+            "contactInfo": "string:+856 21 316123 / itsupport@edl.com.la",
+            "description": "string:ເວລາລັດຖະການ: ວັນຈັນ - ວັນສຸກ (08:30 - 1...",
+            "sortOrder": "number",
+            "isActive": "boolean",
+            "updatedAt": "string:2026-10-21T09:18:12.821Z"
+          }
+        }
+      }
+    },
+    "GET /contracts/:id": {
+      "path": "/contracts/2cbd7128-f8d1-45e6-96a9-12149544045c",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງຂໍ້ມູນສັນຍາສຳເລັດ",
+        "data": {
+          "id": "string:2cbd7128-f8d1-45e6-96a9-12149544045c",
+          "title": "string:ສັນຍາ ບໍລິການ O&M ລະບົບສາຍສົ່ງ 230kV",
+          "contractTypeId": "number",
+          "contractNumber": "string:EDL-OM-2026/001",
+          "durationText": "string:5 ປີ",
+          "durationMonths": "null",
+          "signedDate": "string:2026-01-15T00:00:00.000Z",
+          "effectiveDate": "string:2026-02-01T00:00:00.000Z",
+          "expirationDate": "string:2031-01-31T00:00:00.000Z",
+          "contractValue": "string:5000000000",
+          "currency": "string:LAK",
+          "equityOrCapitalContribution": "string:100%",
+          "sharePercentage": "null",
+          "implementer": "string:ພະແນກສັນຍາທົ່ວໄປ ແລະ ຝ່າຍບຳລຸງຮັກສາ",
+          "additionalDetails": "string:ສັນຍາບໍລິການບຳລຸງຮັກສາ ແລະ ດຳເນີນງານລະບົ...",
+          "status": "string:ACTIVE",
+          "notifyDaysBefore": "number",
+          "isExpiryNotified": "boolean",
+          "lastNotifiedAt": "null",
+          "createdById": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+          "updatedById": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+          "createdAt": "string:2026-10-26T07:44:52.776Z",
+          "updatedAt": "string:2026-10-26T10:10:19.531Z",
+          "deletedAt": "null",
+          "contractType": {
+            "id": "number",
+            "nameLo": "string:ສັນຍາ ບໍລິການ O&M",
+            "nameEn": "null",
+            "isActive": "boolean",
+            "createdAt": "string:2026-10-21T09:18:12.324Z",
+            "updatedAt": "string:2026-10-21T09:18:12.324Z"
+          },
+          "createdBy": {
+            "id": "string:9bb48e6d-b93d-41e9-81a1-b495bda39742",
+            "fullName": "string:System Administrator",
+            "employeeCode": "string:ADMIN-001",
+            "department": "string:IT Department"
+          },
+          "updatedBy": {
+            "id": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+            "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ",
+            "employeeCode": "string:44652"
+          },
+          "attachments": {
+            "__array": 1,
+            "first": {
+              "id": "string:13b8b5f4-b4fd-498d-a493-1bc50c606594",
+              "fileName": "string:TOR_Legal and Contract.pdf",
+              "mimeType": "string:application/pdf",
+              "fileSize": "number",
+              "version": "number",
+              "createdAt": "string:2026-10-26T10:10:21.262Z",
+              "uploadedBy": {
+                "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ"
+              }
+            }
+          },
+          "auditLogs": {
+            "__array": 3,
+            "first": {
+              "id": "string:ae53ccc9-7676-4452-bc8e-d89114a604d1",
+              "action": "string:UPLOAD_ATTACHMENT",
+              "actionLabelLo": "string:ອັບໂຫລດໄຟລ໌ແນບ",
+              "user": {
+                "id": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+                "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ",
+                "employeeCode": "string:44652",
+                "department": "string:ຝ່າຍເຕັກໂນໂລຊີ ການສື່ສານ ຂໍ້ມູນຂ່າວສານ",
+                "role": "string:ADMIN"
+              },
+              "ipAddress": "null",
+              "createdAt": "string:2026-10-26T10:10:21.269Z",
+              "changes": {
+                "__array": 1,
+                "first": {
+                  "field": "string:fileName",
+                  "fieldNameLo": "string:ຊື່ໄຟລ໌ແນບ",
+                  "oldValue": "null",
+                  "newValue": "string:TOR_Legal and Contract.pdf"
+                }
+              },
+              "oldValues": "null",
+              "newValues": {
+                "fileName": "string:TOR_Legal and Contract.pdf",
+                "fileSize": "number",
+                "attachmentId": "string:13b8b5f4-b4fd-498d-a493-1bc50c606594"
+              }
+            }
+          }
+        }
+      }
+    },
+    "GET /contracts/:id/attachments": {
+      "path": "/contracts/2cbd7128-f8d1-45e6-96a9-12149544045c/attachments",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງລາຍການໄຟລ໌ແນບສຳເລັດ",
+        "total": "number",
+        "data": {
+          "__array": 1,
+          "first": {
+            "id": "string:13b8b5f4-b4fd-498d-a493-1bc50c606594",
+            "contractId": "string:2cbd7128-f8d1-45e6-96a9-12149544045c",
+            "fileName": "string:TOR_Legal and Contract.pdf",
+            "storageKey": "string:/app/uploads/contracts/e39c6359-4ef0-44a...",
+            "mimeType": "string:application/pdf",
+            "fileSize": "number",
+            "checksum": "null",
+            "version": "number",
+            "uploadedById": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+            "createdAt": "string:2026-10-26T10:10:21.262Z",
+            "deletedAt": "null",
+            "uploadedBy": {
+              "id": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+              "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ",
+              "employeeCode": "string:44652"
+            }
+          }
+        }
+      }
+    },
+    "GET /contracts/:id/history": {
+      "path": "/contracts/2cbd7128-f8d1-45e6-96a9-12149544045c/history",
+      "status": 200,
+      "shape": {
+        "message": "string:ດຶງປະຫວັດການແກ້ໄຂສັນຍາສຳເລັດ",
+        "contract": {
+          "id": "string:2cbd7128-f8d1-45e6-96a9-12149544045c",
+          "title": "string:ສັນຍາ ບໍລິການ O&M ລະບົບສາຍສົ່ງ 230kV",
+          "contractNumber": "string:EDL-OM-2026/001",
+          "status": "string:ACTIVE"
+        },
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "limit": "number",
+          "totalPages": "number"
+        },
+        "data": {
+          "__array": 3,
+          "first": {
+            "id": "string:ae53ccc9-7676-4452-bc8e-d89114a604d1",
+            "action": "string:UPLOAD_ATTACHMENT",
+            "actionLabelLo": "string:ອັບໂຫລດໄຟລ໌ແນບ",
+            "user": {
+              "id": "string:cbbf28aa-fc5d-4794-ad54-3bda6ef849af",
+              "fullName": "string:ສຸກທະວີໄຊ ອິນທະລັງສີ",
+              "employeeCode": "string:44652",
+              "department": "string:ຝ່າຍເຕັກໂນໂລຊີ ການສື່ສານ ຂໍ້ມູນຂ່າວສານ",
+              "role": "string:ADMIN"
+            },
+            "ipAddress": "null",
+            "createdAt": "string:2026-10-26T10:10:21.269Z",
+            "changes": {
+              "__array": 1,
+              "first": {
+                "field": "string:fileName",
+                "fieldNameLo": "string:ຊື່ໄຟລ໌ແນບ",
+                "oldValue": "null",
+                "newValue": "string:TOR_Legal and Contract.pdf"
+              }
+            },
+            "oldValues": "null",
+            "newValues": {
+              "fileName": "string:TOR_Legal and Contract.pdf",
+              "fileSize": "number",
+              "attachmentId": "string:13b8b5f4-b4fd-498d-a493-1bc50c606594"
+            }
+          }
+        }
+      }
+    }
+  }
+}

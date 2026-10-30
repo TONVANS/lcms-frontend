@@ -2,6 +2,7 @@
 
 import { LifeBuoy, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -24,6 +25,7 @@ export function UserMenu() {
 
   async function handleLogout() {
     await useAuthStore.getState().logout();
+    toast.success(lo.auth.logoutSuccess);
     router.replace('/login?reason=logout');
   }
 

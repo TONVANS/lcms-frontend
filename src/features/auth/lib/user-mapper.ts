@@ -33,8 +33,8 @@ function toModules(v: unknown): SystemModule[] {
 export function toUser(raw: unknown): User {
   const r = rec(raw);
   return {
-    id: toStr(r.id) ?? '',
-    employeeCode: toStr(r.employeeCode),
+    id: toStr(r.id) ?? toStr(r.userId) ?? '',
+    employeeCode: toStr(r.employeeCode) ?? toStr(r.empCode),
     username: toStr(r.username) ?? '',
     fullName: toStr(r.fullName) ?? '',
     email: toStr(r.email),

@@ -198,6 +198,7 @@ export function LegalCasesView() {
     try {
       const rows = await legalCasesService.listAll(useLegalCasesListStore.getState().query);
       downloadCsv(`${lo.legal.cases.csv.filePrefix}${csvStamp()}.csv`, buildLegalCasesCsv(rows));
+      toast.success(lo.common.exportSuccess);
     } catch (e) {
       const text = toUserMessage(normalizeError(e));
       if (text) toast.error(text);
