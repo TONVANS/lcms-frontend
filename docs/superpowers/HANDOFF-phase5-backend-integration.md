@@ -52,7 +52,7 @@ Features: `admin auth documents gc history home legal lookups notifications ppa 
 | lint | 0 errors, 1 warning (unused `METRICS` in `src/features/legal/cases/lib/legal-case-mapper.ts`) | `0bf71b3` |
 | Unit | 144 files / 809 tests pass | `0bf71b3` |
 | Build | EXIT=0; routes include `/support` and `/admin/{users,audit-logs,contract-types,departments}` | `0bf71b3` |
-| e2e | **pending** — a full run on `0bf71b3` was in progress at handoff time; check its result. The previous full run (`0b531c5`, before Tasks 10–13) was 231 pass, 1 load flake (passes alone), 60 skipped by project (desktop-only / mobile-only) | main checkout |
+| e2e | Full `pnpm e2e` on `0bf71b3` (all Wave C merged, no other agents running): **232 passed, 0 failed**, 60 skipped by project (desktop-only / mobile-only) — Task 14 step 1 is done | main checkout |
 
 The merged worktrees were removed at `0bf71b3`. `docs/AGENT_GUIDE.md`, `README.md` (new "Environment & backend" section) and the plan's Outcome section were being updated in parallel by another agent; check `git log` for that commit.
 
