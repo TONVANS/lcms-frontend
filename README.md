@@ -37,13 +37,13 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Environment & backend
 
-Copy `.env.example` to `.env.local` and adjust.
+Copy `.env.example` to `.env.local` and adjust. Note that `.env.local` overrides `.env.example` and is gitignored for local user overrides.
 
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_APP_NAME` | App name shown in the UI (`LCMS`). |
 | `NEXT_PUBLIC_API_MODE` | `mock` runs an in-browser mock API (axios-mock-adapter, no backend needed); `live` calls the real backend. |
-| `NEXT_PUBLIC_API_BASE_URL` | Backend base URL including `/api`. Local backend: `http://localhost:3001/api`. The UAT URL (a Cloudflare tunnel) is in the comment in `.env.example`; the tunnel URL may change, so check the backend team's docs. |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend base URL including `/api`. Local backend: `http://localhost:3001/api`. The UAT URL (a Cloudflare tunnel) is in the comment in `.env.example`; the tunnel URL changes — ask the backend team. |
 | `NEXT_PUBLIC_MAX_UPLOAD_MB` | Client-side upload size limit in MB (default 25). |
 | `SESSION_COOKIE_NAME` | Cookie name read by `src/proxy.ts` (`lcms_session`). |
 
