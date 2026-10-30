@@ -134,4 +134,23 @@ describe('DataTable', () => {
       vi.useRealTimers();
     }
   });
+
+  it('renders page size selector and calls onPageSizeChange', async () => {
+    const user = userEvent.setup();
+    const onPageSizeChange = vi.fn();
+    render(
+      <DataTable
+        {...base}
+        total={50}
+        pageSizeOptions={[10, 20, 50]}
+        onPageSizeChange={onPageSizeChange}
+      />,
+    );
+    const trigger = screen.getByRole('combobox', { name: lo.table.pageSize });
+    expect(trigger).toBeInTheDocument();
+    await user.click(trigger);
+    const option = await screen.findByRole('option', { name: '20' });
+    await user.click(option);
+    expect(onPageSizeChange).toHaveBeenCalledWith(20);
+  });
 });

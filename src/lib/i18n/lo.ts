@@ -440,6 +440,7 @@ export const lo = {
   table: {
     prev: 'ກ່ອນໜ້າ',
     next: 'ຕໍ່ໄປ',
+    pageSize: 'ຈຳນວນຕໍ່ໜ້າ',
     density: 'ຄວາມໜາແໜ້ນ',
     comfortable: 'ສະບາຍ',
     compact: 'ກະທັດຮັດ',

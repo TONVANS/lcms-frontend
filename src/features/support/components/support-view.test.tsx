@@ -8,7 +8,15 @@ import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
 import { supportService } from '../api/support.service';
+import { useSupportTicketsListStore } from '../store/support-tickets-list.store';
 import { SupportView } from './support-view';
+
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/support',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -21,8 +29,11 @@ function signIn(username: string) {
 }
 
 beforeEach(() => {
+  nav.search = '';
+  nav.replace.mockReset();
   installMocks(api, { delay: 0 });
   clearMockSession();
+  useSupportTicketsListStore.getState().reset();
 });
 
 describe('SupportView', () => {

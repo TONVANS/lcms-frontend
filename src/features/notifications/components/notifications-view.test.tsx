@@ -9,6 +9,13 @@ import { useNotificationsStore } from '../store/notifications.store';
 import type { AppNotification } from '../types';
 import { NotificationsView } from './notifications-view';
 
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/notifications',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
+
 const mk = (
   id: string,
   source: 'contracts' | 'power',
@@ -36,6 +43,8 @@ function signIn(username: string) {
 }
 
 beforeEach(() => {
+  nav.search = '';
+  nav.replace.mockReset();
   vi.restoreAllMocks();
   useNotificationsStore.getState().reset();
   vi.spyOn(notificationsService, 'list').mockImplementation(async (source) =>
@@ -75,18 +84,34 @@ describe('NotificationsView', () => {
     signIn('admin');
   });
 
-  it('filters by source and by unread', async () => {
+  it('filters by source and by unread, syncing changes to the URL', async () => {
     signIn('admin');
     const user = userEvent.setup();
     render(<NotificationsView />);
     await screen.findByText('Title 1');
+
     await user.click(screen.getByRole('button', { name: lo.notifications.sourcePower }));
     expect(screen.queryByText('Title 1')).toBeNull();
     expect(screen.getByText('Title 3')).toBeInTheDocument();
+    expect(nav.replace).toHaveBeenCalledWith('/notifications?source=power', { scroll: false });
+
     await user.click(screen.getByRole('button', { name: lo.notifications.all }));
+    expect(nav.replace).toHaveBeenCalledWith('/notifications', { scroll: false });
+
     await user.click(screen.getByRole('checkbox', { name: lo.notifications.unreadOnly }));
     expect(screen.queryByText('Title 2')).toBeNull();
     expect(screen.getByText('Title 1')).toBeInTheDocument();
+    expect(nav.replace).toHaveBeenCalledWith('/notifications?unread=true', { scroll: false });
+  });
+
+  it('initializes filter state from search params in URL', async () => {
+    signIn('admin');
+    nav.search = 'source=power&unread=true';
+    render(<NotificationsView />);
+    await screen.findByText('Title 3');
+    expect(screen.queryByText('Title 1')).toBeNull();
+    expect(screen.queryByText('Title 2')).toBeNull();
+    expect(screen.getByText('Title 3')).toBeInTheDocument();
   });
 
   it('marks one item read', async () => {

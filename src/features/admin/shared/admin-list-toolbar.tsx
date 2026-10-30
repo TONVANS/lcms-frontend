@@ -27,15 +27,26 @@ interface Props {
   onSearch: (q: string) => void;
   activeFilter: ActiveFilter;
   onActiveFilter: (f: ActiveFilter) => void;
+  search?: string;
 }
 
-export function AdminListToolbar({ labels, onSearch, activeFilter, onActiveFilter }: Props) {
-  const [text, setText] = useState('');
+export function AdminListToolbar({ labels, onSearch, activeFilter, onActiveFilter, search = '' }: Props) {
+  const [text, setText] = useState(search);
+  const [prevSearch, setPrevSearch] = useState(search);
+
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setText(search);
+  }
 
   useEffect(() => {
-    const t = setTimeout(() => onSearch(text.trim()), DEBOUNCE_MS);
+    const t = setTimeout(() => {
+      if (text.trim() !== (search ?? '').trim()) {
+        onSearch(text.trim());
+      }
+    }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [text, onSearch]);
+  }, [text, search, onSearch]);
 
   return (
     <div className="flex flex-wrap items-center gap-3">

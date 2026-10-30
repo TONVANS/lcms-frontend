@@ -18,7 +18,7 @@ import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { USERS_PAGE_SIZE, usersService } from '../api/users.service';
 import { permissionSummary } from '../lib/user-mapper';
-import { useUsersListStore } from '../store/users-list.store';
+import { USERS_PAGE_SIZES, useUsersListStore, useUsersListUrlSync } from '../store/users-list.store';
 import { USER_ROLES, type AdminUser } from '../types';
 import { UserFormDialog } from './user-form-dialog';
 
@@ -30,15 +30,29 @@ function statusOf(query: { isActive?: boolean }): string {
   return query.isActive === undefined ? ALL : query.isActive ? 'active' : 'inactive';
 }
 
-function DebouncedSearch({ onCommit }: { onCommit: (q: string | undefined) => void }) {
-  const [text, setText] = useState('');
+function DebouncedSearch({
+  value,
+  onCommit,
+}: {
+  value?: string;
+  onCommit: (q: string | undefined) => void;
+}) {
+  const [text, setText] = useState(value ?? '');
+  const [prevValue, setPrevValue] = useState(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setText(value ?? '');
+  }
+
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
     },
     [],
   );
+
   return (
     <SearchInput
       className="w-full sm:w-72"
@@ -55,6 +69,8 @@ function DebouncedSearch({ onCommit }: { onCommit: (q: string | undefined) => vo
 }
 
 export function UsersView() {
+  useUsersListUrlSync();
+
   const me = useAuthStore((s) => s.user);
   const query = useUsersListStore((s) => s.query);
   const items = useUsersListStore((s) => s.items);
@@ -66,10 +82,6 @@ export function UsersView() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [toDelete, setToDelete] = useState<AdminUser | null>(null);
-
-  useEffect(() => {
-    void useUsersListStore.getState().fetch();
-  }, [query]);
 
   const refresh = () => void useUsersListStore.getState().fetch();
 
@@ -173,7 +185,7 @@ export function UsersView() {
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-(--border-glass) bg-(--surface-glass) p-4 shadow-(--shadow-card) backdrop-blur-md sm:p-5">
-        <DebouncedSearch onCommit={(q) => setQuery({ q })} />
+        <DebouncedSearch value={query.q} onCommit={(q) => setQuery({ q })} />
         <div className="w-full sm:w-52">
           <Label htmlFor="user-role-filter" className="sr-only">
             {L.roleFilter}
@@ -229,6 +241,8 @@ export function UsersView() {
         page={query.page ?? 1}
         pageSize={query.pageSize ?? USERS_PAGE_SIZE}
         onPageChange={(page) => setQuery({ page })}
+        pageSizeOptions={USERS_PAGE_SIZES}
+        onPageSizeChange={(pageSize) => setQuery({ pageSize })}
         isLoading={status === 'idle' || status === 'loading'}
         emptyTitle={L.emptyTitle}
         emptyDescription={L.emptyDescription}

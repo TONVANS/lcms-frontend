@@ -14,10 +14,19 @@ import { UsersView } from './users-view';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/admin/users',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
+
 const L = lo.users;
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  nav.search = '';
+  nav.replace.mockReset();
   installMocks(api, { delay: 0 });
   usersMockDb.reset();
   useUsersListStore.getState().reset();
@@ -81,5 +90,21 @@ describe('UsersView', () => {
     await screen.findByText('EMP1001');
     await user.click(screen.getByRole('button', { name: L.inactive }));
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ isActive: false })));
+  });
+
+  it('syncs search and pageSize to URL', async () => {
+    const user = userEvent.setup();
+    render(<UsersView />);
+    await screen.findByText('EMP1001');
+
+    const searchInput = screen.getByPlaceholderText(L.searchPlaceholder);
+    await user.type(searchInput, 'admin');
+
+    await waitFor(() => {
+      expect(nav.replace).toHaveBeenCalledWith(
+        expect.stringContaining('q=admin'),
+        { scroll: false },
+      );
+    });
   });
 });

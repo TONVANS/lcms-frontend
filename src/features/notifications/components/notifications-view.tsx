@@ -2,7 +2,8 @@
 
 import { CheckCheck } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
 import { CountdownBadge } from '@/components/shared/countdown-badge';
@@ -43,13 +44,66 @@ function ListSkeleton() {
 }
 
 export function NotificationsView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const user = useAuthStore((s) => s.user);
   const items = useNotificationsStore((s) => s.items);
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const status = useNotificationsStore((s) => s.status);
   const error = useNotificationsStore((s) => s.error);
-  const [source, setSource] = useState<SourceFilter>('all');
-  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  const rawSource = searchParams.get('source');
+  const initialSource: SourceFilter =
+    rawSource === 'contracts' || rawSource === 'power' ? rawSource : 'all';
+  const initialUnreadOnly = searchParams.get('unread') === 'true';
+
+  const [source, setSource] = useState<SourceFilter>(initialSource);
+  const [unreadOnly, setUnreadOnly] = useState<boolean>(initialUnreadOnly);
+
+  const searchParamsString = searchParams.toString();
+  const lastUrlRef = useRef<string | null>(searchParamsString);
+
+  useEffect(() => {
+    if (lastUrlRef.current === searchParamsString) return;
+    lastUrlRef.current = searchParamsString;
+    const sp = new URLSearchParams(searchParamsString);
+    const s = sp.get('source');
+    setSource(s === 'contracts' || s === 'power' ? s : 'all');
+    setUnreadOnly(sp.get('unread') === 'true');
+  }, [searchParamsString]);
+
+  const updateUrl = useCallback(
+    (newSource: SourceFilter, newUnread: boolean) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      if (newSource === 'all') {
+        sp.delete('source');
+      } else {
+        sp.set('source', newSource);
+      }
+      if (newUnread) {
+        sp.set('unread', 'true');
+      } else {
+        sp.delete('unread');
+      }
+      const qs = sp.toString();
+      lastUrlRef.current = qs;
+      const target = qs ? `${pathname}?${qs}` : pathname;
+      router.replace(target, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  const handleSourceChange = (newSource: SourceFilter) => {
+    setSource(newSource);
+    updateUrl(newSource, unreadOnly);
+  };
+
+  const handleUnreadChange = (newUnread: boolean) => {
+    setUnreadOnly(newUnread);
+    updateUrl(source, newUnread);
+  };
 
   useEffect(() => {
     if (user) void useNotificationsStore.getState().fetch(user);
@@ -57,10 +111,15 @@ export function NotificationsView() {
 
   const sources = useMemo(() => (user ? sourcesFor(user) : []), [user]);
 
+  const activeSource: SourceFilter =
+    source !== 'all' && !sources.includes(source as NotificationSource) ? 'all' : source;
+
   const visible = useMemo(
     () =>
-      items.filter((n) => (source === 'all' || n.source === source) && (!unreadOnly || !n.read)),
-    [items, source, unreadOnly],
+      items.filter(
+        (n) => (activeSource === 'all' || n.source === activeSource) && (!unreadOnly || !n.read),
+      ),
+    [items, activeSource, unreadOnly],
   );
 
   const header = (
@@ -103,13 +162,13 @@ export function NotificationsView() {
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label={lo.notifications.filterLabel} className="flex flex-wrap gap-2">
           {(['all', ...sources] as SourceFilter[]).map((s) => {
-            const active = source === s;
+            const active = activeSource === s;
             return (
               <button
                 key={s}
                 type="button"
                 aria-pressed={active}
-                onClick={() => setSource(s)}
+                onClick={() => handleSourceChange(s)}
                 className={cn(
                   'min-h-11 rounded-full border px-4 text-sm font-medium',
                   active
@@ -127,7 +186,7 @@ export function NotificationsView() {
           <input
             type="checkbox"
             checked={unreadOnly}
-            onChange={(e) => setUnreadOnly(e.target.checked)}
+            onChange={(e) => handleUnreadChange(e.target.checked)}
             className={cn('size-4', FOCUS)}
           />
           {lo.notifications.unreadOnly}

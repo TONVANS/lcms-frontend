@@ -7,7 +7,15 @@ import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { clearMockSession, setMockSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
+import { useContractTypesListStore } from './contract-types-list.store';
 import { ContractTypesView } from './contract-types-view';
+
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/admin/contract-types',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
@@ -17,8 +25,11 @@ const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 beforeEach(() => {
   vi.clearAllMocks();
+  nav.search = '';
+  nav.replace.mockReset();
   installMocks(api, { delay: 0 });
   adminMockDb.reset(new Date());
+  useContractTypesListStore.getState().reset();
   setMockSession('admin', false);
   useLookupsStore.getState().reset();
 });

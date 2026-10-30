@@ -7,7 +7,15 @@ import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { setMockSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
+import { useDepartmentsListStore } from './departments-list.store';
 import { DepartmentsView } from './departments-view';
+
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/admin/departments',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
@@ -19,8 +27,11 @@ const FREE = 'ຫ້ອງການ ຝ່າຍບໍລິການລູກ�
 
 beforeEach(() => {
   vi.clearAllMocks();
+  nav.search = '';
+  nav.replace.mockReset();
   installMocks(api, { delay: 0 });
   adminMockDb.reset(new Date());
+  useDepartmentsListStore.getState().reset();
   setMockSession('admin', false);
   useLookupsStore.getState().reset();
 });

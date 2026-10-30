@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye } from 'lucide-react';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,19 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useReturnFocus } from '@/hooks/use-return-focus';
+import { toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { formatDate } from '@/lib/utils/date';
-import { adminService } from '../admin.service';
 import { ListSection } from '../shared/admin-list-parts';
 import type { AuditLog } from '../types';
-import { useRemote } from '../use-remote';
+import {
+  AUDIT_LOG_PAGE_SIZES,
+  useAuditLogsListStore,
+  useAuditLogsListUrlSync,
+} from './audit-logs-list.store';
 
 const L = lo.auditLogs;
 const ALL = 'all';
-const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 300;
 const ACTION_LABELS = lo.history.actions;
 
@@ -83,35 +86,34 @@ function DetailsDialog({ log, onClose }: { log: AuditLog | null; onClose: () => 
 }
 
 export function AuditLogsView() {
+  useAuditLogsListUrlSync();
+
   const userInputId = useId();
-  const [action, setAction] = useState(ALL);
-  const [userText, setUserText] = useState('');
-  const [userId, setUserId] = useState('');
-  const [page, setPage] = useState(1);
+  const query = useAuditLogsListStore((s) => s.query);
+  const items = useAuditLogsListStore((s) => s.items);
+  const total = useAuditLogsListStore((s) => s.total);
+  const status = useAuditLogsListStore((s) => s.status);
+  const error = useAuditLogsListStore((s) => s.error);
+  const setQuery = useAuditLogsListStore((s) => s.setQuery);
+
+  const [userText, setUserText] = useState(query.userId ?? '');
+  const [prevUserId, setPrevUserId] = useState(query.userId);
   const [details, setDetails] = useState<AuditLog | null>(null);
+
+  if (query.userId !== prevUserId) {
+    setPrevUserId(query.userId);
+    setUserText(query.userId ?? '');
+  }
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setUserId((prev) => {
-        const next = userText.trim();
-        if (next !== prev) setPage(1);
-        return next;
-      });
+      const next = userText.trim() || undefined;
+      if (next !== query.userId) {
+        setQuery({ userId: next, page: 1 });
+      }
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [userText]);
-
-  const load = useCallback(
-    () =>
-      adminService.auditLogs.list({
-        page,
-        pageSize: PAGE_SIZE,
-        action: action === ALL ? undefined : action,
-        userId: userId || undefined,
-      }),
-    [page, action, userId],
-  );
-  const { data, error, isLoading, reload } = useRemote(load);
+  }, [userText, query.userId, setQuery]);
 
   const columns: DataTableColumn<AuditLog>[] = [
     { id: 'time', header: L.columns.time, cell: (r) => <span className="tabular-nums">{formatDateTime(r.createdAt)}</span> },
@@ -141,6 +143,8 @@ export function AuditLogsView() {
     },
   ];
 
+  const reload = () => void useAuditLogsListStore.getState().fetch();
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={lo.admin.auditLogs} />
@@ -148,10 +152,9 @@ export function AuditLogsView() {
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`${userInputId}-action`}>{L.filterAction}</Label>
           <Select
-            value={action}
+            value={query.action ?? ALL}
             onValueChange={(v) => {
-              setAction(v);
-              setPage(1);
+              setQuery({ action: v === ALL ? undefined : v, page: 1 });
             }}
           >
             <SelectTrigger id={`${userInputId}-action`} aria-label={L.filterAction} className="w-64">
@@ -179,16 +182,23 @@ export function AuditLogsView() {
           />
         </div>
       </div>
-      <ListSection isLoading={isLoading} error={error} errorTitle={L.loadError} onRetry={reload}>
+      <ListSection
+        isLoading={status === 'idle' || status === 'loading'}
+        error={error ? toUserMessage(error) : null}
+        errorTitle={L.loadError}
+        onRetry={reload}
+      >
         <DataTable
           columns={columns}
-          data={data?.items ?? []}
+          data={items}
           getRowId={(r) => r.id}
-          total={data?.total ?? 0}
-          page={page}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-          isLoading={isLoading}
+          total={total}
+          page={query.page ?? 1}
+          pageSize={query.pageSize ?? 20}
+          onPageChange={(page) => setQuery({ page })}
+          pageSizeOptions={AUDIT_LOG_PAGE_SIZES}
+          onPageSizeChange={(pageSize) => setQuery({ pageSize })}
+          isLoading={status === 'idle' || status === 'loading'}
           emptyTitle={L.emptyTitle}
           emptyDescription={L.emptyDesc}
           caption={L.caption}

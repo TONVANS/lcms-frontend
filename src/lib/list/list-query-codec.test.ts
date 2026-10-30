@@ -4,6 +4,7 @@ import { createQueryCodec, type ListQueryBase } from './list-query-codec';
 interface Q extends ListQueryBase {
   kind?: 'a' | 'b';
   year?: number;
+  active?: boolean;
   ref?: string;
   from?: string;
 }
@@ -13,6 +14,7 @@ const codec = createQueryCodec<Q>({
   defaults: { page: 1, pageSize: 10 },
   enums: { kind: ['a', 'b'] },
   ints: ['year'],
+  booleans: ['active'],
   strings: { ref: /^[\w-]{1,40}$/, from: /^\d{4}-\d{2}-\d{2}$/ },
   pageSizes: PAGE_SIZES,
 });
@@ -21,19 +23,24 @@ const parse = (s: string) => codec.parse(new URLSearchParams(s));
 
 describe('list query codec', () => {
   it('falls back to defaults for every invalid value', () => {
-    expect(parse('kind=x&year=abc&ref=a%20b&from=2026-13&page=-3&pageSize=999&sort=evil')).toEqual(D);
+    expect(parse('kind=x&year=abc&active=yes&ref=a%20b&from=2026-13&page=-3&pageSize=999&sort=evil')).toEqual(D);
   });
 
   it('parses valid values and ignores sort/order entirely', () => {
-    expect(parse('q=edl&kind=b&year=2026&ref=dep-1&from=2026-01-31&page=2&pageSize=25&sort=x&order=asc')).toEqual({
+    expect(parse('q=edl&kind=b&year=2026&active=true&ref=dep-1&from=2026-01-31&page=2&pageSize=25&sort=x&order=asc')).toEqual({
       q: 'edl',
       kind: 'b',
       year: 2026,
+      active: true,
       ref: 'dep-1',
       from: '2026-01-31',
       page: 2,
       pageSize: 25,
     });
+  });
+
+  it('parses active=false correctly', () => {
+    expect(parse('active=false').active).toBe(false);
   });
 
   it('accepts only listed page sizes and positive safe integer pages', () => {
@@ -54,12 +61,11 @@ describe('list query codec', () => {
 
   it('serializes without defaults and without sort keys', () => {
     expect(codec.serialize(D)).toBe('');
-    expect(codec.serialize({ ...D, kind: 'a', year: 2025, pageSize: 50 })).toBe('kind=a&year=2025&pageSize=50');
+    expect(codec.serialize({ ...D, kind: 'a', year: 2025, active: true, pageSize: 50 })).toBe('kind=a&year=2025&active=true&pageSize=50');
   });
 
   it('round-trips', () => {
-    const q: Q = { ...D, q: 'a b', kind: 'b', year: 1999, ref: 'x-1', from: '2026-02-03', page: 4 };
+    const q: Q = { ...D, q: 'a b', kind: 'b', year: 1999, active: false, ref: 'x-1', from: '2026-02-03', page: 4 };
     expect(parse(codec.serialize(q))).toEqual(q);
   });
 });
-

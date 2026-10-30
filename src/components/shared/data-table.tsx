@@ -10,6 +10,7 @@ import {
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -46,6 +47,8 @@ export interface DataTableProps<T extends object> {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  pageSizeOptions?: readonly number[];
+  onPageSizeChange?: (pageSize: number) => void;
   sort?: DataTableSort;
   onSortChange?: (sort: DataTableSort) => void;
   isLoading?: boolean;
@@ -71,6 +74,8 @@ export function DataTable<T extends object>({
   page,
   pageSize,
   onPageChange,
+  pageSizeOptions,
+  onPageSizeChange,
   sort,
   onSortChange,
   isLoading = false,
@@ -239,10 +244,35 @@ export function DataTable<T extends object>({
 
       {total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4 px-1 py-1 text-xs text-[var(--text-muted)] print:hidden">
-          <div>
-            {lo.common.showing(
-              startItem === endItem ? startItem : `${startItem}–${endItem}`,
-              total,
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              {lo.common.showing(
+                startItem === endItem ? startItem : `${startItem}–${endItem}`,
+                total,
+              )}
+            </div>
+            {pageSizeOptions && pageSizeOptions.length > 0 && onPageSizeChange && (
+              <div className="flex items-center gap-1.5">
+                <span>{lo.table.pageSize}:</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(val) => onPageSizeChange(Number(val))}
+                >
+                  <SelectTrigger
+                    className="h-8 w-[72px] text-xs"
+                    aria-label={lo.table.pageSize}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((opt) => (
+                      <SelectItem key={opt} value={String(opt)}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
           {totalPages > 1 && (

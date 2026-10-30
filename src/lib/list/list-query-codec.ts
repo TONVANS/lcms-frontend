@@ -10,6 +10,8 @@ export interface QueryCodecSpec<Q extends ListQueryBase> {
   enums?: { [K in keyof Q]?: readonly string[] };
   /** Integer-valued filter params (for example a year). */
   ints?: readonly (keyof Q & string)[];
+  /** Boolean-valued filter params ('true' | 'false'). */
+  booleans?: readonly (keyof Q & string)[];
   /** Free string filter params, accepted only when they match the given pattern. */
   strings?: { [K in keyof Q]?: RegExp };
   pageSizes: readonly number[];
@@ -26,6 +28,7 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
   const enums = (spec.enums ?? {}) as Record<string, readonly string[]>;
   const strings = (spec.strings ?? {}) as Record<string, RegExp>;
   const ints = (spec.ints ?? []) as readonly string[];
+  const booleans = (spec.booleans ?? []) as readonly string[];
 
   function parse(sp: URLSearchParams): Q {
     const out: Record<string, unknown> = { ...(defaults as ListQueryBase) };
@@ -44,6 +47,11 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
     for (const k of ints) {
       const v = sp.get(k);
       if (v !== null && /^\d{1,9}$/.test(v)) out[k] = Number(v);
+    }
+    for (const k of booleans) {
+      const v = sp.get(k);
+      if (v === 'true') out[k] = true;
+      else if (v === 'false') out[k] = false;
     }
 
     const pageRaw = sp.get('page');
@@ -77,6 +85,10 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
       const v = rec[k];
       if (typeof v === 'number' && Number.isFinite(v)) sp.set(k, String(v));
     }
+    for (const k of booleans) {
+      const v = rec[k];
+      if (typeof v === 'boolean') sp.set(k, String(v));
+    }
     if (q.page !== undefined && q.page !== defaults.page) sp.set('page', String(q.page));
     if (q.pageSize !== undefined && q.pageSize !== defaults.pageSize) {
       sp.set('pageSize', String(q.pageSize));
@@ -86,4 +98,3 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
 
   return { defaults, parse, serialize };
 }
-

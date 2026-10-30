@@ -1,18 +1,29 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { adminMockDb } from '@/features/admin/mocks/admin.mock';
 import { api } from '@/lib/api/client';
 import { installMocks } from '@/lib/api/mock';
 import { setMockSession } from '@/lib/auth/session';
 import { lo } from '@/lib/i18n/lo';
+import { useAuditLogsListStore } from './audit-logs-list.store';
 import { AuditLogsView } from './audit-logs-view';
+
+const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
+  usePathname: () => '/admin/audit-logs',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 const L = lo.auditLogs;
 
 beforeEach(() => {
+  nav.search = '';
+  nav.replace.mockReset();
   installMocks(api, { delay: 0 });
   adminMockDb.reset(new Date());
+  useAuditLogsListStore.getState().reset();
   setMockSession('admin', false);
 });
 

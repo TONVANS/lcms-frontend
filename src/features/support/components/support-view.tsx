@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye, Mail, Pencil, Phone, Plus, Trash2, MessageSquare } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
 import { AlertBanner } from '@/components/shared/alert-banner';
@@ -20,10 +20,14 @@ import { isAdmin } from '@/lib/auth/permissions';
 import type { StatusTone } from '@/lib/constants/status';
 import { lo } from '@/lib/i18n/lo';
 import { formatDate } from '@/lib/utils/date';
-import type { Paginated } from '@/types/api';
 import { supportService } from '../api/support.service';
 import { useSupportContacts } from '../hooks/use-support-contacts';
 import { contactKind } from '../lib/support-mapper';
+import {
+  SUPPORT_PAGE_SIZES,
+  useSupportTicketsListStore,
+  useSupportTicketsListUrlSync,
+} from '../store/support-tickets-list.store';
 import {
   TICKET_STATUSES,
   type ContactChannel,
@@ -36,7 +40,6 @@ import { ContactFormDialog } from './contact-form-dialog';
 import { TicketFormDialog } from './ticket-form-dialog';
 import { TicketUpdateDialog } from './ticket-update-dialog';
 
-const PAGE_SIZE = 10;
 const LINK =
   'break-all rounded-sm font-semibold underline underline-offset-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 
@@ -121,8 +124,8 @@ function ContactsSection({ admin }: { admin: boolean }) {
                   <div className="flex min-w-0 items-start gap-3">
                     <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-(--text-muted)" />
                     <div className="min-w-0">
-                      <p className="text-[13px] text-(--text-muted)">{c.channelName}</p>
-                      <p className="text-sm text-(--text-strong)">
+                      <p className="text-sm font-semibold text-(--text-strong)">{c.channelName}</p>
+                      <p className="mt-1 text-sm text-(--text-default)">
                         <ContactValue info={c.contactInfo} />
                       </p>
                       {c.description ? (
@@ -177,48 +180,23 @@ function ContactsSection({ admin }: { admin: boolean }) {
 }
 
 export function SupportView() {
+  useSupportTicketsListUrlSync();
+
   const user = useAuthStore((s) => s.user);
   const admin = user ? isAdmin(user) : false;
 
-  const [filter, setFilter] = useState<'ALL' | TicketStatus>('ALL');
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState<Paginated<SupportTicket> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useSupportTicketsListStore((s) => s.query);
+  const items = useSupportTicketsListStore((s) => s.items);
+  const total = useSupportTicketsListStore((s) => s.total);
+  const status = useSupportTicketsListStore((s) => s.status);
+  const error = useSupportTicketsListStore((s) => s.error);
+  const setQuery = useSupportTicketsListStore((s) => s.setQuery);
+
   const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<SupportTicket | null>(null);
   const [viewing, setViewing] = useState<SupportTicket | null>(null);
-  const gen = useRef(0);
 
-  const load = useCallback(async () => {
-    const mine = ++gen.current;
-    setLoading(true);
-    try {
-      const res = await supportService.tickets({
-        page,
-        pageSize: PAGE_SIZE,
-        status: filter === 'ALL' ? undefined : filter,
-      });
-      if (mine !== gen.current) return;
-      setData(res);
-      setError(null);
-    } catch (e) {
-      if (mine !== gen.current) return;
-      setError(toUserMessage(normalizeError(e)) || lo.support.ticketsLoadError);
-    } finally {
-      if (mine === gen.current) setLoading(false);
-    }
-  }, [page, filter]);
-
-  useEffect(() => {
-    if (!user) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount / query change
-    void load();
-    const cancel = () => {
-      gen.current++;
-    };
-    return cancel;
-  }, [user, load]);
+  const reloadTickets = () => void useSupportTicketsListStore.getState().fetch();
 
   const columns: DataTableColumn<SupportTicket>[] = [
     {
@@ -314,18 +292,17 @@ export function SupportView() {
         <FilterChips
           ariaLabel={lo.support.statusFilter}
           options={chipOptions}
-          value={filter}
+          value={query.status ?? 'ALL'}
           onChange={(v) => {
-            setFilter(v as 'ALL' | TicketStatus);
-            setPage(1);
+            setQuery({ status: v === 'ALL' ? undefined : (v as TicketStatus), page: 1 });
           }}
         />
         {error ? (
           <AlertBanner
             tone="rose"
-            title={error}
+            title={toUserMessage(error) || lo.support.ticketsLoadError}
             action={
-              <Button variant="secondary" onClick={() => void load()}>
+              <Button variant="secondary" onClick={reloadTickets}>
                 {lo.common.retry}
               </Button>
             }
@@ -333,13 +310,15 @@ export function SupportView() {
         ) : null}
         <DataTable
           columns={columns}
-          data={data?.items ?? []}
+          data={items}
           getRowId={(t) => t.id}
-          total={data?.total ?? 0}
-          page={page}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-          isLoading={loading && !data}
+          total={total}
+          page={query.page ?? 1}
+          pageSize={query.pageSize ?? 10}
+          onPageChange={(page) => setQuery({ page })}
+          pageSizeOptions={SUPPORT_PAGE_SIZES}
+          onPageSizeChange={(pageSize) => setQuery({ pageSize })}
+          isLoading={status === 'idle' || status === 'loading'}
           emptyTitle={lo.support.ticketsEmpty}
           caption={lo.support.ticketsCaption}
         />
@@ -349,8 +328,8 @@ export function SupportView() {
         open={reportOpen}
         onOpenChange={setReportOpen}
         onCreated={() => {
-          setPage(1);
-          void load();
+          setQuery({ page: 1 });
+          reloadTickets();
         }}
       />
       {admin ? (
@@ -359,7 +338,7 @@ export function SupportView() {
           onOpenChange={(o) => {
             if (!o) setEditing(null);
           }}
-          onUpdated={() => void load()}
+          onUpdated={reloadTickets}
         />
       ) : null}
       <AttachmentDialog
