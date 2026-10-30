@@ -185,3 +185,20 @@ Full `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build && pnpm e2e`;
 - Response envelopes and dashboard shapes are guesses until `scripts/live-smoke.mjs` runs against a live backend with real credentials. Mappers are tolerant; tighten after the smoke run.
 - CORS on the backend must allow the frontend origin and the `Authorization` header.
 - Token in a JS-readable cookie (Ruling 4).
+
+## 5. Outcome
+
+All 14 tasks are done on `phase-5-backend-integration`.
+
+Delivered: env and API core with the live smoke script (`pnpm smoke:live`); Bearer auth, the backend user model and flag-based permissions; shared status, lookups, attachments and history; the notifications store and page; the role-aware sidebar and topbar; and the migrated GC, Legal (documents and cases), PPA (power contracts), Home, Support, Admin users and Admin audit logs, contract types and departments. `docs/AGENT_GUIDE.md` and `README.md` were updated in Task 14.
+
+Deviations from the plan:
+
+- Tasks 7 and 8 (Legal documents and cases) were done by one agent in one branch and commit (`feat(legal): backend-integrated legal documents and cases`).
+- `/ppa/documents` was removed (route, nav item and view), as Task 9 specified.
+- Forgot-password is a static notice pointing to IT support, because the backend has no reset endpoint.
+- `none.user` (departments and support only) lands on `/support`.
+- Notifications replace the old alerts store and pages.
+- `/home/summary` is gone; Home is built from module dashboards plus notifications.
+
+Left open: the live smoke run and mapper tightening, the PATCH null-vs-omit decision (GC omits cleared fields, Legal sends `null`), and native-speaker review of the new Lao keys. The final full verification run (`pnpm e2e`) was in progress when this section was written.
