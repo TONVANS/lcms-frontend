@@ -1,6 +1,6 @@
 import { format, subDays } from 'date-fns';
 import { MOCK_DEPARTMENTS } from '@/features/lookups/mocks/lookups.mock';
-import { createMockDb, type MockDb, type MockRow } from '../../lib/mock-db';
+import { createMockDb, type MockDb, type MockRow } from '@/lib/api/mock/mock-db';
 import { CASE_TYPES, DISPUTE_STATUSES } from '../types';
 
 // Mock Lao text is data, not UI copy. Names are fictional.

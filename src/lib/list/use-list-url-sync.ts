@@ -58,3 +58,4 @@ export function useListUrlSync<Q extends ListQueryBase>(
     void useStore.getState().fetch();
   }, [query, pathname, router, codec, useStore]);
 }
+

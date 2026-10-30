@@ -1,5 +1,5 @@
 import { toNum, toStr, unwrap } from '@/lib/api/envelope';
-import { isRecord, pickEnum, toCountEntries } from '../../lib/mapper-utils';
+import { isRecord, pickEnum, toCountEntries } from '@/lib/api/mapper-utils';
 import type { Department } from '@/types/domain';
 import type { LegalDocumentFormValues } from '../schemas/legal-document.schema';
 import {

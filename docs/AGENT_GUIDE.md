@@ -149,14 +149,16 @@ When the plan and the code disagree, the controller decides. It records the deci
 
 `src/features/gc/` is the pattern for every later module: a tolerant mapper (`lib/contract-mapper.ts`: `toContract`, `toContractPayload`, `diffPayload`), a service on `/contracts`, a list store plus URL sync, a form dialog, a wizard, a detail view with `DocumentManager` and `HistoryTimeline`, a dashboard and an alerts page. `features/ppa` and `features/legal/*` follow the same shape.
 
-### 4.6 Generic list helpers in features/legal/lib
+### 4.6 Generic list helpers in src/lib/list and src/lib/api
 
-Extracted in Phase 4a for reuse across Legal (and future modules):
-- `createListStore<T, F>`: unified Zustand store factory for paginated search/filter/sort with generation-counter optimistic deletes.
-- `createQueryCodec<F>`: generic bidirectional URL query parameter codec.
-- `useListUrlSync`: hook keeping store query state synchronized with URL search params.
-- `LegalSearch`: accessible debounced search input component.
-- `uploadStagedFiles`: helper uploading staged files sequentially with partial failure isolation.
+Extracted for reuse across all modules (GC, Legal, PPA, Admin, Users, Support):
+- `createListStore<T, Q>` (`@/lib/list`): unified Zustand store factory for paginated search/filter with generation-counter race protection and `afterDelete`.
+- `createQueryCodec<Q>` (`@/lib/list`): generic bidirectional URL query parameter codec.
+- `useListUrlSync` (`@/lib/list`): hook keeping store query state synchronized with URL search params under `<Suspense>`.
+- `isRecord`, `pickEnum`, `toCountEntries` (`@/lib/api/mapper-utils`): tolerant mapper utilities.
+- `createMockDb` (`@/lib/api/mock/mock-db`): in-memory CRUD table for mock handlers.
+- `LegalSearch` (`src/features/legal/lib/legal-search.tsx`): accessible debounced search input component.
+- `uploadStaged` (`src/features/legal/lib/upload-staged.ts`): helper uploading staged files sequentially with partial failure isolation.
 
 shadcn primitives are in `src/components/ui/`. After `pnpm dlx shadcn@latest add <x>`:
 

@@ -1,38 +1,51 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { legalDocumentsService } from '../documents/api/legal-documents.service';
-import {
-  legalDocumentsQueryCodec as codec,
-  useLegalDocumentsListStore as store,
-  useLegalDocumentsListUrlSync,
-} from '../documents/store/legal-documents-list.store';
+import type { Paginated } from '@/types/api';
+import { createListStore } from './create-list-store';
+import { createQueryCodec, type ListQueryBase } from './list-query-codec';
 import { useListUrlSync } from './use-list-url-sync';
 
 const nav = vi.hoisted(() => ({ search: '', replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: nav.replace }),
-  usePathname: () => '/legal/regulations',
+  usePathname: () => '/items',
   useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
-let list: ReturnType<typeof vi.spyOn>;
+interface Item {
+  id: string;
+}
+
+interface Q extends ListQueryBase {
+  status?: 'ACTIVE' | 'INACTIVE';
+  docType?: 'MANUAL' | 'RULE';
+}
+
+const codec = createQueryCodec<Q>({
+  defaults: { page: 1, pageSize: 10 },
+  enums: { status: ['ACTIVE', 'INACTIVE'], docType: ['MANUAL', 'RULE'] },
+  pageSizes: [10, 20, 50],
+});
+
+let list: ReturnType<typeof vi.fn<(q: Q) => Promise<Paginated<Item>>>>;
+let store: ReturnType<typeof createListStore<Item, Q>>;
 
 beforeEach(() => {
   vi.restoreAllMocks();
   nav.search = '';
   nav.replace = vi.fn();
-  store.getState().reset();
   list = vi
-    .spyOn(legalDocumentsService, 'list')
+    .fn<(q: Q) => Promise<Paginated<Item>>>()
     .mockResolvedValue({ items: [], page: 1, pageSize: 10, total: 0 });
+  store = createListStore<Item, Q>(list, codec.defaults);
 });
 
-describe('useListUrlSync (regulations)', () => {
+describe('useListUrlSync', () => {
   it('does not wipe incoming params on mount and fetches once with them', async () => {
     nav.search = 'status=INACTIVE&page=2';
     await act(async () => {
-      renderHook(() => useLegalDocumentsListUrlSync());
+      renderHook(() => useListUrlSync(store, codec));
     });
     expect(nav.replace).not.toHaveBeenCalled();
     expect(list).toHaveBeenCalledTimes(1);
@@ -55,7 +68,7 @@ describe('useListUrlSync (regulations)', () => {
     await act(async () => {
       store.getState().setQuery({ status: 'INACTIVE' });
     });
-    expect(nav.replace).toHaveBeenCalledWith('/legal/regulations?status=INACTIVE', {
+    expect(nav.replace).toHaveBeenCalledWith('/items?status=INACTIVE', {
       scroll: false,
     });
     expect(list).toHaveBeenCalledTimes(1);
@@ -123,7 +136,7 @@ describe('useListUrlSync (regulations)', () => {
 
   it('afterDelete steps back a page and updates the URL', async () => {
     nav.search = 'page=3';
-    const ten = Array.from({ length: 10 }, (_, i) => ({ id: `p2-${i}` }) as never);
+    const ten = Array.from({ length: 10 }, (_, i) => ({ id: `p2-${i}` }));
     list.mockImplementation(async (q: { page?: number }) =>
       q.page === 3
         ? { items: [], page: 3, pageSize: 10, total: 20 }
@@ -138,7 +151,7 @@ describe('useListUrlSync (regulations)', () => {
     expect(st.query.page).toBe(2);
     expect(st.items).toHaveLength(10);
     expect(st.status).toBe('ready');
-    expect(nav.replace).toHaveBeenCalledWith('/legal/regulations?page=2', { scroll: false });
+    expect(nav.replace).toHaveBeenCalledWith('/items?page=2', { scroll: false });
   });
 
   it('ignores late echoes of earlier pushes so the latest query is not rolled back', async () => {
@@ -161,7 +174,7 @@ describe('useListUrlSync (regulations)', () => {
     });
     expect(store.getState().query.status).toBe('INACTIVE');
     expect(list).toHaveBeenCalledTimes(fetchesAfterPushes);
-    expect(nav.replace).toHaveBeenLastCalledWith('/legal/regulations?status=INACTIVE', {
+    expect(nav.replace).toHaveBeenLastCalledWith('/items?status=INACTIVE', {
       scroll: false,
     });
   });

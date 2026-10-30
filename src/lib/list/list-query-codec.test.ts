@@ -62,3 +62,4 @@ describe('list query codec', () => {
     expect(parse(codec.serialize(q))).toEqual(q);
   });
 });
+

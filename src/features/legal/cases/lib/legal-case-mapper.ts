@@ -1,6 +1,6 @@
 import { toNum, toStr, toIsoDate, unwrap } from '@/lib/api/envelope';
 import { toDepartment } from '../../documents/lib/legal-document-mapper';
-import { isRecord, pickEnum, toCountEntries } from '../../lib/mapper-utils';
+import { isRecord, pickEnum, toCountEntries } from '@/lib/api/mapper-utils';
 import type { LegalCaseFormValues } from '../schemas/legal-case.schema';
 import {
   CASE_TYPES,

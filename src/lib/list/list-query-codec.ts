@@ -86,3 +86,4 @@ export function createQueryCodec<Q extends ListQueryBase>(spec: QueryCodecSpec<Q
 
   return { defaults, parse, serialize };
 }
+

@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE, ID_PARAM, LEGAL_PAGE_SIZES } from '../../constants';
-import { createListStore } from '../../lib/create-list-store';
-import { createQueryCodec } from '../../lib/list-query-codec';
-import { useListUrlSync } from '../../lib/use-list-url-sync';
+import { createListStore, createQueryCodec, useListUrlSync } from '@/lib/list';
+
+
 import { legalDocumentsService, type LegalDocumentListQuery } from '../api/legal-documents.service';
 import { DOC_STATUSES, DOC_TYPES, type LegalDocument } from '../types';
 

@@ -1,7 +1,7 @@
 import { DATE_PARAM, DEFAULT_PAGE_SIZE, ID_PARAM, LEGAL_PAGE_SIZES } from '../../constants';
-import { createListStore } from '../../lib/create-list-store';
-import { createQueryCodec } from '../../lib/list-query-codec';
-import { useListUrlSync } from '../../lib/use-list-url-sync';
+import { createListStore, createQueryCodec, useListUrlSync } from '@/lib/list';
+
+
 import { legalCasesService, type LegalCaseListQuery } from '../api/legal-cases.service';
 import { CASE_TYPES, DISPUTE_STATUSES, type LegalCase } from '../types';
 
