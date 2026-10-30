@@ -40,7 +40,7 @@ Do not redo finished tasks. Implementers are Sonnet subagents, one task each (se
 | 11 | `/support`: contact channels, tickets (multipart image), admin ticket update + contact CRUD | `cd13655` |
 | 12 | `/admin/users`: list/filters, create with HRM lookup, edit (role/division/flags), delete | `548f689` |
 | 13 | `/admin/audit-logs`, `/admin/contract-types`, `/admin/departments` (+ HRM sync) | `925a0bf` |
-| 14 | Integration verification & cleanup: dead code removed (`METRICS`, `SupportDialog`, unused `lo` keys), `SupportCard` unit tested, docs updated | pending commit |
+| 14 | Integration verification & cleanup: dead code removed (`METRICS`, `SupportDialog`, unused `lo` keys), `SupportCard` unit tested, docs updated | `66eb31c` |
 
 Routes now: `/`, `/notifications`, `/support`, `/contracts{,/list,/new,/alerts,/[id]}`, `/legal{,/regulations,/regulations/[id],/cases,/cases/[id],/new}`, `/ppa{,/contracts,/contracts/[id],/new,/alerts}`, `/admin/{users,audit-logs,contract-types,departments}`, `/forbidden`.
 Features: `admin auth documents gc history home legal lookups notifications ppa support users`.
