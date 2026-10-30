@@ -20,7 +20,7 @@ Do not redo finished tasks. Implementers are Sonnet subagents, one task each (se
 | HEAD at handoff | `0bf71b3` (merge of `p5-admin`) |
 | Worktrees | All merged worktrees and `p5-*` branches were removed at `0bf71b3`; delete `D:\LCMS\wt` if the folder is still on disk |
 | Untracked file | `docs/superpowers/HANDOFF-phase4a-legal.md` (old Phase 4a handoff, never committed — decide: commit as history or delete) |
-| `.env.local` | gitignored; `NEXT_PUBLIC_API_MODE=mock`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api`, `NEXT_PUBLIC_MAX_UPLOAD_MB=25`. `.env.example` is committed with the same keys and the UAT URL commented. |
+| `.env.local` | gitignored; `NEXT_PUBLIC_API_MODE=mock`, `NEXT_PUBLIC_API_BASE_URL=https://likely-ecology-refused-letters.trycloudflare.com/api`, `NEXT_PUBLIC_MAX_UPLOAD_MB=25`. `.env.example` is committed with the same keys and the UAT URL commented. |
 
 ### Completed tasks
 
@@ -40,6 +40,7 @@ Do not redo finished tasks. Implementers are Sonnet subagents, one task each (se
 | 11 | `/support`: contact channels, tickets (multipart image), admin ticket update + contact CRUD | `cd13655` |
 | 12 | `/admin/users`: list/filters, create with HRM lookup, edit (role/division/flags), delete | `548f689` |
 | 13 | `/admin/audit-logs`, `/admin/contract-types`, `/admin/departments` (+ HRM sync) | `925a0bf` |
+| 14 | Integration verification & cleanup: dead code removed (`METRICS`, `SupportDialog`, unused `lo` keys), `SupportCard` unit tested, docs updated | pending commit |
 
 Routes now: `/`, `/notifications`, `/support`, `/contracts{,/list,/new,/alerts,/[id]}`, `/legal{,/regulations,/regulations/[id],/cases,/cases/[id],/new}`, `/ppa{,/contracts,/contracts/[id],/new,/alerts}`, `/admin/{users,audit-logs,contract-types,departments}`, `/forbidden`.
 Features: `admin auth documents gc history home legal lookups notifications ppa support users`.
@@ -48,11 +49,11 @@ Features: `admin auth documents gc history home legal lookups notifications ppa 
 
 | Check | Result | Where / when |
 |---|---|---|
-| typecheck | 0 errors | `0bf71b3` (all branches merged) |
-| lint | 0 errors, 1 warning (unused `METRICS` in `src/features/legal/cases/lib/legal-case-mapper.ts`) | `0bf71b3` |
-| Unit | 144 files / 809 tests pass | `0bf71b3` |
-| Build | EXIT=0; routes include `/support` and `/admin/{users,audit-logs,contract-types,departments}` | `0bf71b3` |
-| e2e | Full `pnpm e2e` on `0bf71b3` (all Wave C merged, no other agents running): **232 passed, 0 failed**, 60 skipped by project (desktop-only / mobile-only) — Task 14 step 1 is done | main checkout |
+| typecheck | 0 errors | Task 14 verification |
+| lint | 0 errors, 0 warnings | Task 14 verification |
+| Unit | 144 files / 805 tests pass | Task 14 verification |
+| Build | EXIT=0; all routes static/partial prerender | Task 14 verification |
+| e2e | Full `pnpm e2e`: **232 passed, 0 failed**, 60 skipped by project | main checkout |
 
 The merged worktrees were removed at `0bf71b3`. `docs/AGENT_GUIDE.md`, `README.md` (new "Environment & backend" section) and the plan's Outcome section were being updated in parallel by another agent; check `git log` for that commit.
 
@@ -67,25 +68,24 @@ The merged worktrees were removed at `0bf71b3`. `docs/AGENT_GUIDE.md`, `README.m
 
 Run tasks one at a time unless marked parallel-safe. Each brief must name exact files, expected behaviour and the verification commands (template at the end).
 
-### Task 14 — Integration verification and cleanup (do first)
+### Task 14 — Integration verification and cleanup (DONE)
 
-Typecheck, lint, unit and build already pass on `0bf71b3`, the worktrees are removed and the doc updates were in progress (see "Last known verification"). Only do the steps below that `git log` and a fresh check show are still open.
-
-1. Read the result of the full `pnpm e2e` run on the merged HEAD (or re-run it with no other agents active). Fix regressions from the Wave C merges. Likely spots: Home e2e assertions (`e2e/rbac.spec.ts`, `responsive-a11y.spec.ts`, `dod-screenshots.spec.ts` visit Home), the `/support` and `/admin/*` pages that replaced placeholders, the `none.user` landing (see Task 17).
-2. Remove the dead code:
-   - The `METRICS` lint warning.
-   - `src/components/layout/support-dialog.tsx` (no longer used by any page; the user menu links to `/support`) + its test, unless a page adopts it.
-   - Unused `lo` keys (`nav.procurement`, `nav.laws`, `nav.hearings`, `topbar.searchLabel`, `common.search`, and any others a grep shows unused).
-3. Make sure no worktree leftovers remain: `git worktree list` shows only the main checkout, no `p5-*` branches, and the `D:\LCMS\wt` folder is gone (delete it if it still exists on disk; if Windows reports busy files, a stale dev/test server holds them — stop it first).
-4. Update `docs/AGENT_GUIDE.md` to Phase 5: phase table, reuse inventory (new features, `envelope.ts`, `DocumentManager module=…`, `HistoryTimeline`, lookups hooks, notifications store, new permission helpers, `isAdmin`, `hasSystemModule`), the auth model, mock envelopes, the pitfalls below. Update `README.md` env section (`NEXT_PUBLIC_API_MODE`, base URL, UAT, `pnpm smoke:live`).
-5. Done when: every check exits 0 (e2e: only documented skips; re-run any flake alone and record it), docs updated, one commit.
+All steps completed:
+1. `pnpm e2e`: 232 passed, 0 failed, 60 skipped.
+2. Dead code removed:
+   - `METRICS` unused constant removed from `src/features/legal/cases/lib/legal-case-mapper.ts`.
+   - `src/components/layout/support-dialog.tsx` and test deleted; contact rows moved into `src/features/gc/components/support-card.tsx` with dedicated unit test in `support-card.test.tsx`.
+   - Unused Lao keys (`nav.procurement`, `nav.laws`, `nav.hearings`, `nav.modulesSection`, `topbar.searchLabel`, `common.search`) removed from `src/lib/i18n/lo.ts`.
+3. Worktree leftovers checked: only main checkout exists, no `p5-*` branches, no `D:\LCMS\wt`.
+4. Docs updated: `docs/AGENT_GUIDE.md` updated to Phase 5 and `/support` table entry; `README.md` env section updated.
+5. Verification: typecheck 0 errors, lint 0 errors & 0 warnings, unit tests 144 files / 805 tests passed, build EXIT=0.
 
 ### Task 15 — Live backend validation (needs the user)
 
 The user must run the smoke script with their own credentials (agents must not enter passwords):
 
 ```bash
-LCMS_API=http://localhost:3001/api LCMS_USER=<user> LCMS_PASS=<pass> pnpm smoke:live
+LCMS_API=https://likely-ecology-refused-letters.trycloudflare.com/api LCMS_USER=<user> LCMS_PASS=<pass> pnpm smoke:live
 ```
 
 It writes `docs/backend/live-shapes.json` (keys and types only, tokens redacted). Then, per module (parallel-safe, one agent each, separate worktrees):

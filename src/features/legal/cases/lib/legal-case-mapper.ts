@@ -103,7 +103,7 @@ export function isCaseFinished(s: DisputeStatus): boolean {
   return s === 'CLOSED' || s === 'RESOLVED';
 }
 
-const METRICS = ['damage', 'fine', 'totalDue', 'recovered'] as const;
+
 const SOURCE_KEYS = ['totals', 'total', 'summary', 'amounts', 'money', 'sums', '_sum'];
 
 function moneyFor(r: Record<string, unknown>, cur: Currency2): MoneyTotals {

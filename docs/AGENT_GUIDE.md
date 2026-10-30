@@ -134,7 +134,7 @@ When the plan and the code disagree, the controller decides. It records the deci
 | Notifications (`features/notifications`) | `useNotificationsStore`, `NotificationsView`, `contractHref`, `notificationKey`, `sourcesFor` | Replaces the old alerts store. Merges contract and power notifications; the topbar bell and the `/notifications` page read it. |
 | `DatePicker`, `MoneyInput` (`shared/`) | form-field controls | Use them in forms instead of raw inputs. |
 | `useReturnFocus` (`@/hooks/use-return-focus`) | `(open) => onCloseAutoFocus` | Returns focus to the trigger when a dialog closes. |
-| `SupportDialog`, `SUPPORT_CONTACTS` | `layout/support-dialog`, `@/config/support` | The help dialog and its contact data. |
+| Support page, `SUPPORT_CONTACTS` | `/support`, `@/config/support`, `SupportCard` | The `/support` page (channels + tickets) and static fallback contacts. |
 | Layout | `AppShell`, `AppSidebar` (role-aware, mobile sheet), `Topbar`, `ModuleSwitcher`, `Breadcrumbs`, `BackgroundGlows`, `ThemeToggle` | Sidebar nav comes from `MODULE_NAV`, `COMMON_NAV` and `ADMIN_NAV` in `src/config/navigation.ts` |
 
 ### 4.4 Tokens added in Phase 3a
