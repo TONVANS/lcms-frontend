@@ -18,7 +18,7 @@ Do not redo finished tasks. Implementers are Sonnet subagents, one task each (se
 | Repo | `D:\LCMS\lcms-frontend` |
 | Branch | `phase-5-backend-integration` (from `phase-4a-legal`; not pushed, not merged to `main`) |
 | HEAD at handoff | `0bf71b3` (merge of `p5-admin`) |
-| Leftover worktree | `D:\LCMS\wt\admin` on branch `p5-admin` (already merged) — remove it (Task 14) |
+| Worktrees | All merged worktrees and `p5-*` branches were removed at `0bf71b3`; delete `D:\LCMS\wt` if the folder is still on disk |
 | Untracked file | `docs/superpowers/HANDOFF-phase4a-legal.md` (old Phase 4a handoff, never committed — decide: commit as history or delete) |
 | `.env.local` | gitignored; `NEXT_PUBLIC_API_MODE=mock`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api`, `NEXT_PUBLIC_MAX_UPLOAD_MB=25`. `.env.example` is committed with the same keys and the UAT URL commented. |
 
@@ -48,12 +48,13 @@ Features: `admin auth documents gc history home legal lookups notifications ppa 
 
 | Check | Result | Where / when |
 |---|---|---|
-| typecheck, lint | pass (1 warning: unused `METRICS` in `src/features/legal/cases/lib/legal-case-mapper.ts`) | each task |
-| Unit | 694 pass after the e2e-fix commit; each Wave C branch green on its own; Task 13: 40/40 admin tests, typecheck clean | before final merges |
-| Build | pass at `0b531c5` | main checkout |
-| e2e | 231 pass, 1 load flake (passes alone), 60 skipped by project (desktop-only / mobile-only) | at `0b531c5`, **before** Tasks 10–13 merged |
+| typecheck | 0 errors | `0bf71b3` (all branches merged) |
+| lint | 0 errors, 1 warning (unused `METRICS` in `src/features/legal/cases/lib/legal-case-mapper.ts`) | `0bf71b3` |
+| Unit | 144 files / 809 tests pass | `0bf71b3` |
+| Build | EXIT=0; routes include `/support` and `/admin/{users,audit-logs,contract-types,departments}` | `0bf71b3` |
+| e2e | **pending** — a full run on `0bf71b3` was in progress at handoff time; check its result. The previous full run (`0b531c5`, before Tasks 10–13) was 231 pass, 1 load flake (passes alone), 60 skipped by project (desktop-only / mobile-only) | main checkout |
 
-**Not yet verified on the fully merged HEAD (`0bf71b3`)**: full unit run, `pnpm build`, full `pnpm e2e`. That is Task 14, first step.
+The merged worktrees were removed at `0bf71b3`. `docs/AGENT_GUIDE.md`, `README.md` (new "Environment & backend" section) and the plan's Outcome section were being updated in parallel by another agent; check `git log` for that commit.
 
 ## Key decisions (details in plan §1)
 
@@ -68,12 +69,14 @@ Run tasks one at a time unless marked parallel-safe. Each brief must name exact 
 
 ### Task 14 — Integration verification and cleanup (do first)
 
-1. On `0bf71b3`: `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm build`, full `pnpm e2e`. Fix regressions from the Wave C merges. Likely spots: Home e2e assertions (`e2e/rbac.spec.ts`, `responsive-a11y.spec.ts`, `dod-screenshots.spec.ts` visit Home), the `/support` and `/admin/*` pages that replaced placeholders, the `none.user` landing (see Task 17).
+Typecheck, lint, unit and build already pass on `0bf71b3`, the worktrees are removed and the doc updates were in progress (see "Last known verification"). Only do the steps below that `git log` and a fresh check show are still open.
+
+1. Read the result of the full `pnpm e2e` run on the merged HEAD (or re-run it with no other agents active). Fix regressions from the Wave C merges. Likely spots: Home e2e assertions (`e2e/rbac.spec.ts`, `responsive-a11y.spec.ts`, `dod-screenshots.spec.ts` visit Home), the `/support` and `/admin/*` pages that replaced placeholders, the `none.user` landing (see Task 17).
 2. Remove the dead code:
    - The `METRICS` lint warning.
    - `src/components/layout/support-dialog.tsx` (no longer used by any page; the user menu links to `/support`) + its test, unless a page adopts it.
    - Unused `lo` keys (`nav.procurement`, `nav.laws`, `nav.hearings`, `topbar.searchLabel`, `common.search`, and any others a grep shows unused).
-3. Remove the merged worktree `D:\LCMS\wt\admin` and branch `p5-admin` (`git worktree remove --force`, `git worktree prune`, `git branch -d p5-admin`; if Windows reports busy files, a stale dev/test server holds them — stop it first).
+3. Make sure no worktree leftovers remain: `git worktree list` shows only the main checkout, no `p5-*` branches, and the `D:\LCMS\wt` folder is gone (delete it if it still exists on disk; if Windows reports busy files, a stale dev/test server holds them — stop it first).
 4. Update `docs/AGENT_GUIDE.md` to Phase 5: phase table, reuse inventory (new features, `envelope.ts`, `DocumentManager module=…`, `HistoryTimeline`, lookups hooks, notifications store, new permission helpers, `isAdmin`, `hasSystemModule`), the auth model, mock envelopes, the pitfalls below. Update `README.md` env section (`NEXT_PUBLIC_API_MODE`, base URL, UAT, `pnpm smoke:live`).
 5. Done when: every check exits 0 (e2e: only documented skips; re-run any flake alone and record it), docs updated, one commit.
 
