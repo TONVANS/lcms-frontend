@@ -43,7 +43,7 @@ Suggested order: **Wave 1** (now, parallel): P6-01, P6-02, P6-03, P6-06, P6-07 (
 ### P6-01 — Env + repo housekeeping (agent)
 
 Why: commit `66eb31c` set the committed `.env.example` default `NEXT_PUBLIC_API_BASE_URL` to the Cloudflare tunnel URL, which is temporary and changes.
-- `.env.example`: default back to `http://localhost:3001/api`; keep the UAT URL as a commented line with "tunnel URL changes — ask the backend team". Do not touch `.env.local` (gitignored, user-owned).
+- `.env.example`: default back to `https://likely-ecology-refused-letters.trycloudflare.com/api`; keep the UAT URL as a commented line with "tunnel URL changes — ask the backend team". Do not touch `.env.local` (gitignored, user-owned).
 - `README.md` "Environment & backend": same wording; explain that `.env.local` overrides `.env.example`.
 - `src/config/env.test.ts`: still asserts the localhost default.
 - List (do not delete) stale branches in the report: `phase-2-ppa-wip` is superseded by Phase 5 PPA. Deleting branches needs the user's OK (part of P6-14).

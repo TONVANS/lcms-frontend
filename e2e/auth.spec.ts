@@ -13,7 +13,7 @@ test('login honours next and rejects off-site next', async ({ page }) => {
   await page.getByLabel(lo.auth.username).fill('admin');
   await page.getByLabel(lo.auth.password, { exact: true }).fill('password');
   await page.getByRole('button', { name: lo.auth.submit, exact: true }).click();
-  await expect(page).toHaveURL('http://localhost:3100/');
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('login honours a safe next', async ({ page }) => {
@@ -33,7 +33,7 @@ test('wrong password shows Lao error', async ({ page }) => {
 });
 
 test('stale session cookie ends on login with expired banner, no loop', async ({ page, context }) => {
-  await context.addCookies([{ name: 'lcms_session', value: 'mock:ghost', url: 'http://localhost:3100' }]);
+  await context.addCookies([{ name: 'lcms_session', value: 'mock:ghost', path: '/', domain: 'localhost' }]);
   let navigations = 0;
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) navigations += 1;

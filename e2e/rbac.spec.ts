@@ -5,7 +5,7 @@ import { loginAs } from './helpers';
 
 test('admin lands on Home with three module cards', async ({ page }) => {
   await loginAs(page, 'admin');
-  await expect(page).toHaveURL('http://localhost:3100/');
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('link', { name: lo.home.openModule })).toHaveCount(3);
 });
 

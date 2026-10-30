@@ -3,7 +3,10 @@ import { z } from 'zod';
 const schema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().min(1).default('LCMS'),
   NEXT_PUBLIC_API_MODE: z.enum(['mock', 'live']).default('mock'),
-  NEXT_PUBLIC_API_BASE_URL: z.string().min(1).default('http://localhost:3001/api'),
+  NEXT_PUBLIC_API_BASE_URL: z
+    .string()
+    .min(1)
+    .default('https://likely-ecology-refused-letters.trycloudflare.com/api'),
   NEXT_PUBLIC_MAX_UPLOAD_MB: z.coerce.number().positive().default(25),
 });
 

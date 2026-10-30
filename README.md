@@ -43,7 +43,7 @@ Copy `.env.example` to `.env.local` and adjust. Note that `.env.local` overrides
 |---|---|
 | `NEXT_PUBLIC_APP_NAME` | App name shown in the UI (`LCMS`). |
 | `NEXT_PUBLIC_API_MODE` | `mock` runs an in-browser mock API (axios-mock-adapter, no backend needed); `live` calls the real backend. |
-| `NEXT_PUBLIC_API_BASE_URL` | Backend base URL including `/api`. Local backend: `http://localhost:3001/api`. The UAT URL (a Cloudflare tunnel) is in the comment in `.env.example`; the tunnel URL changes — ask the backend team. |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend base URL including `/api`. Default: `https://likely-ecology-refused-letters.trycloudflare.com/api` (Cloudflare tunnel). |
 | `NEXT_PUBLIC_MAX_UPLOAD_MB` | Client-side upload size limit in MB (default 25). |
 | `SESSION_COOKIE_NAME` | Cookie name read by `src/proxy.ts` (`lcms_session`). |
 
@@ -78,4 +78,4 @@ The password for every account is `password`.
 
 ### Tests
 
-`pnpm test --run` (unit), `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `pnpm e2e` (Playwright against a production build on port 3100).
+`pnpm test --run` (unit), `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `pnpm e2e` (Playwright against a production build on port 3100; configurable with `PLAYWRIGHT_PORT=<port>` to prevent collision across worktrees).

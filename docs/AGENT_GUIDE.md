@@ -246,7 +246,7 @@ Write each phase plan after the previous phase merges, against the real code.
 | Running a view-model transform twice (the Home 31–90 bucket was always 0). | Give the server shape and the client view model **different types**, so a double application fails to type-check. |
 | `expire()` racing `fetchMe` or `logout`. | `expire()` only acts while status is `authenticated`; `fetchMe` owns its own transition. |
 | Exit codes hidden by `| tail`. | `cmd; echo EXIT=$?` |
-| Playwright uses the fixed port 3100 (`pnpm build && pnpm start -p 3100`), shared by every worktree. Two runs at once collide. | Run one e2e at a time; stop stale `next start` processes first. |
+| Playwright port collision across parallel worktrees. | Set a unique port via env `PLAYWRIGHT_PORT=<port>` (e.g. `PLAYWRIGHT_PORT=3201 pnpm e2e`), default 3100. |
 | After deleting a route (for example `/ppa/documents`), the stale `.next/dev/types` still references it and `pnpm typecheck` fails. | Delete `.next/dev/types` and re-run. |
 | Long `userEvent` tests (dialogs, wizards) time out at the default 5s. | `testTimeout` is 15000 in `vitest.config.*`; keep tests focused instead of raising it again. |
 | `src/lib/i18n/lo.ts` has CRLF line endings. Edits that assume LF (`sed`, exact-match edits, scripts) fail or mix endings. | Preserve CRLF; check with `git diff --stat` that only intended lines changed. |
