@@ -66,6 +66,8 @@ The merged worktrees were removed at `0bf71b3`. `docs/AGENT_GUIDE.md`, `README.m
 
 ## Remaining work — task plan for implementers
 
+> **Superseded:** the full remaining task list now lives in `docs/superpowers/plans/2026-10-30-lcms-phase6-next-tasks.md` (P6-01 … P6-15). Tasks 15–20 below are kept for history and map to P6-08/09 (15), P6-10 (16), P6-12 (17), P6-03/11 (18), P6-07 (19), P6-06 (20).
+
 Run tasks one at a time unless marked parallel-safe. Each brief must name exact files, expected behaviour and the verification commands (template at the end).
 
 ### Task 14 — Integration verification and cleanup (DONE)
