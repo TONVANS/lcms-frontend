@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { STATUS_META } from '../src/lib/constants/status';
 import { lo } from '../src/lib/i18n/lo';
@@ -332,5 +333,29 @@ test.describe('focus return in a real browser', () => {
     await dialog.getByRole('button', { name: lo.gc.form.cancel, exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect(edit).toBeFocused();
+  });
+
+  test('detail: uploads a PDF attachment, previews it, and deletes it', async ({ page }) => {
+    await listAs(page, 'gc.editor');
+    await page.getByRole('link', { name: /^GC-2026-/ }).first().click();
+    await expect(page.getByRole('heading', { name: lo.gc.detail.info })).toBeVisible();
+
+    const fixturePath = path.resolve(__dirname, 'fixtures/sample.pdf');
+    await page.getByLabel(lo.dropzone.prompt).setInputFiles(fixturePath);
+    await expect(page.getByText('sample.pdf')).toBeVisible();
+
+    await page.getByRole('button', { name: lo.dropzone.previewFile('sample.pdf') }).click();
+    const previewDialog = page.getByRole('dialog');
+    await expect(previewDialog).toBeVisible();
+    await expect(previewDialog.getByText('sample.pdf')).toBeVisible();
+    await previewDialog.getByRole('button', { name: lo.common.close }).click();
+    await expect(previewDialog).not.toBeVisible();
+
+    await page.getByRole('button', { name: lo.dropzone.deleteFile('sample.pdf') }).click();
+    const confirmDialog = page.getByRole('dialog');
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: lo.confirm.confirm }).click();
+    await expect(confirmDialog).not.toBeVisible();
+    await expect(page.getByText('sample.pdf')).not.toBeVisible();
   });
 });

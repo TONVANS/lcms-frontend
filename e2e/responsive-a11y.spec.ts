@@ -9,6 +9,8 @@ const pages: readonly { name: string; path: string; user: string | null; ready?:
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
   { name: 'ppa', path: '/ppa', user: 'admin' },
+  { name: 'ppa-contracts', path: '/ppa/contracts', user: 'admin' },
+  { name: 'ppa-detail', path: '/ppa/contracts/ppa-1', user: 'admin' },
   { name: 'gc-dashboard', path: '/contracts', user: 'admin' },
   { name: 'gc-list', path: '/contracts/list', user: 'admin' },
   { name: 'gc-wizard', path: '/contracts/new', user: 'admin' },
@@ -23,6 +25,12 @@ const pages: readonly { name: string; path: string; user: string | null; ready?:
   { name: 'legal-cases', path: '/legal/cases', user: 'admin' },
   { name: 'legal-case-detail', path: '/legal/cases/case-1', user: 'admin' },
   { name: 'legal-new', path: '/legal/new', user: 'admin' },
+  { name: 'notifications', path: '/notifications', user: 'admin' },
+  { name: 'support', path: '/support', user: 'admin' },
+  { name: 'admin-users', path: '/admin/users', user: 'admin' },
+  { name: 'admin-departments', path: '/admin/departments', user: 'admin' },
+  { name: 'admin-contract-types', path: '/admin/contract-types', user: 'admin' },
+  { name: 'admin-audit-logs', path: '/admin/audit-logs', user: 'admin' },
 ];
 
 /** Waits until the route has real content, not a skeleton. */
@@ -47,6 +55,12 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
   if (path === '/ppa') {
     await expect(page.getByRole('heading', { level: 2, name: lo.ppa.dashboard.byProjectType })).toBeVisible();
   }
+  if (path === '/ppa/contracts') {
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.title);
+  }
+  if (path === '/ppa/contracts/ppa-1') {
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Nam Theun 2');
+  }
   if (path === '/contracts/alerts') {
     await expect(
       page.getByRole('heading', { level: 2 }).first().or(page.getByText(lo.gc.alerts.empty)),
@@ -70,6 +84,24 @@ async function waitForReady(page: Page, ready: Ready | undefined, path: string):
   }
   if (path.startsWith('/legal/cases/')) {
     await expect(page.getByRole('heading', { name: lo.legal.cases.detail.info })).toBeVisible();
+  }
+  if (path === '/notifications') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.topbar.notifications })).toBeVisible();
+  }
+  if (path === '/support') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.support.title })).toBeVisible();
+  }
+  if (path === '/admin/users') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.users.title })).toBeVisible();
+  }
+  if (path === '/admin/departments') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.admin.departments })).toBeVisible();
+  }
+  if (path === '/admin/contract-types') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.contractTypes.title })).toBeVisible();
+  }
+  if (path === '/admin/audit-logs') {
+    await expect(page.getByRole('heading', { level: 1, name: lo.admin.auditLogs })).toBeVisible();
   }
 }
 

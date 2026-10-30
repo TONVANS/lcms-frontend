@@ -8,6 +8,8 @@ const shots: readonly { name: string; path: string; user: string | null; detail?
   { name: 'login', path: '/login', user: null },
   { name: 'home', path: '/', user: 'admin' },
   { name: 'ppa', path: '/ppa', user: 'admin' },
+  { name: 'ppa-contracts', path: '/ppa/contracts', user: 'admin' },
+  { name: 'ppa-detail', path: '/ppa/contracts/ppa-1', user: 'admin' },
   { name: 'forbidden', path: '/legal', user: 'ppa.user' },
   { name: 'gc-dashboard', path: '/contracts', user: 'admin' },
   { name: 'gc-list', path: '/contracts/list', user: 'admin' },
@@ -20,6 +22,12 @@ const shots: readonly { name: string; path: string; user: string | null; detail?
   { name: 'legal-cases', path: '/legal/cases', user: 'admin' },
   { name: 'legal-case-detail', path: '/legal/cases/case-1', user: 'admin' },
   { name: 'legal-new', path: '/legal/new', user: 'admin' },
+  { name: 'notifications', path: '/notifications', user: 'admin' },
+  { name: 'support', path: '/support', user: 'admin' },
+  { name: 'admin-users', path: '/admin/users', user: 'admin' },
+  { name: 'admin-departments', path: '/admin/departments', user: 'admin' },
+  { name: 'admin-contract-types', path: '/admin/contract-types', user: 'admin' },
+  { name: 'admin-audit-logs', path: '/admin/audit-logs', user: 'admin' },
 ];
 
 for (const theme of ['dark', 'light'] as const) {
@@ -45,6 +53,12 @@ for (const theme of ['dark', 'light'] as const) {
         // PPA dashboard section headings (h3) only render once the data has loaded.
         await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
       }
+      if (s.path === '/ppa/contracts') {
+        await expect(page.getByRole('heading', { level: 1 })).toContainText(lo.ppa.title);
+      }
+      if (s.path === '/ppa/contracts/ppa-1') {
+        await expect(page.getByRole('heading', { level: 1 })).toContainText('Nam Theun 2');
+      }
       if (s.path === '/legal') {
         await expect(page.getByRole('heading', { level: 2, name: lo.legal.dashboard.regulationsSection })).toBeVisible();
       }
@@ -62,6 +76,24 @@ for (const theme of ['dark', 'light'] as const) {
       }
       if (s.path.startsWith('/legal/cases/')) {
         await expect(page.getByRole('heading', { name: lo.legal.cases.detail.info })).toBeVisible();
+      }
+      if (s.path === '/notifications') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.topbar.notifications })).toBeVisible();
+      }
+      if (s.path === '/support') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.support.title })).toBeVisible();
+      }
+      if (s.path === '/admin/users') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.users.title })).toBeVisible();
+      }
+      if (s.path === '/admin/departments') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.admin.departments })).toBeVisible();
+      }
+      if (s.path === '/admin/contract-types') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.contractTypes.title })).toBeVisible();
+      }
+      if (s.path === '/admin/audit-logs') {
+        await expect(page.getByRole('heading', { level: 1, name: lo.admin.auditLogs })).toBeVisible();
       }
       if (s.detail) {
         // The id is read from the list: open the first row.

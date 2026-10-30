@@ -16,6 +16,7 @@ test('ppa.user lands on /ppa and /legal shows forbidden', async ({ page }) => {
   await expect(page.getByText(lo.forbidden.title).first()).toBeVisible();
 });
 
+// TODO(P6-12): Decide whether users without a business module land on /support or Home empty state.
 test('none.user (no business module) lands on /support', async ({ page }) => {
   await loginAs(page, 'none.user');
   await expect(page).toHaveURL(/\/support$/);
