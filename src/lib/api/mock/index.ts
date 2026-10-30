@@ -1,5 +1,6 @@
 import type { AxiosInstance } from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import { register as registerAdmin } from './handlers/admin';
 import { register as registerAlerts } from './handlers/alerts';
 import { register as registerAuth } from './handlers/auth';
 import { register as registerDocuments } from './handlers/documents';
@@ -26,6 +27,8 @@ const handlers: Handler[] = [
   registerLookups,
   registerHistory,
   registerNotifications,
+  // Must stay after registerLookups: it replaces the static contract-type/department dropdown handlers.
+  registerAdmin,
 ];
 
 export function installMocks(instance: AxiosInstance, opts?: { delay?: number }): MockAdapter {
