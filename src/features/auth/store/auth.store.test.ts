@@ -175,4 +175,40 @@ describe('auth store', () => {
     useAuthStore.getState().expire();
     expect(useAuthStore.getState()).toMatchObject({ status: 'loading', endReason: null });
   });
+
+  it('schedules expiry and auto-expires when token expires', async () => {
+    vi.useFakeTimers();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const payload = btoa(JSON.stringify({ exp: nowSec + 10, sub: 'admin' }));
+      const jwt = `${header}.${payload}.sig`;
+
+      vi.spyOn(authService, 'login').mockResolvedValueOnce({
+        token: jwt,
+        user: MOCK_USERS[0],
+      });
+      await useAuthStore.getState().login({ username: 'admin', password: 'password', remember: false });
+      expect(useAuthStore.getState().status).toBe('authenticated');
+
+      vi.advanceTimersByTime(11000);
+      expect(useAuthStore.getState().status).toBe('unauthenticated');
+      expect(useAuthStore.getState().endReason).toBe('expired');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('expires on window focus if token is already expired', () => {
+    useAuthStore.setState({ user: MOCK_USERS[0], status: 'authenticated' });
+    const pastSec = Math.floor(Date.now() / 1000) - 100;
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({ exp: pastSec, sub: 'admin' }));
+    const jwt = `${header}.${payload}.sig`;
+    setSessionToken(jwt, false);
+
+    window.dispatchEvent(new Event('focus'));
+    expect(useAuthStore.getState().status).toBe('unauthenticated');
+    expect(useAuthStore.getState().endReason).toBe('expired');
+  });
 });

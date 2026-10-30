@@ -5,11 +5,18 @@ import {
   hasSessionHint,
   readMockSession,
   readSessionToken,
+  readTokenExpiry,
   setMockSession,
   setSessionToken,
 } from './session';
 
 afterEach(() => clearSession());
+
+function makeTestJwt(exp?: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify(exp !== undefined ? { exp, sub: '123' } : { sub: '123' }));
+  return `${header}.${payload}.signature`;
+}
 
 describe('session token', () => {
   it('sets, reads the raw value and clears', () => {
@@ -48,6 +55,51 @@ describe('session token', () => {
     } finally {
       delete (document as unknown as Record<string, unknown>).cookie;
     }
+  });
+
+  it('caps max-age at token expiry when exp is present', () => {
+    const writes: string[] = [];
+    const desc = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => desc.get!.call(document),
+      set: (v: string) => {
+        writes.push(v);
+        desc.set!.call(document, v);
+      },
+    });
+    try {
+      const futureExp = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const jwt = makeTestJwt(futureExp);
+      setSessionToken(jwt, true);
+      const match = writes[0].match(/max-age=(\d+)/);
+      expect(match).not.toBeNull();
+      const maxAge = Number(match![1]);
+      expect(maxAge).toBeGreaterThanOrEqual(3590);
+      expect(maxAge).toBeLessThanOrEqual(3600);
+    } finally {
+      delete (document as unknown as Record<string, unknown>).cookie;
+    }
+  });
+});
+
+describe('readTokenExpiry', () => {
+  it('returns null for empty, mock, or invalid tokens', () => {
+    expect(readTokenExpiry('')).toBeNull();
+    expect(readTokenExpiry('mock:admin')).toBeNull();
+    expect(readTokenExpiry('invalid.token')).toBeNull();
+    expect(readTokenExpiry('a.b.c')).toBeNull();
+  });
+
+  it('returns null when exp is not in payload', () => {
+    const token = makeTestJwt(undefined);
+    expect(readTokenExpiry(token)).toBeNull();
+  });
+
+  it('decodes numeric exp from payload', () => {
+    const exp = 1761800000;
+    const token = makeTestJwt(exp);
+    expect(readTokenExpiry(token)).toBe(exp);
   });
 });
 

@@ -2,7 +2,13 @@ import { create } from 'zustand';
 import { setUnauthorizedHandler } from '@/lib/api/client';
 import { normalizeError } from '@/lib/api/errors';
 import { runLogoutResets } from '@/lib/auth/logout-registry';
-import { clearSession, hasSessionHint, setSessionToken } from '@/lib/auth/session';
+import {
+  clearSession,
+  hasSessionHint,
+  readSessionToken,
+  readTokenExpiry,
+  setSessionToken,
+} from '@/lib/auth/session';
 import type { ApiError } from '@/types/api';
 import type { User } from '@/types/domain';
 import { authService } from '../api/auth.service';
@@ -20,6 +26,48 @@ interface AuthState {
   expire(): void;
 }
 
+let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function clearExpiryTimer(): void {
+  if (expiryTimer !== null) {
+    clearTimeout(expiryTimer);
+    expiryTimer = null;
+  }
+}
+
+export function scheduleExpiryTimer(token: string): void {
+  clearExpiryTimer();
+  const exp = readTokenExpiry(token);
+  if (exp === null) return;
+  const delayMs = exp * 1000 - Date.now();
+  if (delayMs <= 0) {
+    useAuthStore.getState().expire();
+    return;
+  }
+  if (delayMs < 2147483647) {
+    expiryTimer = setTimeout(() => {
+      useAuthStore.getState().expire();
+    }, delayMs);
+  }
+}
+
+export function checkFocusExpiry(): void {
+  if (useAuthStore.getState().status !== 'authenticated') return;
+  const token = readSessionToken();
+  if (!token) {
+    useAuthStore.getState().expire();
+    return;
+  }
+  const exp = readTokenExpiry(token);
+  if (exp !== null && exp * 1000 <= Date.now()) {
+    useAuthStore.getState().expire();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', checkFocusExpiry);
+}
+
 export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   status: 'idle',
@@ -31,6 +79,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       const { token, user } = await authService.login(input);
       setSessionToken(token, input.remember ?? false);
+      scheduleExpiryTimer(token);
       set({ user, status: 'authenticated', endReason: null, error: null });
     } catch (e) {
       set({ user: null, status: 'unauthenticated' });
@@ -39,6 +88,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   async logout() {
+    clearExpiryTimer();
     // The backend has no logout endpoint: logging out is purely client-side.
     clearSession();
     runLogoutResets();
@@ -54,10 +104,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ status: 'loading' });
     try {
       const user = await authService.me();
+      const token = readSessionToken();
+      if (token) scheduleExpiryTimer(token);
       set({ user, status: 'authenticated', error: null });
     } catch (e) {
       const err = normalizeError(e);
       if (err.status === 401) {
+        clearExpiryTimer();
         clearSession();
         set({ user: null, status: 'unauthenticated', endReason: 'expired', error: null });
       } else {
@@ -68,6 +121,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   expire() {
+    clearExpiryTimer();
     // Only a genuine mid-session 401; fetchMe/logout own their own transitions.
     if (get().status !== 'authenticated') return;
     clearSession();

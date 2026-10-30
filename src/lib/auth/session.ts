@@ -3,14 +3,50 @@ export const SESSION_COOKIE = 'lcms_session';
 const THIRTY_DAYS = 2592000;
 
 /**
+ * Decodes the JWT payload `exp` without cryptographic verification (the server verifies).
+ * Returns the epoch seconds (e.g. 1761800000), or null for mock tokens / malformed JWTs.
+ */
+export function readTokenExpiry(token: string): number | null {
+  if (!token || token.startsWith('mock:')) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json =
+      typeof atob === 'function' ? atob(padded) : Buffer.from(padded, 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    if (typeof payload.exp === 'number' && Number.isFinite(payload.exp)) {
+      return payload.exp;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Stores the bearer token (live: the raw JWT; mock: `mock:<username>`) in the
- * JS-readable session cookie. `max-age` only when "remember me".
+ * JS-readable session cookie. `max-age` only when "remember me", capped by token expiry.
  */
 export function setSessionToken(token: string, remember: boolean): void {
   if (typeof document === 'undefined') return;
   let cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
   if (typeof location !== 'undefined' && location.protocol === 'https:') cookie += '; Secure';
-  if (remember) cookie += `; max-age=${THIRTY_DAYS}`;
+
+  const exp = readTokenExpiry(token);
+  if (remember) {
+    let maxAge = THIRTY_DAYS;
+    if (exp !== null) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      maxAge = Math.min(maxAge, Math.max(0, exp - nowSec));
+    }
+    cookie += `; max-age=${maxAge}`;
+  } else if (exp !== null) {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const maxAge = Math.max(0, exp - nowSec);
+    cookie += `; max-age=${maxAge}`;
+  }
   document.cookie = cookie;
 }
 
