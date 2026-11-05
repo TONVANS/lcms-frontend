@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils/cn';
 
@@ -26,17 +27,17 @@ export const TOKEN_FIELD =
 
 export const fieldDomId = (idPrefix: string, name: string): string => `${idPrefix}-field-${name}`;
 
-/** One labelled field: visible <label>, gold aria-hidden marker, error linked by aria-describedby. */
+/** One labelled field conforming to Design.md: 13px text-secondary label, gold asterisk, linked error in text-error. */
 export function Field({ idPrefix, name, label, required, error, wide, children }: FieldProps) {
   const id = fieldDomId(idPrefix, name);
   const errorId = `${id}-error`;
   const labelId = `${id}-label`;
   return (
     <div className={cn('flex min-w-0 flex-col gap-1.5', wide && 'col-span-full')}>
-      <Label htmlFor={id} id={labelId} className="text-xs text-(--text-secondary)">
-        {label}
+      <Label htmlFor={id} id={labelId} className="flex items-center gap-1 text-[13px] font-medium text-(--text-secondary)">
+        <span>{label}</span>
         {required ? (
-          <span aria-hidden="true" className="text-(--gold)">
+          <span aria-hidden="true" className="font-bold text-(--gold)" title="Required">
             *
           </span>
         ) : null}
@@ -51,8 +52,9 @@ export function Field({ idPrefix, name, label, required, error, wide, children }
         labelId,
       )}
       {error ? (
-        <p id={errorId} className="text-xs text-(--text-error)">
-          {error}
+        <p id={errorId} className="flex items-center gap-1.5 text-xs font-medium text-(--text-error) animate-fade-in-up-sm">
+          <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
         </p>
       ) : null}
     </div>

@@ -2,7 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import type { ModuleKey, Permission } from '@/types/domain';
+import type {
+  CoreModuleKey,
+  ModuleKey,
+  Permission,
+  PermissionActionKey,
+  SystemModuleKey,
+} from '@/types/domain';
 import { useCan } from './can';
 
 // Assumes it is rendered under AuthGate, which never mounts children while auth is loading.
@@ -11,8 +17,8 @@ export function PermissionGuard({
   permission,
   children,
 }: {
-  module: ModuleKey;
-  permission: Permission;
+  module: ModuleKey | CoreModuleKey | SystemModuleKey;
+  permission: Permission | PermissionActionKey;
   children: ReactNode;
 }) {
   const router = useRouter();

@@ -14,9 +14,12 @@ import { FileList, type FileItem } from '@/components/shared/file-list';
 import { GlassCard } from '@/components/shared/glass-card';
 import { Stepper } from '@/components/shared/stepper';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { env } from '@/config/env';
 import { documentsService } from '@/features/documents';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { MODULES } from '@/lib/constants/modules';
+import { STATUS_META } from '@/lib/constants/status';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { useContractTypes } from '@/features/lookups';
@@ -35,6 +38,7 @@ import {
 import { applyGcServerErrors } from './gc-server-errors';
 
 const TOTAL_STEPS = 4;
+const ACCEPT_ATTACHMENTS = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 
@@ -47,7 +51,7 @@ const STEP_LABELS = [
 const STEPS = STEP_LABELS.map((label, i) => ({ id: i + 1, label }));
 
 const STEP_FIELDS: Record<number, readonly GcFormFieldName[]> = {
-  1: ['title', 'contractTypeId', 'contractNumber'],
+  1: ['title', 'contractTypeId', 'contractNumber', 'status'],
   2: ['signedDate', 'effectiveDate', 'expirationDate', 'durationText', 'durationMonths'],
   3: ['contractValue', 'currency', 'equityOrCapitalContribution', 'sharePercentage'],
   4: ['implementer', 'additionalDetails', 'notifyDaysBefore'],
@@ -101,6 +105,7 @@ function SummaryAside({ control, completed }: { control: Control<GcFormValues>; 
     { label: lo.gc.fields.title, value: text(v.title) },
     { label: lo.gc.fields.contractTypeId, value: typeName },
     { label: lo.gc.fields.contractNumber, value: text(v.contractNumber) },
+    { label: lo.gc.fields.status, value: v.status ? STATUS_META[v.status]?.label ?? v.status : lo.status.DRAFT },
     { label: lo.gc.fields.effectiveDate, value: date(v.effectiveDate) },
     { label: lo.gc.fields.expirationDate, value: date(v.expirationDate) },
     { label: lo.gc.fields.contractValue, value: formatValue(v.contractValue, v.currency) },
@@ -273,6 +278,7 @@ export function GcWizardView() {
   const [staged, setStaged] = useState<StagedFile[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   // Guards against a second create: the lock is synchronous, the id survives a failed upload.
   const busyRef = useRef(false);
@@ -282,6 +288,16 @@ export function GcWizardView() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pendingFocus = useRef<string | null>(null);
   const prevStep = useRef(step);
+
+  const resetForm = () => {
+    form.reset(emptyGcForm());
+    setStaged([]);
+    setStep(1);
+    setMaxReached(1);
+    setValidated(0);
+    setBanner(null);
+    createdIdRef.current = null;
+  };
 
   useEffect(() => {
     mounted.current = true;
@@ -372,12 +388,19 @@ export function GcWizardView() {
       if (!mounted.current) return;
       setStaged(failed);
       if (justCreated) toast.success(lo.gc.wizard.created);
-      router.replace(`/contracts/${id}`);
+      resetForm();
+      router.push(`/contracts/${id}`);
+      router.refresh();
+    } catch (e) {
+      if (!mounted.current) return;
+      const err = normalizeError(e);
+      const msg = toUserMessage(err);
+      if (msg) toast.error(msg);
     } finally {
-      // Once the contract exists navigation always follows, so the form stays locked until unmount.
-      if (createdIdRef.current === null) {
-        busyRef.current = false;
+      busyRef.current = false;
+      if (mounted.current) {
         setSubmitting(false);
+        setUploadingFiles(false);
       }
     }
   };
@@ -438,6 +461,8 @@ export function GcWizardView() {
                     <>
                       <FileDropzone
                         disabled={submitting}
+                        accept={ACCEPT_ATTACHMENTS}
+                        maxSizeMb={env.NEXT_PUBLIC_MAX_UPLOAD_MB}
                         onFilesSelected={addFiles}
                         onReject={(messages) => toast.error(messages.join(' · '))}
                       />
@@ -466,6 +491,7 @@ export function GcWizardView() {
                 tabIndex={submitting ? -1 : undefined}
                 onClick={(e) => {
                   if (submitting) e.preventDefault();
+                  else resetForm();
                 }}
                 className={cn(
                   buttonVariants({ variant: 'ghost' }),
@@ -485,7 +511,14 @@ export function GcWizardView() {
                   <Button type="submit">{lo.gc.wizard.next}</Button>
                 ) : (
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? lo.gc.form.saving : lo.gc.wizard.submit}
+                    {submitting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        <span>{uploadingFiles ? lo.dropzone.uploading : lo.gc.form.saving}</span>
+                      </span>
+                    ) : (
+                      lo.gc.wizard.submit
+                    )}
                   </Button>
                 )}
               </div>

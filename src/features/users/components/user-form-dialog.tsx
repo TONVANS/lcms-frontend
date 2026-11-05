@@ -1,7 +1,23 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Search, UserPlus } from 'lucide-react';
+import {
+  Check,
+  CheckCheck,
+  Download,
+  Eye,
+  FilePlus2,
+  FileText,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Scale,
+  Search,
+  Shield,
+  Trash2,
+  UserPlus,
+  Zap,
+} from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -19,9 +35,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { rolesService, type Role } from '@/features/roles';
 import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
+import { cn } from '@/lib/utils/cn';
+import { PILLAR_MODULES, type CoreModuleKey, type ModulePermission, type PermissionActionKey } from '@/types/domain';
 import { usersService } from '../api/users.service';
 import {
   diffUserUpdate,
@@ -40,6 +59,20 @@ import { DIVISIONS, PERMISSION_KEYS, USER_ROLES, type AdminUser } from '../types
 
 const F = lo.users.form;
 const NO_DIVISION = '__none__';
+
+const PILLAR_ICONS: Record<CoreModuleKey, typeof FileText> = {
+  CONTRACTS: FileText,
+  POWER_CONTRACTS: Zap,
+  LEGAL_AND_DISPUTE: Scale,
+};
+
+const ACTION_ICONS: Record<PermissionActionKey, typeof Eye> = {
+  canView: Eye,
+  canUpload: FilePlus2,
+  canEdit: Pencil,
+  canDelete: Trash2,
+  canDownload: Download,
+};
 
 export interface UserFormDialogProps {
   open: boolean;
@@ -104,18 +137,41 @@ function FormBody({
   const [banner, setBanner] = useState<string | null>(null);
   const [hrmNotice, setHrmNotice] = useState<'failed' | 'filled' | null>(null);
   const [looking, setLooking] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
   const alive = useRef(true);
+
+  // Watch full modulePermissions state so UI reacts instantly to all changes
+  const modulePermissions = useWatch({ control, name: 'modulePermissions' });
+  const currentRole = useWatch({ control, name: 'role' });
 
   useEffect(() => {
     alive.current = true;
+    void (async () => {
+      try {
+        const fetchedRoles = await rolesService.list();
+        if (alive.current && fetchedRoles.length > 0) {
+          setRoles(fetchedRoles);
+        }
+      } catch {
+        // Use fallback roles
+      }
+    })();
     return () => {
       alive.current = false;
     };
   }, []);
+
   useEffect(() => registerBusy(isSubmitting), [isSubmitting, registerBusy]);
 
-  const role = useWatch({ control, name: 'role' });
-  const implied = impliesAllPermissions(role);
+  const isAdminRole = currentRole === 'ADMIN';
+  const isDeptHead = currentRole === 'DEPARTMENT_HEAD';
+
+  // Calculate total checked permissions count
+  const activeCount = PILLAR_MODULES.reduce((total, p) => {
+    const row = modulePermissions?.[p.key];
+    if (!row) return total;
+    return total + PERMISSION_KEYS.filter((k) => row[k]).length;
+  }, 0);
 
   const lookup = async () => {
     const code = getValues('employeeCode').trim();
@@ -135,11 +191,140 @@ function FormBody({
       }
       setHrmNotice('filled');
     } catch {
-      // HRM being unreachable is not fatal: the backend falls back to the manual fields.
       if (alive.current) setHrmNotice('failed');
     } finally {
       if (alive.current) setLooking(false);
     }
+  };
+
+  const handleRoleChange = (roleValue: string) => {
+    setValue('role', roleValue, { shouldValidate: true, shouldDirty: true });
+
+    const matchedRole = roles.find((r) => r.name === roleValue || r.id === roleValue);
+    if (matchedRole) {
+      setValue('roleId', matchedRole.id, { shouldDirty: true });
+      if (matchedRole.name === 'ADMIN') {
+        setAllPillars(true);
+        return;
+      }
+      if (matchedRole.name === 'DEPARTMENT_HEAD') {
+        setDeptHeadPillars();
+        return;
+      }
+
+      // Populate matrix from custom role permissions
+      const newPerms: Record<CoreModuleKey, ModulePermission> = {
+        CONTRACTS: { canView: false, canUpload: false, canEdit: false, canDelete: false, canDownload: false },
+        POWER_CONTRACTS: { canView: false, canUpload: false, canEdit: false, canDelete: false, canDownload: false },
+        LEGAL_AND_DISPUTE: { canView: false, canUpload: false, canEdit: false, canDelete: false, canDownload: false },
+      };
+
+      for (const pillar of PILLAR_MODULES) {
+        const pKey = pillar.key;
+        const rolePerm = matchedRole.permissions.find(
+          (p) => p.module === pKey || (pKey === 'LEGAL_AND_DISPUTE' && (p.module === 'LEGAL_DOCUMENTS' || p.module === 'LEGAL_CASES')),
+        );
+        if (rolePerm) {
+          newPerms[pKey] = {
+            canView: rolePerm.canView,
+            canUpload: rolePerm.canUpload,
+            canEdit: rolePerm.canEdit,
+            canDelete: rolePerm.canDelete,
+            canDownload: rolePerm.canDownload,
+          };
+        }
+      }
+      setValue('modulePermissions', newPerms, { shouldDirty: true, shouldValidate: true });
+    } else {
+      setValue('roleId', undefined, { shouldDirty: true });
+      if (roleValue === 'ADMIN') {
+        setAllPillars(true);
+      } else if (roleValue === 'DEPARTMENT_HEAD') {
+        setDeptHeadPillars();
+      }
+    }
+  };
+
+  const setAllPillars = (checked: boolean) => {
+    const perm: ModulePermission = {
+      canView: checked,
+      canUpload: checked,
+      canEdit: checked,
+      canDelete: checked,
+      canDownload: checked,
+    };
+    setValue(
+      'modulePermissions',
+      {
+        CONTRACTS: { ...perm },
+        POWER_CONTRACTS: { ...perm },
+        LEGAL_AND_DISPUTE: { ...perm },
+      },
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
+
+  const setDeptHeadPillars = () => {
+    const deptPerm: ModulePermission = {
+      canView: true,
+      canDownload: true,
+      canUpload: false,
+      canEdit: false,
+      canDelete: false,
+    };
+    setValue(
+      'modulePermissions',
+      {
+        CONTRACTS: { ...deptPerm },
+        POWER_CONTRACTS: { ...deptPerm },
+        LEGAL_AND_DISPUTE: { ...deptPerm },
+      },
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
+
+  const toggleRow = (pKey: CoreModuleKey) => {
+    const row = modulePermissions?.[pKey];
+    const allChecked = PERMISSION_KEYS.every((k) => row?.[k]);
+    const next = !allChecked;
+    setValue(
+      `modulePermissions.${pKey}`,
+      {
+        canView: next,
+        canUpload: next,
+        canEdit: next,
+        canDelete: next,
+        canDownload: next,
+      },
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
+
+  const handleActionToggle = (pKey: CoreModuleKey, action: PermissionActionKey, nextChecked: boolean) => {
+    const current = modulePermissions?.[pKey] ?? {
+      canView: false,
+      canUpload: false,
+      canEdit: false,
+      canDelete: false,
+      canDownload: false,
+    };
+
+    const updated = { ...current, [action]: nextChecked };
+
+    // Smart UX Rules:
+    // 1) Enabling upload, edit, delete or download automatically enables canView
+    if (nextChecked && action !== 'canView') {
+      updated.canView = true;
+    }
+    // 2) Disabling canView automatically disables the other 4 actions
+    if (!nextChecked && action === 'canView') {
+      updated.canUpload = false;
+      updated.canEdit = false;
+      updated.canDelete = false;
+      updated.canDownload = false;
+    }
+
+    setValue(`modulePermissions.${pKey}`, updated, { shouldDirty: true, shouldValidate: true });
   };
 
   const onValid = async (values: UserFormValues) => {
@@ -249,16 +434,27 @@ function FormBody({
               control={control}
               name="role"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select value={field.value} onValueChange={handleRoleChange}>
                   <SelectTrigger id="user-role" aria-label={F.role} className="h-10 w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {USER_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {lo.roles[r]}
-                      </SelectItem>
-                    ))}
+                    {roles.length > 0 ? (
+                      roles.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          <div className="flex items-center gap-2">
+                            <span>{r.title || r.name}</span>
+                            <span className="text-[11px] text-(--text-muted)">({r.name})</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      USER_ROLES.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {lo.roles[r] ?? r}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               )}
@@ -266,34 +462,166 @@ function FormBody({
           </Field>
         </div>
 
-        <fieldset className="space-y-3 rounded-xl border border-(--border-subtle) p-4">
-          <legend className="px-1 text-xs font-medium text-(--text-secondary)">{F.permissions}</legend>
-          {implied ? (
-            <p role="status" className="text-xs text-(--text-muted)">
-              {F.permissionsImplied}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-x-6 gap-y-3">
-            {PERMISSION_KEYS.map((k) => (
-              <Controller
-                key={k}
-                control={control}
-                name={k}
-                render={({ field }) => (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`user-${k}`}
-                      checked={implied || field.value}
-                      disabled={implied}
-                      onCheckedChange={(c) => field.onChange(c === true)}
-                    />
-                    <Label htmlFor={`user-${k}`} className="text-sm">
-                      {lo.users.permissions[k]}
-                    </Label>
-                  </div>
+        {/* 3 Core Modules Permission Matrix */}
+        <fieldset className="space-y-4 rounded-2xl border border-(--border-subtle) bg-(--surface-subtle)/30 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-subtle) pb-3.5">
+            <div>
+              <div className="flex items-center gap-2">
+                <Shield className="size-4 text-(--gold)" />
+                <legend className="text-sm font-semibold text-(--text-strong)">
+                  {lo.users.matrixTitle}
+                </legend>
+                {!isAdminRole && (
+                  <span className="rounded-full bg-(--gold)/15 px-2 py-0.5 text-[11px] font-semibold text-(--gold)">
+                    {activeCount} / 15 ສິດທິ
+                  </span>
                 )}
-              />
-            ))}
+              </div>
+              <p className="mt-0.5 text-xs text-(--text-muted)">{lo.users.matrixDesc}</p>
+            </div>
+
+            {!isAdminRole && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-xs font-medium text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10"
+                  onClick={() => setAllPillars(true)}
+                >
+                  <CheckCheck className="size-3.5" />
+                  {lo.users.selectAll}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2.5 text-xs font-medium text-(--text-muted) hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
+                  onClick={() => setAllPillars(false)}
+                >
+                  <RotateCcw className="size-3" />
+                  {lo.users.clearAll}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {isAdminRole ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+              {lo.users.adminFullAccess}
+            </div>
+          ) : isDeptHead ? (
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-200">
+              {lo.users.deptHeadAudit}
+            </div>
+          ) : null}
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] border-collapse text-left text-xs">
+              <thead>
+                <tr className="border-b border-(--border-subtle) text-(--text-secondary)">
+                  <th className="py-2.5 pr-4 font-medium">ໂມດູນຫຼັກ (Pillar)</th>
+                  {PERMISSION_KEYS.map((k) => {
+                    const ActionIcon = ACTION_ICONS[k];
+                    return (
+                      <th key={k} className="px-2 py-2.5 text-center font-medium">
+                        <div className="flex flex-col items-center gap-1">
+                          <ActionIcon className="size-3.5 opacity-70" />
+                          <span>{lo.users.permissions[k]}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
+                  <th className="py-2.5 pl-2 text-right font-medium">ແຖວ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-(--border-subtle)/40">
+                {PILLAR_MODULES.map((pillar) => {
+                  const pKey = pillar.key;
+                  const row = modulePermissions?.[pKey] ?? {
+                    canView: false,
+                    canUpload: false,
+                    canEdit: false,
+                    canDelete: false,
+                    canDownload: false,
+                  };
+                  const allRow = PERMISSION_KEYS.every((k) => row[k]);
+                  const PillarIcon = PILLAR_ICONS[pKey] ?? FileText;
+
+                  return (
+                    <tr key={pKey} className="transition-colors hover:bg-white/[0.03]">
+                      <td className="py-3.5 pr-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-(--gold)">
+                            <PillarIcon className="size-4" />
+                          </div>
+                          <div>
+                            <span className="block font-medium text-(--text-strong)">
+                              {lo.users.pillars[pKey] ?? pillar.label}
+                            </span>
+                            <span className="block text-[11px] text-(--text-muted)">
+                              {lo.users.pillarDivisions[pKey] ?? pillar.divisionLabel}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {PERMISSION_KEYS.map((k) => {
+                        const isChecked = isAdminRole || row[k];
+                        const isDisabled =
+                          isAdminRole ||
+                          (isDeptHead && (k === 'canUpload' || k === 'canEdit' || k === 'canDelete'));
+
+                        return (
+                          <td
+                            key={k}
+                            className={cn(
+                              'px-2 py-3.5 text-center transition-colors',
+                              !isDisabled && 'cursor-pointer hover:bg-white/[0.04]',
+                            )}
+                            onClick={() => {
+                              if (!isDisabled) {
+                                handleActionToggle(pKey, k, !row[k]);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                id={`user-perm-${pKey}-${k}`}
+                                checked={isChecked}
+                                disabled={isDisabled}
+                                onCheckedChange={(checked) => {
+                                  handleActionToggle(pKey, k, checked === true);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`${pillar.label} ${lo.users.permissions[k]}`}
+                              />
+                            </div>
+                          </td>
+                        );
+                      })}
+
+                      <td className="py-3.5 pl-2 text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isAdminRole || isDeptHead}
+                          onClick={() => toggleRow(pKey)}
+                          title={allRow ? 'ຍົກເລີກທຸກສິດໃນແຖວນີ້' : 'ເລືອກທຸກສິດໃນແຖວນີ້'}
+                          className={cn(
+                            'h-7 px-2 text-[11px] transition-colors',
+                            allRow && 'bg-emerald-500/15 text-emerald-300 hover:bg-rose-500/15 hover:text-rose-300',
+                          )}
+                        >
+                          {allRow ? <Check className="size-3.5" /> : 'ເລືອກ'}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </fieldset>
 
@@ -351,7 +679,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSaved }: UserFormDi
     <Dialog open={open} onOpenChange={close}>
       <DialogContent
         onCloseAutoFocus={returnFocus}
-        className="flex max-h-[90vh] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-[26px] border border-(--border-glass) bg-(image:--surface-modal) p-0 shadow-2xl sm:max-w-[720px]"
+        className="flex max-h-[92vh] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-[26px] border border-(--border-glass) bg-(image:--surface-modal) p-0 shadow-2xl sm:max-w-[780px]"
       >
         <DialogHeader className="flex shrink-0 flex-row items-center gap-3.5 border-b border-(--border-subtle) px-6 py-4.5 sm:px-8">
           <div

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 
 import { useRouter } from 'next/navigation';
@@ -59,8 +60,8 @@ export function LoginForm({ next, reason }: LoginFormProps) {
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 sm:gap-6">
       <FadeIn variant="up-sm" index={0} className="space-y-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-primary/20 via-amber-500/10 to-primary/10 text-[#d4b37a] shadow-sm">
-            <KeyRound aria-hidden="true" className="size-4.5" />
+          <div className="flex size-9 items-center justify-center rounded-xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-[#1e3a8a]/30 via-amber-500/10 to-primary/10 p-1 shadow-sm">
+            <Image src="/logo/logo.png" alt="LCMS" width={28} height={28} className="size-6 object-contain" priority />
           </div>
           <span className="rounded-full border border-border/60 bg-secondary/80 px-2.5 py-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
             {lo.common.appName} Authentication

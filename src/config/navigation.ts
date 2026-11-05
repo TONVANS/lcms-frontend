@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ScrollText,
+  ShieldCheck,
   Tags,
   Users,
   type LucideIcon,
@@ -45,7 +46,7 @@ export const MODULE_NAV: Record<ModuleKey, NavItem[]> = {
       icon: FilePlus2,
       permission: 'create',
     },
-    { key: 'alerts', label: lo.nav.alerts, href: '/ppa/alerts', icon: Bell },
+    { key: 'alerts', label: lo.nav.alerts, href: '/ppa/alerts', icon: Bell, countKey: 'expiringSoon' },
   ],
   gc: [
     { key: 'dashboard', label: lo.nav.dashboard, href: '/contracts', icon: LayoutDashboard },
@@ -57,7 +58,7 @@ export const MODULE_NAV: Record<ModuleKey, NavItem[]> = {
       icon: FilePlus2,
       permission: 'create',
     },
-    { key: 'alerts', label: lo.nav.alerts, href: '/contracts/alerts', icon: Bell },
+    { key: 'alerts', label: lo.nav.alerts, href: '/contracts/alerts', icon: Bell, countKey: 'expiringSoon' },
   ],
   legal: [
     { key: 'dashboard', label: lo.nav.dashboard, href: '/legal', icon: LayoutDashboard },
@@ -98,6 +99,7 @@ export const COMMON_NAV: NavItem[] = [
 
 export const ADMIN_NAV: NavItem[] = [
   { key: 'users', label: lo.admin.users, href: '/admin/users', icon: Users },
+  { key: 'roles', label: lo.admin.roles, href: '/admin/roles', icon: ShieldCheck },
   { key: 'audit-logs', label: lo.admin.auditLogs, href: '/admin/audit-logs', icon: ClipboardList },
   {
     key: 'contract-types',

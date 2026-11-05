@@ -103,8 +103,16 @@ export function isCaseFinished(s: DisputeStatus): boolean {
   return s === 'CLOSED' || s === 'RESOLVED';
 }
 
-
-const SOURCE_KEYS = ['totals', 'total', 'summary', 'amounts', 'money', 'sums', '_sum'];
+const SOURCE_KEYS = [
+  'financialSummary',
+  'totals',
+  'total',
+  'summary',
+  'amounts',
+  'money',
+  'sums',
+  '_sum',
+];
 
 function moneyFor(r: Record<string, unknown>, cur: Currency2): MoneyTotals {
   const cap = cur === 'lak' ? 'Lak' : 'Usd';
@@ -138,10 +146,18 @@ function moneyFor(r: Record<string, unknown>, cur: Currency2): MoneyTotals {
 export function toLegalCasesDashboard(body: unknown): LegalCasesDashboard {
   const raw = unwrap<unknown>(body);
   const r = isRecord(raw) ? raw : {};
-  const entries = toCountEntries(r.byDisputeStatus ?? r.byStatus, ['disputeStatus', 'status', 'key']);
+  const summary = isRecord(r.summary) ? r.summary : {};
+
+  const rawStatus = r.statusDonutChart ?? r.byDisputeStatus ?? r.byStatus ?? r.statusChart;
+  const entries = toCountEntries(rawStatus, ['disputeStatus', 'status', 'key', 'name']);
   const counts = new Map<string, number>(entries.map((e) => [e.key.toUpperCase(), e.count]));
   const byDisputeStatus = DISPUTE_STATUSES.map((status) => ({ status, count: counts.get(status) ?? 0 }));
   const total =
-    toNum(r.total) ?? toNum(r.totalCases) ?? byDisputeStatus.reduce((sum, e) => sum + e.count, 0);
+    toNum(summary.totalCases) ??
+    toNum(summary.total) ??
+    toNum(r.total) ??
+    toNum(r.totalCases) ??
+    byDisputeStatus.reduce((sum, e) => sum + e.count, 0);
+
   return { total, byDisputeStatus, lak: moneyFor(r, 'lak'), usd: moneyFor(r, 'usd') };
 }

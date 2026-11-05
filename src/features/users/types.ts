@@ -1,8 +1,21 @@
-import type { UserRole } from '@/types/domain';
+import type { CoreModuleKey, ModulePermission, PermissionActionKey, UserRole } from '@/types/domain';
 
-export const USER_ROLES = ['ADMIN', 'MAIN_USER', 'EDITOR', 'VIEWER'] as const satisfies readonly UserRole[];
+export const USER_ROLES = [
+  'ADMIN',
+  'MAIN_USER',
+  'DEPARTMENT_HEAD',
+  'EDITOR',
+  'VIEWER',
+] as const satisfies readonly UserRole[];
 
-export const PERMISSION_KEYS = ['canView', 'canUpload', 'canEdit', 'canDelete', 'canDownload'] as const;
+export const PERMISSION_KEYS: readonly PermissionActionKey[] = [
+  'canView',
+  'canUpload',
+  'canEdit',
+  'canDelete',
+  'canDownload',
+] as const;
+
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 export type PermissionFlags = Record<PermissionKey, boolean>;
 
@@ -13,6 +26,15 @@ export const DIVISIONS = [
   'ພະແນກສັນຍາຊື້-ຂາຍໄຟຟ້າ',
 ] as const;
 
+export interface ModulePermissionDto {
+  module: CoreModuleKey | string;
+  canView: boolean;
+  canUpload: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canDownload: boolean;
+}
+
 export interface AdminUser extends PermissionFlags {
   id: string;
   employeeCode: string | null;
@@ -22,10 +44,15 @@ export interface AdminUser extends PermissionFlags {
   phone: string | null;
   department: string | null;
   division: string | null;
+  unit?: string | null;
   position: string | null;
-  role: UserRole;
+  role: string;
+  roleId?: string | null;
+  roleTitle?: string | null;
   isActive: boolean;
   createdAt: string | null;
+  permissionsByModule?: Record<string, ModulePermission>;
+  modulePermissions?: ModulePermissionDto[];
 }
 
 export interface HrmEmployee {
@@ -41,26 +68,33 @@ export interface HrmEmployee {
 /** CreateUserDto */
 export interface UserCreatePayload extends PermissionFlags {
   employeeCode: string;
-  role: UserRole;
+  role: string;
   division?: string;
-  department?: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
+  modulePermissions?: ModulePermissionDto[];
 }
 
 /** UpdateUserDto */
-export type UserUpdatePayload = Partial<PermissionFlags> & {
-  role?: UserRole;
+export interface UserUpdatePayload extends Partial<PermissionFlags> {
+  role?: string;
   isActive?: boolean;
   division?: string;
-  department?: string;
-};
+  modulePermissions?: ModulePermissionDto[];
+}
+
+export interface ResetPasswordPayload {
+  newPassword?: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export interface UserListQuery {
   page?: number;
   pageSize?: number;
   q?: string;
-  role?: UserRole;
+  role?: string;
   isActive?: boolean;
 }

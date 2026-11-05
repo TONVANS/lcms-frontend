@@ -83,28 +83,45 @@ export function diffLegalDocumentPayload(
 export function toLegalDocumentsDashboard(body: unknown): LegalDocumentsDashboard {
   const raw = unwrap<unknown>(body);
   const r = isRecord(raw) ? raw : {};
-  const statusEntries = toCountEntries(r.byStatus, ['status']);
+  const summary = isRecord(r.summary) ? r.summary : {};
+
+  const statusRaw = r.donutChart ?? r.statusChart ?? r.byStatus;
+  const statusEntries = toCountEntries(statusRaw, ['status', 'docStatus', 'name', 'key']);
   const fromStatus = (s: string): number =>
     statusEntries.find((e) => e.key.toUpperCase() === s)?.count ?? 0;
-  const active = toNum(r.active) ?? toNum(r.activeCount) ?? fromStatus('ACTIVE');
-  const inactive = toNum(r.inactive) ?? toNum(r.inactiveCount) ?? fromStatus('INACTIVE');
-  const total = toNum(r.total) ?? toNum(r.totalCount) ?? active + inactive;
+  const active =
+    toNum(summary.activeDocuments) ??
+    toNum(r.active) ??
+    toNum(r.activeCount) ??
+    fromStatus('ACTIVE');
+  const inactive =
+    toNum(summary.inactiveDocuments) ??
+    toNum(r.inactive) ??
+    toNum(r.inactiveCount) ??
+    fromStatus('INACTIVE');
+  const total =
+    toNum(summary.totalDocuments) ??
+    toNum(r.total) ??
+    toNum(r.totalCount) ??
+    active + inactive;
 
-  const byType = toCountEntries(r.byType, ['docType', 'type', 'key'])
+  const typeRaw = r.donutChart ?? r.typeChart ?? r.byType;
+  const byType = toCountEntries(typeRaw, ['docType', 'type', 'key', 'name', 'label'])
     .filter((e) => (DOC_TYPES as readonly string[]).includes(e.key.toUpperCase()))
     .map((e) => ({ docType: e.key.toUpperCase() as DocType, count: e.count }));
 
-  const deptRaw = Array.isArray(r.byDepartment)
-    ? r.byDepartment.map((row) => {
+  const rawDept = r.departmentBarChart ?? r.byDepartment ?? r.departmentsChart;
+  const deptRaw = Array.isArray(rawDept)
+    ? rawDept.map((row) => {
         if (!isRecord(row)) return row;
         const d = isRecord(row.department) ? row.department : {};
         return {
           ...row,
-          departmentId: row.departmentId ?? d.id,
+          departmentId: row.departmentId ?? row.id ?? d.id,
           name: row.name ?? row.departmentName ?? d.name,
         };
       })
-    : r.byDepartment;
+    : rawDept;
   const byDepartment = toCountEntries(deptRaw, ['departmentId', 'id', 'name'])
     .map((e) => {
       const name = e.row ? (toStr(e.row.name) ?? toStr(e.row.departmentName)) : null;

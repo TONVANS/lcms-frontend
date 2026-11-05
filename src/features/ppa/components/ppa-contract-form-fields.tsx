@@ -13,8 +13,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { useProjectTypes } from '@/features/lookups';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
+import {
+  calculateMonthsDiff,
+  composeInstalledCapacity,
+  composeTariff,
+  durationTextToMonths,
+  monthsToDurationText,
+} from '../lib/format';
 import type { PowerFormField, PowerFormValues } from '../schemas/ppa.schema';
-import { POWER_CAPACITY_UNITS, POWER_CONTRACT_TYPES, POWER_CURRENCIES } from '../types';
+import { STATUS_META } from '@/lib/constants/status';
+import { DOT_TONE_CLASS } from '@/components/shared/status-badge';
+import type { ContractStatus } from '@/types/domain';
+import {
+  POWER_CAPACITY_UNITS,
+  POWER_CONTRACT_TYPES,
+  POWER_CURRENCIES,
+  POWER_PURCHASE_PROJECT_TYPES,
+  POWER_STATUSES,
+  type PowerContractType,
+} from '../types';
 
 export type PpaFieldGroup = 'general' | 'dates' | 'tech' | 'notes';
 
@@ -25,6 +42,7 @@ export const PPA_FIELD_ORDER: readonly PowerFormField[] = [
   'projectName',
   'projectTypeOrCustomer',
   'projectLocation',
+  'status',
   'durationText',
   'durationMonths',
   'signedDate',
@@ -50,8 +68,8 @@ export function firstInvalidFieldId(errors: FieldErrors<PowerFormValues>): strin
 }
 
 /**
- * PURCHASE contracts must use one of the loaded project types. Skipped while the list is not
- * loaded and for an unchanged legacy value (editing a contract whose type is no longer listed).
+ * PURCHASE contracts must use one of the loaded project types (or standard 5 project types).
+ * Skipped while the list is not loaded and for an unchanged legacy value.
  */
 export function projectTypeIssue(
   values: PowerFormValues,
@@ -59,9 +77,11 @@ export function projectTypeIssue(
   ready: boolean,
   initial: string,
 ): string | null {
-  if (values.contractType !== 'PURCHASE' || !ready) return null;
+  if (values.contractType !== 'PURCHASE') return null;
   const v = values.projectTypeOrCustomer.trim();
-  if (!v || v === initial || types.includes(v)) return null;
+  if (!v || v === initial) return null;
+  const allowed = types.length > 0 ? types : POWER_PURCHASE_PROJECT_TYPES;
+  if ((allowed as readonly string[]).includes(v)) return null;
   return lo.ppa.validation.projectTypeNotInList;
 }
 
@@ -138,32 +158,55 @@ function NumberInput({
   onChange,
   control,
   nullable,
+  placeholder,
 }: {
   value: number | null;
   onChange: (v: number | null) => void;
   control: ControlProps;
   nullable: boolean;
+  placeholder?: string;
 }) {
   const [raw, setRaw] = useState(() => (value === null || !Number.isFinite(value) ? '' : String(value)));
+  const [prevValue, setPrevValue] = useState(value);
+
+  // If value was changed from OUTSIDE this component (e.g. form reset or auto-calc), sync raw text.
+  if (!Object.is(value, prevValue)) {
+    setPrevValue(value);
+    const synced = value === null || !Number.isFinite(value) ? '' : String(value);
+    if (synced !== raw) {
+      setRaw(synced);
+    }
+  }
+
   return (
     <Input
       {...control}
       type="text"
       inputMode="decimal"
       autoComplete="off"
+      placeholder={placeholder}
       value={raw}
       onChange={(e) => {
         const text = e.target.value;
         setRaw(text);
         const t = text.trim();
-        if (t === '') onChange(nullable ? null : Number.NaN);
-        else onChange(/^-?\d*\.?\d*$/.test(t) && t !== '.' && t !== '-' ? Number(t) : Number.NaN);
+        const cleaned = t.replace(/,/g, '');
+        let next: number | null;
+        if (cleaned === '') {
+          next = nullable ? null : Number.NaN;
+        } else if (/^-?\d*\.?\d*$/.test(cleaned) && cleaned !== '.' && cleaned !== '-') {
+          next = Number(cleaned);
+        } else {
+          next = Number.NaN;
+        }
+        setPrevValue(next);
+        onChange(next);
       }}
     />
   );
 }
 
-function SectionCard({
+export function SectionCard({
   icon: Icon,
   title,
   children,
@@ -190,7 +233,7 @@ function SectionCard({
 
 const msg = (err: { message?: string } | undefined): string | undefined => err?.message;
 
-/** PURCHASE -> select of the backend project types; SALE -> free text (FRONTEND_API_SUMMARY 4.1). */
+/** PURCHASE -> select of the 5 project types; SALE -> free text customer name (FRONTEND_API_SUMMARY 4.1). */
 function ProjectTypeOrCustomerField({ form }: { form: UseFormReturn<PowerFormValues> }) {
   const { register, control, formState, watch } = form;
   const contractType = watch('contractType');
@@ -206,18 +249,25 @@ function ProjectTypeOrCustomerField({ form }: { form: UseFormReturn<PowerFormVal
         error={error}
         hint={lo.ppa.form.customerHint}
       >
-        {(c) => <Input {...c} {...register('projectTypeOrCustomer')} />}
+        {(c) => (
+          <Input
+            {...c}
+            placeholder={lo.ppa.placeholders.customerSale}
+            {...register('projectTypeOrCustomer')}
+          />
+        )}
       </Field>
     );
   }
 
-  const options = types.items;
+  const options: readonly string[] = types.items.length > 0 ? types.items : POWER_PURCHASE_PROJECT_TYPES;
   return (
     <Field
       name="projectTypeOrCustomer"
       label={lo.ppa.fields.projectType}
       required
-      error={error ?? (types.status === 'error' ? lo.ppa.form.projectTypesError : undefined)}
+      error={error ?? (types.status === 'error' && types.items.length === 0 ? lo.ppa.form.projectTypesError : undefined)}
+      hint={lo.ppa.form.projectTypeHint}
     >
       {(c) => (
         <div className="flex items-center gap-2">
@@ -237,7 +287,9 @@ function ProjectTypeOrCustomerField({ form }: { form: UseFormReturn<PowerFormVal
                   >
                     <SelectValue
                       placeholder={
-                        types.status === 'loading' ? lo.ppa.form.projectTypesLoading : lo.ppa.form.select
+                        types.status === 'loading' && options.length === 0
+                          ? lo.ppa.form.projectTypesLoading
+                          : lo.ppa.placeholders.selectProjectType
                       }
                     />
                   </SelectTrigger>
@@ -252,7 +304,7 @@ function ProjectTypeOrCustomerField({ form }: { form: UseFormReturn<PowerFormVal
               );
             }}
           />
-          {types.status === 'error' ? (
+          {types.status === 'error' && types.items.length === 0 ? (
             <Button type="button" variant="secondary" size="sm" onClick={types.reload}>
               {lo.common.retry}
             </Button>
@@ -282,9 +334,11 @@ export function PpaFormFieldGroup({
   group: PpaFieldGroup;
   form: UseFormReturn<PowerFormValues>;
 }) {
-  const { register, control } = form;
+  const { register, control, watch } = form;
   const errors = form.formState.errors;
   const f = lo.ppa.fields;
+  const contractType = watch('contractType');
+  const isSale = contractType === 'SALE';
 
   if (group === 'general') {
     return (
@@ -303,12 +357,19 @@ export function PpaFormFieldGroup({
                 </span>
                 <RadioGroup
                   value={field.value}
-                  onValueChange={(next) => {
+                  onValueChange={(next: PowerContractType) => {
                     if (next === field.value) return;
                     field.onChange(next);
                     // The field changes meaning with the type (select vs text), so never carry a value over.
                     form.setValue('projectTypeOrCustomer', '', { shouldDirty: true });
                     form.clearErrors('projectTypeOrCustomer');
+                    // Automatically adjust default currency for the contract type
+                    const currentCur = form.getValues('tariffCurrency');
+                    if (next === 'SALE' && currentCur === 'USD') {
+                      form.setValue('tariffCurrency', 'LAK', { shouldDirty: true });
+                    } else if (next === 'PURCHASE' && currentCur === 'LAK') {
+                      form.setValue('tariffCurrency', 'USD', { shouldDirty: true });
+                    }
                   }}
                   aria-labelledby={ppaFieldId('contractType-label')}
                   className="flex flex-wrap gap-x-6 gap-y-2"
@@ -316,8 +377,8 @@ export function PpaFormFieldGroup({
                   {POWER_CONTRACT_TYPES.map((t) => (
                     <div key={t} className="flex items-center gap-2">
                       <RadioGroupItem value={t} id={ppaFieldId(`contractType-${t}`)} />
-                      <Label htmlFor={ppaFieldId(`contractType-${t}`)} className="text-sm">
-                        {lo.ppa.types[t]}
+                      <Label htmlFor={ppaFieldId(`contractType-${t}`)} className="text-sm font-medium">
+                        {lo.ppa.typesWithCode[t]}
                       </Label>
                     </div>
                   ))}
@@ -326,14 +387,74 @@ export function PpaFormFieldGroup({
             )}
           />
           <Field name="contractNumber" label={f.contractNumber} error={msg(errors.contractNumber)}>
-            {(c) => <Input {...c} {...register('contractNumber')} />}
+            {(c) => (
+              <Input
+                {...c}
+                placeholder={isSale ? lo.ppa.placeholders.contractNumberSale : lo.ppa.placeholders.contractNumberPurchase}
+                {...register('contractNumber')}
+              />
+            )}
           </Field>
-          <Field name="projectName" label={f.projectName} required error={msg(errors.projectName)}>
-            {(c) => <Input {...c} {...register('projectName')} />}
+          <Field
+            name="projectName"
+            label={isSale ? lo.ppa.fields.projectNameSale : f.projectName}
+            required
+            error={msg(errors.projectName)}
+            hint={isSale ? lo.ppa.form.projectNameSaleHint : lo.ppa.form.projectNamePurchaseHint}
+          >
+            {(c) => (
+              <Input
+                {...c}
+                placeholder={isSale ? lo.ppa.placeholders.projectNameSale : lo.ppa.placeholders.projectNamePurchase}
+                {...register('projectName')}
+              />
+            )}
           </Field>
           <ProjectTypeOrCustomerField form={form} />
           <Field name="projectLocation" label={f.projectLocation} error={msg(errors.projectLocation)}>
-            {(c) => <Input {...c} {...register('projectLocation')} />}
+            {(c) => (
+              <Input
+                {...c}
+                placeholder={isSale ? lo.ppa.placeholders.projectLocationSale : lo.ppa.placeholders.projectLocationPurchase}
+                {...register('projectLocation')}
+              />
+            )}
+          </Field>
+          <Field name="status" label={f.status} error={msg(errors.status)}>
+            {(c, labelId) => (
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? 'DRAFT'}
+                    onValueChange={(val) => field.onChange(val as ContractStatus)}
+                  >
+                    <SelectTrigger
+                      {...c}
+                      id={c.id}
+                      aria-labelledby={`${labelId} ${c.id}`}
+                      className={cn('w-full', FOCUS)}
+                    >
+                      <SelectValue placeholder={lo.status.DRAFT} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POWER_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className={cn('size-2 shrink-0 rounded-full', DOT_TONE_CLASS[STATUS_META[s].tone])}
+                            />
+                            <span>{STATUS_META[s].label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            )}
           </Field>
         </div>
       </SectionCard>
@@ -360,6 +481,20 @@ export function PpaFormFieldGroup({
                   if (name !== 'signedDate' && form.formState.errors.expirationDate) {
                     void form.trigger('expirationDate');
                   }
+                  // Auto-calculate duration if effectiveDate and expirationDate are both selected
+                  const eff = name === 'effectiveDate' ? (v ?? '') : form.getValues('effectiveDate');
+                  const exp = name === 'expirationDate' ? (v ?? '') : form.getValues('expirationDate');
+                  if (eff && exp && exp >= eff) {
+                    const diff = calculateMonthsDiff(eff, exp);
+                    if (diff !== null) {
+                      if (!form.getValues('durationMonths')) {
+                        form.setValue('durationMonths', diff, { shouldDirty: true });
+                      }
+                      if (!form.getValues('durationText')) {
+                        form.setValue('durationText', monthsToDurationText(diff), { shouldDirty: true });
+                      }
+                    }
+                  }
                 }}
               />
             )}
@@ -374,7 +509,21 @@ export function PpaFormFieldGroup({
           {dateField('effectiveDate')}
           {dateField('expirationDate')}
           <Field name="durationText" label={f.durationText} error={msg(errors.durationText)}>
-            {(c) => <Input {...c} {...register('durationText')} />}
+            {(c) => (
+              <Input
+                {...c}
+                placeholder={isSale ? lo.ppa.placeholders.durationTextSale : lo.ppa.placeholders.durationTextPurchase}
+                {...register('durationText', {
+                  onChange: (e) => {
+                    const val = (e.target as HTMLInputElement).value;
+                    const parsed = durationTextToMonths(val);
+                    if (parsed !== null && !form.getValues('durationMonths')) {
+                      form.setValue('durationMonths', parsed, { shouldDirty: true });
+                    }
+                  },
+                })}
+              />
+            )}
           </Field>
           <Field name="durationMonths" label={f.durationMonths} error={msg(errors.durationMonths)}>
             {(c) => (
@@ -382,12 +531,28 @@ export function PpaFormFieldGroup({
                 control={control}
                 name="durationMonths"
                 render={({ field }) => (
-                  <NumberInput control={c} nullable value={field.value} onChange={field.onChange} />
+                  <NumberInput
+                    control={c}
+                    nullable
+                    value={field.value}
+                    placeholder={isSale ? lo.ppa.placeholders.durationMonthsSale : lo.ppa.placeholders.durationMonthsPurchase}
+                    onChange={(m) => {
+                      field.onChange(m);
+                      if (m !== null && m > 0 && !form.getValues('durationText')) {
+                        form.setValue('durationText', monthsToDurationText(m), { shouldDirty: true });
+                      }
+                    }}
+                  />
                 )}
               />
             )}
           </Field>
-          <Field name="notifyDaysBefore" label={f.notifyDaysBefore} error={msg(errors.notifyDaysBefore)}>
+          <Field
+            name="notifyDaysBefore"
+            label={f.notifyDaysBefore}
+            error={msg(errors.notifyDaysBefore)}
+            hint={lo.ppa.form.notifyDaysHint}
+          >
             {(c) => (
               <Controller
                 control={control}
@@ -397,6 +562,7 @@ export function PpaFormFieldGroup({
                     control={c}
                     nullable={false}
                     value={field.value}
+                    placeholder={lo.ppa.placeholders.notifyDaysBefore}
                     onChange={(v) => field.onChange(v ?? Number.NaN)}
                   />
                 )}
@@ -409,16 +575,35 @@ export function PpaFormFieldGroup({
   }
 
   if (group === 'tech') {
+    const capVal = watch('capacityValue');
+    const capUnit = watch('capacityUnit');
+    const tarVal = watch('tariffValue');
+    const tarCur = watch('tariffCurrency');
+
+    const capPreview = composeInstalledCapacity(capVal, capUnit);
+    const tarPreview = composeTariff(tarVal, tarCur);
+
     return (
       <SectionCard icon={Zap} title={lo.ppa.form.sectionTech}>
         <div className={GRID}>
-          <Field name="capacityValue" label={f.capacityValue} error={msg(errors.capacityValue)}>
+          <Field
+            name="capacityValue"
+            label={f.capacityValue}
+            error={msg(errors.capacityValue)}
+            hint={capPreview ? lo.ppa.form.capacityPreview(capPreview) : undefined}
+          >
             {(c) => (
               <Controller
                 control={control}
                 name="capacityValue"
                 render={({ field }) => (
-                  <NumberInput control={c} nullable value={field.value} onChange={field.onChange} />
+                  <NumberInput
+                    control={c}
+                    nullable
+                    value={field.value}
+                    placeholder={isSale ? lo.ppa.placeholders.capacityValueSale : lo.ppa.placeholders.capacityValuePurchase}
+                    onChange={field.onChange}
+                  />
                 )}
               />
             )}
@@ -439,13 +624,24 @@ export function PpaFormFieldGroup({
               />
             )}
           </Field>
-          <Field name="tariffValue" label={f.tariffValue} error={msg(errors.tariffValue)}>
+          <Field
+            name="tariffValue"
+            label={f.tariffValue}
+            error={msg(errors.tariffValue)}
+            hint={tarPreview ? lo.ppa.form.tariffPreview(tarPreview) : undefined}
+          >
             {(c) => (
               <Controller
                 control={control}
                 name="tariffValue"
                 render={({ field }) => (
-                  <NumberInput control={c} nullable value={field.value} onChange={field.onChange} />
+                  <NumberInput
+                    control={c}
+                    nullable
+                    value={field.value}
+                    placeholder={isSale ? lo.ppa.placeholders.tariffValueSale : lo.ppa.placeholders.tariffValuePurchase}
+                    onChange={field.onChange}
+                  />
                 )}
               />
             )}
@@ -475,7 +671,14 @@ export function PpaFormFieldGroup({
     <SectionCard icon={AlignLeft} title={lo.ppa.form.sectionNotes}>
       <div className={GRID}>
         <Field name="additionalDetails" label={f.additionalDetails} wide error={msg(errors.additionalDetails)}>
-          {(c) => <Textarea {...c} rows={3} {...register('additionalDetails')} />}
+          {(c) => (
+            <Textarea
+              {...c}
+              rows={3}
+              placeholder={isSale ? lo.ppa.placeholders.additionalDetailsSale : lo.ppa.placeholders.additionalDetailsPurchase}
+              {...register('additionalDetails')}
+            />
+          )}
         </Field>
       </div>
     </SectionCard>

@@ -1,3 +1,47 @@
+/** 3 Core Pillars (Modules) in EDL Legal System */
+export type CoreModuleKey = 'CONTRACTS' | 'POWER_CONTRACTS' | 'LEGAL_AND_DISPUTE';
+
+/** All Module Keys supported by Backend RBAC */
+export type SystemModuleKey = CoreModuleKey | 'LEGAL_DOCUMENTS' | 'LEGAL_CASES' | string;
+
+export type PermissionActionKey = 'canView' | 'canUpload' | 'canEdit' | 'canDelete' | 'canDownload';
+
+export interface ModulePermission {
+  canView: boolean;
+  canUpload: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canDownload: boolean;
+}
+
+export interface PillarRowConfig {
+  key: CoreModuleKey;
+  label: string;
+  divisionLabel: string;
+  backendKeys: string[];
+}
+
+export const PILLAR_MODULES: PillarRowConfig[] = [
+  {
+    key: 'CONTRACTS',
+    label: '1. ສັນຍາທົ່ວໄປ (General Contracts)',
+    divisionLabel: 'ພະແນກສັນຍາທົ່ວໄປ',
+    backendKeys: ['CONTRACTS'],
+  },
+  {
+    key: 'POWER_CONTRACTS',
+    label: '2. ສັນຍາຊື້-ຂາຍໄຟຟ້າ (Power Contracts)',
+    divisionLabel: 'ພະແນກສັນຍາຊື້-ຂາຍໄຟຟ້າ',
+    backendKeys: ['POWER_CONTRACTS'],
+  },
+  {
+    key: 'LEGAL_AND_DISPUTE',
+    label: '3. ນິຕິກຳ ແລະ ແກ້ໄຂຂໍ້ຂັດແຍ່ງ (Legal Affairs & Disputes)',
+    divisionLabel: 'ພະແນກນິຕິກຳ ແລະ ແກ້ໄຂຂໍ້ຂັດແຍ່ງ',
+    backendKeys: ['LEGAL_AND_DISPUTE', 'LEGAL_DOCUMENTS', 'LEGAL_CASES'],
+  },
+];
+
 /** Backend RBAC module names (`accessibleModules` on the user profile). */
 export type SystemModule =
   | 'contracts'
@@ -9,8 +53,10 @@ export type SystemModule =
   | 'departments'
   | 'support'
   | 'users'
-  | 'audit-logs';
-export type UserRole = 'ADMIN' | 'MAIN_USER' | 'EDITOR' | 'VIEWER';
+  | 'audit-logs'
+  | string;
+
+export type UserRole = 'ADMIN' | 'MAIN_USER' | 'DEPARTMENT_HEAD' | 'EDITOR' | 'VIEWER' | string;
 /** UI module keys, derived from `SystemModule` (see `getAccessibleModules`). */
 export type ModuleKey = 'ppa' | 'gc' | 'legal';
 export type AttachmentModule = 'contracts' | 'legal-documents' | 'legal-cases' | 'power-contracts';
@@ -25,14 +71,18 @@ export interface User {
   phone: string | null;
   department: string | null;
   division: string | null;
+  unit?: string | null;
   position: string | null;
   role: UserRole;
+  roleId?: string | null;
+  roleTitle?: string | null;
   canView: boolean;
   canUpload: boolean;
   canEdit: boolean;
   canDelete: boolean;
   canDownload: boolean;
   accessibleModules: SystemModule[];
+  permissionsByModule?: Record<string, ModulePermission>;
 }
 
 export interface Department {

@@ -1,13 +1,13 @@
 import { toStr } from '@/lib/api/envelope';
 import { lo } from '@/lib/i18n/lo';
-import type { UserRole } from '@/types/domain';
+import type { ModulePermission } from '@/types/domain';
 import type { UserFormValues } from '../schemas/user.schema';
 import {
   DIVISIONS,
   PERMISSION_KEYS,
-  USER_ROLES,
   type AdminUser,
   type HrmEmployee,
+  type ModulePermissionDto,
   type PermissionFlags,
   type UserCreatePayload,
   type UserUpdatePayload,
@@ -16,13 +16,42 @@ import {
 type Rec = Record<string, unknown>;
 const rec = (v: unknown): Rec => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Rec) : {});
 
-function role(v: unknown): UserRole {
-  const up = typeof v === 'string' ? v.trim().toUpperCase() : '';
-  return USER_ROLES.find((r) => r === up) ?? 'VIEWER';
+function parseModulePerm(v: unknown): ModulePermission {
+  const r = rec(v);
+  return {
+    canView: r.canView === true,
+    canUpload: r.canUpload === true,
+    canEdit: r.canEdit === true,
+    canDelete: r.canDelete === true,
+    canDownload: r.canDownload === true,
+  };
 }
 
 export function toAdminUser(raw: unknown): AdminUser {
   const r = rec(raw);
+  const role = toStr(r.role) ?? 'VIEWER';
+
+  // Parse permissionsByModule
+  let permissionsByModule: Record<string, ModulePermission> | undefined;
+  if (r.permissionsByModule && typeof r.permissionsByModule === 'object') {
+    permissionsByModule = {};
+    for (const [k, v] of Object.entries(r.permissionsByModule as Record<string, unknown>)) {
+      permissionsByModule[k.toUpperCase()] = parseModulePerm(v);
+    }
+  }
+
+  // Parse modulePermissions array
+  let modulePermissions: ModulePermissionDto[] | undefined;
+  if (Array.isArray(r.modulePermissions)) {
+    modulePermissions = r.modulePermissions.map((item) => {
+      const it = rec(item);
+      return {
+        module: toStr(it.module) ?? '',
+        ...parseModulePerm(it),
+      };
+    });
+  }
+
   return {
     id: toStr(r.id) ?? '',
     employeeCode: toStr(r.employeeCode),
@@ -32,8 +61,11 @@ export function toAdminUser(raw: unknown): AdminUser {
     phone: toStr(r.phone),
     department: toStr(r.department),
     division: toStr(r.division),
+    unit: toStr(r.unit),
     position: toStr(r.position),
-    role: role(r.role),
+    role,
+    roleId: toStr(r.roleId),
+    roleTitle: toStr(r.roleTitle),
     canView: r.canView === true,
     canUpload: r.canUpload === true,
     canEdit: r.canEdit === true,
@@ -41,6 +73,8 @@ export function toAdminUser(raw: unknown): AdminUser {
     canDownload: r.canDownload === true,
     isActive: r.isActive === false ? false : true,
     createdAt: toStr(r.createdAt),
+    permissionsByModule,
+    modulePermissions,
   };
 }
 
@@ -71,12 +105,12 @@ export function hrmToFormPatch(
   return out;
 }
 
-/** ADMIN and MAIN_USER hold every permission regardless of the individual flags. */
-export function impliesAllPermissions(r: UserRole): boolean {
+/** ADMIN and MAIN_USER hold full permissions */
+export function impliesAllPermissions(r: string): boolean {
   return r === 'ADMIN' || r === 'MAIN_USER';
 }
 
-export function resolveFlags(r: UserRole, flags: PermissionFlags): PermissionFlags {
+export function resolveFlags(r: string, flags: PermissionFlags): PermissionFlags {
   if (impliesAllPermissions(r)) {
     return { canView: true, canUpload: true, canEdit: true, canDelete: true, canDownload: true };
   }
@@ -90,34 +124,114 @@ export function resolveFlags(r: UserRole, flags: PermissionFlags): PermissionFla
 }
 
 export function toCreatePayload(values: UserFormValues): UserCreatePayload {
+  const legal = values.modulePermissions.LEGAL_AND_DISPUTE;
+  const candidates: ModulePermissionDto[] = [
+    { module: 'CONTRACTS', ...values.modulePermissions.CONTRACTS },
+    { module: 'POWER_CONTRACTS', ...values.modulePermissions.POWER_CONTRACTS },
+    { module: 'LEGAL_DOCUMENTS', ...legal },
+    { module: 'LEGAL_CASES', ...legal },
+  ];
+
+  // Include only modules that have at least one permission granted
+  const modulePermissions = candidates.filter(
+    (m) => m.canView || m.canUpload || m.canEdit || m.canDelete || m.canDownload,
+  );
+
+  const anyCanView = modulePermissions.some((m) => m.canView);
+  const anyCanUpload = modulePermissions.some((m) => m.canUpload);
+  const anyCanEdit = modulePermissions.some((m) => m.canEdit);
+  const anyCanDelete = modulePermissions.some((m) => m.canDelete);
+  const anyCanDownload = modulePermissions.some((m) => m.canDownload);
+
+  const flags = resolveFlags(values.role, {
+    canView: anyCanView || values.canView,
+    canUpload: anyCanUpload || values.canUpload,
+    canEdit: anyCanEdit || values.canEdit,
+    canDelete: anyCanDelete || values.canDelete,
+    canDownload: anyCanDownload || values.canDownload,
+  });
+
   const out: UserCreatePayload = {
     employeeCode: values.employeeCode.trim(),
     role: values.role,
-    ...resolveFlags(values.role, values),
+    canView: flags.canView,
+    canUpload: flags.canUpload,
+    canEdit: flags.canEdit,
+    canDelete: flags.canDelete,
+    canDownload: flags.canDownload,
+    modulePermissions,
   };
-  for (const k of ['division', 'department', 'fullName', 'email', 'phone'] as const) {
-    const s = values[k].trim();
-    if (s) out[k] = s;
+
+  const division = values.division?.trim();
+  if (division && division !== '__none__') {
+    out.division = division;
   }
+
   return out;
 }
 
 /** Only the fields that differ from the stored user (UpdateUserDto). */
 export function diffUserUpdate(values: UserFormValues, prev: AdminUser): UserUpdatePayload {
-  const out: UserUpdatePayload = {};
-  if (values.role !== prev.role) out.role = values.role;
-  if (values.isActive !== prev.isActive) out.isActive = values.isActive;
-  const division = values.division.trim();
-  if (division && division !== (prev.division ?? '')) out.division = division;
-  const department = values.department.trim();
-  if (department && department !== (prev.department ?? '')) out.department = department;
-  const flags = resolveFlags(values.role, values);
-  for (const k of PERMISSION_KEYS) if (flags[k] !== prev[k]) out[k] = flags[k];
+  const legal = values.modulePermissions.LEGAL_AND_DISPUTE;
+  const candidates: ModulePermissionDto[] = [
+    { module: 'CONTRACTS', ...values.modulePermissions.CONTRACTS },
+    { module: 'POWER_CONTRACTS', ...values.modulePermissions.POWER_CONTRACTS },
+    { module: 'LEGAL_DOCUMENTS', ...legal },
+    { module: 'LEGAL_CASES', ...legal },
+  ];
+
+  const modulePermissions = candidates.filter(
+    (m) => m.canView || m.canUpload || m.canEdit || m.canDelete || m.canDownload,
+  );
+
+  const anyCanView = modulePermissions.some((m) => m.canView);
+  const anyCanUpload = modulePermissions.some((m) => m.canUpload);
+  const anyCanEdit = modulePermissions.some((m) => m.canEdit);
+  const anyCanDelete = modulePermissions.some((m) => m.canDelete);
+  const anyCanDownload = modulePermissions.some((m) => m.canDownload);
+
+  const flags = resolveFlags(values.role, {
+    canView: anyCanView || values.canView,
+    canUpload: anyCanUpload || values.canUpload,
+    canEdit: anyCanEdit || values.canEdit,
+    canDelete: anyCanDelete || values.canDelete,
+    canDownload: anyCanDownload || values.canDownload,
+  });
+
+  const out: UserUpdatePayload = {
+    role: values.role,
+    isActive: values.isActive,
+    canView: flags.canView,
+    canUpload: flags.canUpload,
+    canEdit: flags.canEdit,
+    canDelete: flags.canDelete,
+    canDownload: flags.canDownload,
+    modulePermissions,
+  };
+
+  const division = values.division?.trim();
+  if (division && division !== '__none__' && division !== (prev.division ?? '')) {
+    out.division = division;
+  }
+
   return out;
 }
 
-export function permissionSummary(u: Pick<AdminUser, 'role'> & PermissionFlags): string {
+export function permissionSummary(u: AdminUser): string {
   if (impliesAllPermissions(u.role)) return lo.users.permissionAll;
+
+  if (u.permissionsByModule) {
+    const activePillars: string[] = [];
+    if (u.permissionsByModule.CONTRACTS?.canView) activePillars.push('ສັນຍາທົ່ວໄປ');
+    if (u.permissionsByModule.POWER_CONTRACTS?.canView) activePillars.push('ສັນຍາໄຟຟ້າ');
+    if (u.permissionsByModule.LEGAL_AND_DISPUTE?.canView || u.permissionsByModule.LEGAL_DOCUMENTS?.canView || u.permissionsByModule.LEGAL_CASES?.canView) {
+      activePillars.push('ນິຕິກຳ/ຄະດີ');
+    }
+    if (activePillars.length > 0) {
+      return activePillars.join(', ');
+    }
+  }
+
   const parts = PERMISSION_KEYS.filter((k) => u[k]).map((k) => lo.users.permissions[k]);
   return parts.length ? parts.join(' · ') : lo.users.permissionNone;
 }

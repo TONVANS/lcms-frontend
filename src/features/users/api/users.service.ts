@@ -5,7 +5,9 @@ import type { Paginated } from '@/types/api';
 import { toAdminUser, toHrmEmployee } from '../lib/user-mapper';
 import type {
   AdminUser,
+  ChangePasswordPayload,
   HrmEmployee,
+  ResetPasswordPayload,
   UserCreatePayload,
   UserListQuery,
   UserUpdatePayload,
@@ -49,4 +51,15 @@ export const usersService = {
     api
       .get<unknown>(endpoints.users.hrm(empCode))
       .then((r) => toHrmEmployee(unwrap(r.data), empCode)),
+
+  resetPassword: (id: string, newPassword?: string): Promise<{ message?: string }> =>
+    api
+      .patch<unknown>(
+        endpoints.users.resetPassword(id),
+        newPassword ? ({ newPassword } satisfies ResetPasswordPayload) : {},
+      )
+      .then((r) => unwrap(r.data)),
+
+  changePassword: (dto: ChangePasswordPayload): Promise<void> =>
+    api.patch<unknown>(endpoints.users.changePassword, dto).then(() => undefined),
 };

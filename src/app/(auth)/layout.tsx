@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import { BackgroundGlows } from '@/components/layout/background-glows';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { FadeIn } from '@/components/shared/fade-in';
 import { GlassCard } from '@/components/shared/glass-card';
 import { lo } from '@/lib/i18n/lo';
-import { Scale, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { BrandPanel } from './_brand-panel';
 
 export const instant = false;
@@ -26,8 +27,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {/* Logo & System Brand */}
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-[#1e3a8a] via-[#13294f] to-[#0b1b3a] text-[#d4b37a] shadow-[0_0_15px_rgba(212,179,122,0.2)]">
-              <Scale className="size-5" aria-hidden="true" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-[#1e3a8a]/40 via-[#13294f]/60 to-[#0b1b3a] p-1 shadow-[0_0_15px_rgba(212,179,122,0.2)]">
+              <Image
+                src="/logo/logo.png"
+                alt="LCMS Logo"
+                width={36}
+                height={36}
+                className="size-8 object-contain drop-shadow"
+                priority
+              />
             </div>
             <div className="flex flex-col">
               <span className="font-heading text-lg font-bold tracking-wider text-foreground leading-none">

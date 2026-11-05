@@ -16,11 +16,13 @@ export function NotificationMenu() {
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
   const markRead = useNotificationsStore((s) => s.markRead);
 
-  const hasUnread = unreadCount > 0;
+  // Filter only unread notifications
+  const unreadItems = items.filter((n) => !n.read);
+  const hasUnread = unreadCount > 0 || unreadItems.length > 0;
   const label = hasUnread
     ? `${lo.topbar.notifications}, ${unreadCount} ${lo.topbar.unread}`
     : lo.topbar.notifications;
-  const latest = items.slice(0, LATEST);
+  const latest = unreadItems.slice(0, LATEST);
 
   return (
     <Popover>
@@ -41,7 +43,14 @@ export function NotificationMenu() {
         aria-label={lo.topbar.latestNotifications}
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold">{lo.topbar.notifications}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-semibold">{lo.topbar.notifications}</p>
+            {hasUnread ? (
+              <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-500">
+                {unreadCount}
+              </span>
+            ) : null}
+          </div>
           <Button
             type="button"
             variant="ghost"
@@ -54,7 +63,7 @@ export function NotificationMenu() {
         </div>
         {latest.length === 0 ? (
           <p className="text-muted-foreground px-1 py-6 text-center text-[13px]">
-            {lo.notifications.empty}
+            {lo.notifications.emptyUnread}
           </p>
         ) : (
           <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
@@ -66,18 +75,16 @@ export function NotificationMenu() {
                   className="border-border flex flex-col gap-1 rounded-lg border px-3 py-2"
                 >
                   <div className="flex items-start gap-2">
-                    {!n.read ? (
-                      <span
-                        aria-hidden="true"
-                        className="mt-1.5 size-2 shrink-0 rounded-full bg-rose-600"
-                      />
-                    ) : null}
+                    <span
+                      aria-hidden="true"
+                      className="mt-1.5 size-2 shrink-0 rounded-full bg-rose-600"
+                    />
                     <p className="min-w-0 flex-1 text-[13px] font-semibold break-words">
                       {n.title}
                     </p>
                   </div>
                   <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                    <span>{n.read ? lo.notifications.read : lo.notifications.unread}</span>
+                    <span>{lo.notifications.unread}</span>
                     {n.createdAt ? <span>{formatDate(n.createdAt)}</span> : null}
                     {href && n.contractLabel ? (
                       <Link

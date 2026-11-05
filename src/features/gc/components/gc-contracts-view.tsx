@@ -30,7 +30,7 @@ import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
 import { gcService } from '../api/gc.service';
-import { formatValue } from '../lib/format';
+import { formatNumber } from '@/lib/utils/number';
 import { useGcListUrlSync } from '../hooks/use-gc-list-url-sync';
 import { useGcListStore } from '../store/gc-list.store';
 import { GC_PAGE_SIZES, GC_STATUSES, type Contract } from '../types';
@@ -102,35 +102,45 @@ function RowActions({
   onDelete: (c: Contract) => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-inset)]/60 p-0.5 shadow-xs backdrop-blur-xs">
       <Link
         href={`/contracts/${contract.id}`}
         aria-label={`${lo.gc.list.view} ${contract.contractNumber}`}
-        className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-(--text-secondary) hover:text-(--text)', FOCUS_RING)}
+        title={lo.gc.list.view}
+        className={cn(
+          'inline-flex size-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--text-strong)]',
+          FOCUS_RING,
+        )}
       >
-        <Eye aria-hidden="true" />
+        <Eye className="size-4" aria-hidden="true" />
       </Link>
       {canEdit ? (
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           aria-label={`${lo.gc.list.edit} ${contract.contractNumber}`}
+          title={lo.gc.list.edit}
           onClick={() => onEdit(contract)}
-          className="text-(--text-secondary) hover:text-(--text)"
+          className={cn(
+            'inline-flex size-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--gold)]',
+            FOCUS_RING,
+          )}
         >
-          <Pencil aria-hidden="true" />
-        </Button>
+          <Pencil className="size-4" aria-hidden="true" />
+        </button>
       ) : null}
       {canDelete ? (
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           aria-label={`${lo.gc.list.delete} ${contract.contractNumber}`}
+          title={lo.gc.list.delete}
           onClick={() => onDelete(contract)}
-          className="text-destructive hover:bg-destructive/10"
+          className={cn(
+            'inline-flex size-8 items-center justify-center rounded-md text-destructive/80 transition-colors hover:bg-destructive/15 hover:text-destructive',
+            FOCUS_RING,
+          )}
         >
-          <Trash2 aria-hidden="true" />
-        </Button>
+          <Trash2 className="size-4" aria-hidden="true" />
+        </button>
       ) : null}
     </div>
   );
@@ -174,36 +184,41 @@ export function GcContractsView() {
       {
         id: 'contractNumber',
         header: lo.gc.list.numberAndTitle,
-        className: 'min-w-56 whitespace-normal',
+        className: 'min-w-64 max-w-xs whitespace-normal',
         cell: (c) => (
-          <>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center rounded border border-[var(--gc)]/25 bg-[var(--gc)]/10 px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight text-[var(--gc)]">
+                {c.contractNumber}
+              </span>
+              <span className="truncate text-[11px] text-[var(--text-muted)] 2xl:hidden">
+                · {c.contractType?.nameLo ?? '—'}
+              </span>
+            </div>
             <Link
               href={`/contracts/${c.id}`}
+              title={c.title}
               className={cn(
-                'rounded-sm font-medium text-(--text-strong) tabular-nums underline underline-offset-4 hover:text-(--gc)',
+                'line-clamp-1 text-sm font-semibold text-[var(--text-strong)] transition-colors hover:text-[var(--gold)]',
                 FOCUS_RING,
               )}
             >
-              {c.contractNumber}
+              {c.title}
             </Link>
-            <span className="mt-0.5 block font-semibold text-(--text-strong)">{c.title}</span>
-            <span className="mt-0.5 block text-xs text-(--text-secondary) 2xl:hidden">
-              {c.contractType?.nameLo ?? '—'}
-            </span>
-          </>
+          </div>
         ),
       },
       {
         id: 'contractType',
         header: lo.gc.fields.contractTypeId,
-        className: 'hidden 2xl:table-cell min-w-48 whitespace-normal',
-        cell: (c) => <span className="text-xs text-(--text-secondary)">{c.contractType?.nameLo ?? '—'}</span>,
+        className: 'hidden 2xl:table-cell min-w-44 whitespace-normal',
+        cell: (c) => <span className="text-xs font-medium text-[var(--text-secondary)]">{c.contractType?.nameLo ?? '—'}</span>,
       },
       {
         id: 'signedDate',
         header: lo.gc.fields.signedDate,
         className: 'hidden xl:table-cell',
-        cell: (c) => <span className="tabular-nums">{formatDate(c.signedDate)}</span>,
+        cell: (c) => <span className="tabular-nums text-xs text-[var(--text-secondary)]">{formatDate(c.signedDate)}</span>,
       },
       {
         id: 'expirationDate',
@@ -212,14 +227,14 @@ export function GcContractsView() {
           const left = daysLeft(c.expirationDate);
           const show = left !== null && left >= 0 && left <= (c.notifyDaysBefore ?? 60);
           return (
-            <>
-              <span className="tabular-nums">{formatDate(c.expirationDate)}</span>
+            <div className="flex flex-col gap-1">
+              <span className="tabular-nums text-sm font-medium text-[var(--text)]">{formatDate(c.expirationDate)}</span>
               {show ? (
-                <span className="mt-1 block">
+                <div className="inline-flex">
                   <CountdownBadge days={left} />
-                </span>
+                </div>
               ) : null}
-            </>
+            </div>
           );
         },
       },
@@ -227,7 +242,19 @@ export function GcContractsView() {
         id: 'contractValue',
         header: lo.gc.fields.contractValue,
         align: 'end',
-        cell: (c) => <span className="tabular-nums">{formatValue(c.contractValue, c.currency)}</span>,
+        cell: (c) => {
+          if (c.contractValue == null || Number.isNaN(c.contractValue)) {
+            return <span className="text-[var(--text-dim)]">—</span>;
+          }
+          return (
+            <div className="inline-flex items-baseline justify-end gap-1 tabular-nums">
+              <span className="text-sm font-semibold text-[var(--text-strong)]">{formatNumber(c.contractValue)}</span>
+              {c.currency ? (
+                <span className="text-[11px] font-normal text-[var(--text-muted)]">{c.currency}</span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         id: 'status',
@@ -238,6 +265,8 @@ export function GcContractsView() {
     cols.push({
       id: 'actions',
       header: lo.table.actions,
+      align: 'end',
+      className: 'w-24',
       cell: (c) => (
         <RowActions
           contract={c}

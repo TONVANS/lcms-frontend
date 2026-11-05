@@ -7,6 +7,7 @@ export interface ContractPayload {
   title?: string;
   contractTypeId?: number;
   contractNumber?: string;
+  status?: ContractStatus;
   durationText?: string;
   durationMonths?: number;
   signedDate?: string;
@@ -26,6 +27,7 @@ export interface ContractFormInput {
   title: string;
   contractTypeId: number | null;
   contractNumber: string;
+  status?: ContractStatus;
   durationText: string;
   durationMonths: number | null;
   signedDate: string;
@@ -105,6 +107,7 @@ export function toContractPayload(f: ContractFormInput): ContractPayload {
     title: text(f.title),
     contractTypeId: num(f.contractTypeId),
     contractNumber: text(f.contractNumber),
+    status: f.status ?? 'DRAFT',
     durationText: text(f.durationText),
     durationMonths: num(f.durationMonths),
     signedDate: toIsoDate(f.signedDate) ?? undefined,

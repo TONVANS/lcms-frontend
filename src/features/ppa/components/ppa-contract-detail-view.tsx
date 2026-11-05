@@ -70,6 +70,7 @@ function LoadedDetail({ contract, onChange }: { contract: PowerContract; onChang
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const f = lo.ppa.fields;
+  const isSale = contract.contractType === 'SALE';
   const date = (d: string | null) => <span className="tabular-nums">{formatDate(d)}</span>;
   const left = contract.status === 'EXPIRED' || contract.status === 'TERMINATED' ? null : daysLeft(contract.expirationDate);
 
@@ -86,16 +87,23 @@ function LoadedDetail({ contract, onChange }: { contract: PowerContract; onChang
   };
 
   const info: { label: string; value: ReactNode }[] = [
-    { label: f.contractType, value: lo.ppa.types[contract.contractType] },
+    { label: f.contractType, value: lo.ppa.typesWithCode[contract.contractType] },
     { label: f.contractNumber, value: <span className="tabular-nums">{displayText(contract.contractNumber)}</span> },
-    { label: f.projectName, value: contract.projectName },
+    { label: isSale ? f.projectNameSale : f.projectName, value: contract.projectName },
     {
-      label: contract.contractType === 'SALE' ? f.customer : f.projectType,
+      label: isSale ? f.customer : f.projectType,
       value: displayText(contract.projectTypeOrCustomer),
     },
     { label: f.projectLocation, value: displayText(contract.projectLocation) },
-    { label: f.durationText, value: displayText(contract.durationText) },
-    { label: f.durationMonths, value: contract.durationMonths ?? EMPTY },
+    {
+      label: f.durationText,
+      value: (
+        <span>
+          {displayText(contract.durationText)}
+          {contract.durationMonths ? ` (${contract.durationMonths} ${lo.ppa.fields.monthsUnit})` : ''}
+        </span>
+      ),
+    },
     { label: f.signedDate, value: date(contract.signedDate) },
     { label: f.effectiveDate, value: date(contract.effectiveDate) },
     { label: f.expirationDate, value: date(contract.expirationDate) },
@@ -119,7 +127,10 @@ function LoadedDetail({ contract, onChange }: { contract: PowerContract; onChang
         </span>
       ),
     },
-    { label: f.notifyDaysBefore, value: contract.notifyDaysBefore ?? EMPTY },
+    {
+      label: f.notifyDaysBefore,
+      value: contract.notifyDaysBefore !== null ? `${contract.notifyDaysBefore} ${lo.ppa.fields.daysUnit}` : EMPTY,
+    },
     { label: f.additionalDetails, value: displayText(contract.additionalDetails) },
   ];
 

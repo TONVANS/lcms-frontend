@@ -1,10 +1,13 @@
 'use client';
 
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Paperclip, Zap } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
+import { useCan } from '@/components/guards/can';
 import { AlertBanner } from '@/components/shared/alert-banner';
+import { FileDropzone } from '@/components/shared/file-dropzone';
+import { FileList, type FileItem } from '@/components/shared/file-list';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { env } from '@/config/env';
+import { documentsService } from '@/features/documents';
 import { useProjectTypes } from '@/features/lookups';
 import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError } from '@/lib/api/errors';
@@ -26,14 +31,24 @@ import {
   toPowerContractPayload,
   type PowerFormValues,
 } from '../schemas/ppa.schema';
-import type { PowerContract } from '../types';
-import { PpaFormFieldGroup, firstInvalidFieldId } from './ppa-contract-form-fields';
+import type { PowerContract, PowerContractType } from '../types';
+import { PpaFormFieldGroup, SectionCard, firstInvalidFieldId } from './ppa-contract-form-fields';
 import { applyPpaServerError, makePowerResolver } from './ppa-form-support';
+
+const ACCEPT_ATTACHMENTS = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
+
+export interface StagedFile {
+  id: string;
+  file: File;
+}
+
+let stagedSeq = 0;
 
 export interface PpaContractFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contract?: PowerContract;
+  defaultType?: PowerContractType;
   onSaved: (c: PowerContract) => void;
 }
 
@@ -43,6 +58,7 @@ function focusById(id: string | null): void {
 
 interface BodyProps {
   contract?: PowerContract;
+  defaultType?: PowerContractType;
   onOpenChange: (open: boolean) => void;
   onSaved: (c: PowerContract) => void;
   busyRef: RefObject<boolean>;
@@ -50,17 +66,21 @@ interface BodyProps {
 }
 
 /** Mounted fresh each time the dialog opens (and per contract), so no value leaks between openings. */
-function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyChange }: BodyProps) {
+function PpaContractFormBody({ contract, defaultType, onOpenChange, onSaved, busyRef, onBusyChange }: BodyProps) {
   const projectTypes = useProjectTypes();
   const initial = contract?.projectTypeOrCustomer ?? '';
 
   const form = useForm<PowerFormValues>({
     resolver: makePowerResolver({ types: projectTypes.items, ready: projectTypes.status === 'ready', initial }),
-    defaultValues: contract ? fromPowerContract(contract) : emptyPowerForm(),
+    defaultValues: contract ? fromPowerContract(contract) : emptyPowerForm(defaultType ?? 'PURCHASE'),
     shouldFocusError: false,
   });
   const { handleSubmit, formState } = form;
+  const canUpload = useCan('ppa', 'create');
+  const [staged, setStaged] = useState<StagedFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const createdIdRef = useRef<string | null>(contract?.id ?? null);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -69,6 +89,17 @@ function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyC
       alive.current = false;
     };
   }, []);
+
+  const addFiles = (files: File[]) => {
+    setStaged((prev) => [...prev, ...files.map((file) => ({ id: `staged-${++stagedSeq}`, file }))]);
+  };
+
+  const stagedItems: FileItem[] = staged.map((s) => ({
+    id: s.id,
+    name: s.file.name,
+    size: s.file.size,
+    mime: s.file.type,
+  }));
 
   const onInvalid = (errors: FieldErrors<PowerFormValues>) => focusById(firstInvalidFieldId(errors));
 
@@ -79,9 +110,35 @@ function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyC
     setBanner(null);
     try {
       const payload = toPowerContractPayload(values);
-      const saved = contract
-        ? await ppaService.update(contract.id, diffPayload(payload, contract))
-        : await ppaService.create(payload);
+      let saved: PowerContract;
+      if (contract) {
+        const patch = diffPayload(payload, contract);
+        saved = Object.keys(patch).length > 0 ? await ppaService.update(contract.id, patch) : contract;
+        createdIdRef.current = saved.id;
+      } else if (createdIdRef.current !== null) {
+        saved = await ppaService.update(createdIdRef.current, payload);
+      } else {
+        saved = await ppaService.create(payload);
+        createdIdRef.current = saved.id;
+      }
+
+      if (staged.length > 0) {
+        setUploadingFiles(true);
+        const results = await Promise.allSettled(
+          staged.map((s) => documentsService.upload('power-contracts', saved.id, s.file)),
+        );
+        const failed = staged.filter((_, i) => results[i].status === 'rejected');
+        if (failed.length > 0) {
+          toast.error(lo.ppa.wizard.uploadFailed(failed.map((s) => s.file.name).join(', ')));
+        }
+        if (!alive.current) return;
+        setStaged(failed);
+        if (failed.length > 0) {
+          onSaved(saved);
+          return;
+        }
+      }
+
       busyRef.current = false;
       onBusyChange(false);
       onSaved(saved);
@@ -96,15 +153,18 @@ function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyC
     } finally {
       busyRef.current = false;
       onBusyChange(false);
+      if (alive.current) {
+        setUploadingFiles(false);
+      }
     }
   };
 
-  const saving = formState.isSubmitting;
+  const isBusy = formState.isSubmitting || uploadingFiles;
 
   return (
     <form
       noValidate
-      aria-busy={saving}
+      aria-busy={isBusy}
       onSubmit={(e) => {
         void handleSubmit(onValid, onInvalid)(e);
       }}
@@ -115,20 +175,44 @@ function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyC
         <PpaFormFieldGroup group="dates" form={form} />
         <PpaFormFieldGroup group="tech" form={form} />
         <PpaFormFieldGroup group="notes" form={form} />
+
+        <SectionCard icon={Paperclip} title={lo.ppa.form.sectionDocs}>
+          {canUpload ? (
+            <div className="flex flex-col gap-3">
+              <FileDropzone
+                disabled={isBusy}
+                accept={ACCEPT_ATTACHMENTS}
+                maxSizeMb={env.NEXT_PUBLIC_MAX_UPLOAD_MB}
+                onFilesSelected={addFiles}
+                onReject={(messages) => toast.error(messages.join(' · '))}
+              />
+              <p className="text-xs text-(--text-muted)">{lo.ppa.wizard.stagedHint}</p>
+            </div>
+          ) : null}
+          {stagedItems.length > 0 ? (
+            <FileList
+              files={stagedItems}
+              onDelete={
+                isBusy ? undefined : (file) => setStaged((prev) => prev.filter((s) => s.id !== file.id))
+              }
+            />
+          ) : null}
+        </SectionCard>
+
         {banner ? <AlertBanner tone="rose" title={banner} /> : null}
       </div>
 
       <DialogFooter className="mx-0 mb-0 flex shrink-0 items-center justify-between border-t border-(--border-subtle) bg-white/[0.02] px-6 py-4 sm:px-8">
         <span className="hidden text-xs text-(--text-muted) sm:inline">{lo.ppa.form.requiredHint}</span>
         <div className="ml-auto flex items-center gap-2.5">
-          <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" disabled={isBusy} onClick={() => onOpenChange(false)}>
             {lo.ppa.form.cancel}
           </Button>
-          <Button type="submit" disabled={saving} className="min-w-28 gap-2">
-            {saving ? (
+          <Button type="submit" disabled={isBusy} className="min-w-28 gap-2">
+            {isBusy ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                <span>{lo.ppa.form.saving}</span>
+                <span>{uploadingFiles ? lo.dropzone.uploading : lo.ppa.form.saving}</span>
               </>
             ) : (
               lo.ppa.form.save
@@ -140,7 +224,7 @@ function PpaContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyC
   );
 }
 
-export function PpaContractFormDialog({ open, onOpenChange, contract, onSaved }: PpaContractFormDialogProps) {
+export function PpaContractFormDialog({ open, onOpenChange, contract, defaultType, onSaved }: PpaContractFormDialogProps) {
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const returnFocus = useReturnFocus(open);
@@ -175,8 +259,9 @@ export function PpaContractFormDialog({ open, onOpenChange, contract, onSaved }:
           </div>
         </DialogHeader>
         <PpaContractFormBody
-          key={contract?.id ?? 'new'}
+          key={contract?.id ?? `new-${defaultType ?? 'default'}`}
           contract={contract}
+          defaultType={defaultType}
           onOpenChange={handleOpenChange}
           onSaved={onSaved}
           busyRef={busyRef}

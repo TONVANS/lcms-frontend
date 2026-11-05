@@ -104,7 +104,13 @@ function countOf(v: unknown): number {
 /** Capacity in MW from `capacityMw`, `totalCapacityMw`, `capacityKw`, or value+unit. */
 function mwOf(v: unknown): number {
   if (!isRec(v)) return 0;
-  const mw = toNum(v.capacityMw) ?? toNum(v.totalCapacityMw) ?? toNum(v.totalMw);
+  const mw =
+    toNum(v.capacityMw) ??
+    toNum(v.totalCapacityMw) ??
+    toNum(v.totalCapacity) ??
+    toNum(v.totalMw) ??
+    toNum(v.capacity) ??
+    toNum(v.totalInstalledCapacity);
   if (mw !== null) return mw;
   const kw = toNum(v.capacityKw) ?? toNum(v.totalCapacityKw);
   if (kw !== null) return kw / 1000;
@@ -128,16 +134,45 @@ function toCountMap(v: unknown, keyNames: string[]): Map<string, number> {
 
 export function toPowerContractsDashboard(raw: unknown): PowerContractsDashboard {
   const r: Rec = isRec(raw) ? raw : {};
+  const sum: Rec = isRec(r.summary) ? (r.summary as Rec) : {};
+  const bct: Rec = isRec(r.byContractType) ? (r.byContractType as Rec) : {};
 
-  const statusCounts = toCountMap(r.byStatus ?? r.statusCounts, ['status']);
+  const statusCounts = toCountMap(
+    r.statusChart ?? r.statusDonutChart ?? r.byStatus ?? r.statusCounts,
+    ['status', 'disputeStatus', 'key'],
+  );
+  if (toNum(r.expiringSoonCount) !== null && !statusCounts.has('EXPIRING_SOON')) {
+    statusCounts.set('EXPIRING_SOON', toNum(r.expiringSoonCount)!);
+  }
+  if (toNum(r.expiredCount) !== null && !statusCounts.has('EXPIRED')) {
+    statusCounts.set('EXPIRED', toNum(r.expiredCount)!);
+  }
   const byStatus = POWER_STATUSES.map((status) => ({ status, count: statusCounts.get(status) ?? 0 }));
 
-  const typeCounts = toCountMap(r.byContractType ?? r.byType, ['contractType', 'type']);
-  const purchaseCount = toNum(r.purchaseCount) ?? typeCounts.get('PURCHASE') ?? 0;
-  const saleCount = toNum(r.saleCount) ?? typeCounts.get('SALE') ?? 0;
+  const typeCounts =
+    Array.isArray(r.byContractType) || Array.isArray(r.typeChart)
+      ? toCountMap(r.typeChart ?? r.typeDonutChart ?? r.byContractType ?? r.byType, ['contractType', 'type', 'key'])
+      : new Map<string, number>();
+
+  const purchaseCount =
+    toNum(bct.purchaseCount) ??
+    toNum(sum.purchaseCount) ??
+    toNum(r.purchaseCount) ??
+    typeCounts.get('PURCHASE') ??
+    0;
+  const saleCount =
+    toNum(bct.saleCount) ??
+    toNum(sum.saleCount) ??
+    toNum(r.saleCount) ??
+    typeCounts.get('SALE') ??
+    0;
 
   const rows: unknown[] = [];
-  const bp = r.byProjectType ?? r.byProjectTypeOrCustomer;
+  const bp =
+    r.projectTypeBarChart ??
+    r.projectTypeChart ??
+    r.byProjectType ??
+    r.byProjectTypeOrCustomer;
   if (Array.isArray(bp)) {
     for (const row of bp) rows.push(row);
   } else if (isRec(bp)) {
@@ -150,15 +185,40 @@ export function toPowerContractsDashboard(raw: unknown): PowerContractsDashboard
     return projectType ? [{ projectType, count: countOf(row), capacityMw: round(mwOf(row)) }] : [];
   });
 
-  const totalMwDirect = isRec(r) && (r.totalCapacityMw !== undefined || r.totalCapacityKw !== undefined || r.totalCapacityValue !== undefined);
+  const totalMwDirect =
+    toNum(r.totalInstalledCapacity) ??
+    toNum(r.totalCapacityMw) ??
+    toNum(r.totalCapacityKw) ??
+    toNum(r.totalCapacityValue) ??
+    toNum(r.totalMw);
+
+  const capacityFromBct =
+    toNum(bct.totalCapacityPurchase) !== null || toNum(bct.totalCapacitySale) !== null
+      ? (toNum(bct.totalCapacityPurchase) ?? 0) + (toNum(bct.totalCapacitySale) ?? 0)
+      : null;
+
   const totalCapacityMw = round(
-    totalMwDirect ? mwOf(r) : byProjectType.reduce((s, p) => s + p.capacityMw, 0),
+    totalMwDirect ??
+      capacityFromBct ??
+      (isRec(r) && (r.capacityValue !== undefined || r.installedCapacity !== undefined)
+        ? mwOf(r)
+        : byProjectType.reduce((s, p) => s + p.capacityMw, 0)),
   );
 
-  const expiringRaw = r.expiringSoon ?? r.expiringContracts ?? r.expiring ?? r.upcoming;
+  const expiringRaw =
+    r.expiringSoonList ??
+    r.expiringSoon ??
+    r.expiringContracts ??
+    r.expiring ??
+    r.upcoming;
   const expiringSoon = (Array.isArray(expiringRaw) ? expiringRaw : []).map(toPowerContract);
 
-  const totalDirect = toNum(r.total) ?? toNum(r.totalContracts);
+  const totalDirect =
+    toNum(sum.totalContracts) ??
+    toNum(sum.total) ??
+    toNum(r.total) ??
+    toNum(r.totalContracts);
+
   return {
     total: totalDirect ?? byStatus.reduce((s, x) => s + x.count, 0),
     byStatus,

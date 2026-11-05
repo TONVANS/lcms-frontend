@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { lo } from '@/lib/i18n/lo';
-import { GC_DEFAULT_NOTIFY_DAYS, type Contract } from '../types';
+import type { ContractStatus } from '@/types/domain';
+import { GC_DEFAULT_NOTIFY_DAYS, GC_STATUSES, type Contract } from '../types';
 
 const v = lo.gc.validation;
 
@@ -28,6 +29,7 @@ export const gcFormSchema = z
       title: requiredText(300, v.titleMax),
       contractTypeId: z.number(v.required).int(v.required).positive(v.required),
       contractNumber: requiredText(100, v.invalid),
+      status: z.enum(GC_STATUSES as [ContractStatus, ...ContractStatus[]]).optional(),
       durationText: optionalText(100, v.invalid),
       durationMonths: optionalInt,
       signedDate: optionalDate,
@@ -61,6 +63,7 @@ export function emptyGcForm(): GcFormValues {
     title: '',
     contractTypeId: null as unknown as number,
     contractNumber: '',
+    status: 'DRAFT',
     durationText: '',
     durationMonths: null,
     signedDate: '',
@@ -81,6 +84,7 @@ export function fromContract(c: Contract): GcFormValues {
     title: c.title,
     contractTypeId: c.contractTypeId as number,
     contractNumber: c.contractNumber,
+    status: c.status,
     durationText: c.durationText ?? '',
     durationMonths: c.durationMonths,
     signedDate: c.signedDate ?? '',

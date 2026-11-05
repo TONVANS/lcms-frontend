@@ -16,7 +16,14 @@ function countOf(item: Record<string, unknown>): number {
 
 function amountOf(item: Record<string, unknown>): number {
   const sum = rec(item._sum);
-  return toNum(item.amount) ?? toNum(item.total) ?? toNum(item.sum) ?? toNum(sum.contractValue) ?? 0;
+  return (
+    toNum(item.amount) ??
+    toNum(item.total) ??
+    toNum(item.sum) ??
+    toNum(item.totalValue) ??
+    toNum(sum.contractValue) ??
+    0
+  );
 }
 
 /** Normalises `{KEY: n}` and `[{<keyName>: KEY, ...}]` into [key, item] pairs. */
@@ -49,20 +56,28 @@ function pickCurrencies<T>(
 
 export function toContractsDashboard(body: unknown): ContractsDashboard {
   const r = rec(unwrap<unknown>(body));
+  const summary = rec(r.summary);
 
+  const rawStatus = r.statusChart ?? r.byStatus ?? r.statusCounts;
   const counts = new Map<ContractStatus, number>(GC_STATUSES.map((s) => [s, 0]));
-  for (const [k, item] of entries(r.byStatus, 'status')) {
+  for (const [k, item] of entries(rawStatus, 'status')) {
     const s = k.toUpperCase() as ContractStatus;
     if (counts.has(s)) counts.set(s, countOf(item));
   }
   const byStatus = GC_STATUSES.map((status) => ({ status, count: counts.get(status) ?? 0 }));
   const statusTotal = byStatus.reduce((sum, s) => sum + s.count, 0);
 
-  const byContractType = entries(r.byContractType, 'contractTypeId').map(([k, item]) => {
+  const rawType = r.typeChart ?? r.byContractType ?? r.contractTypeChart;
+  const byContractType = entries(rawType, 'contractTypeId').map(([k, item]) => {
     const nested = rec(item.contractType);
-    const isMap = !Array.isArray(r.byContractType);
+    const isMap = !Array.isArray(rawType);
     const name =
-      toStr(item.name) ?? toStr(item.nameLo) ?? toStr(nested.nameLo) ?? (isMap ? k : toStr(item.contractTypeName)) ?? '';
+      toStr(item.nameLo) ??
+      toStr(item.name) ??
+      toStr(item.nameEn) ??
+      toStr(nested.nameLo) ??
+      (isMap ? k : toStr(item.contractTypeName)) ??
+      '';
     return {
       contractTypeId: isMap ? null : toNum(item.contractTypeId),
       name,
@@ -70,13 +85,35 @@ export function toContractsDashboard(body: unknown): ContractsDashboard {
     };
   });
 
+  const rawCurrency = r.currencyChart ?? r.byCurrency;
+  const rawValueByCurrency = r.valueByCurrency ?? r.byCurrencyValue ?? r.currencyValueChart;
+
+  const total =
+    toNum(summary.totalContracts) ??
+    toNum(summary.total) ??
+    toNum(r.total) ??
+    toNum(r.totalContracts) ??
+    statusTotal;
+
+  const expiringSoonCount =
+    toNum(summary.expiringSoonCount) ??
+    toNum(r.expiringSoonCount) ??
+    counts.get('EXPIRING_SOON') ??
+    0;
+
+  const expiredCount =
+    toNum(summary.expiredCount) ??
+    toNum(r.expiredCount) ??
+    counts.get('EXPIRED') ??
+    0;
+
   return {
-    total: toNum(r.total) ?? statusTotal,
-    expiringSoonCount: toNum(r.expiringSoonCount) ?? counts.get('EXPIRING_SOON') ?? 0,
-    expiredCount: toNum(r.expiredCount) ?? counts.get('EXPIRED') ?? 0,
+    total,
+    expiringSoonCount,
+    expiredCount,
     byStatus,
-    byCurrency: pickCurrencies(r.byCurrency, (currency, item) => ({ currency, count: countOf(item) })),
-    valueByCurrency: pickCurrencies(r.valueByCurrency, (currency, item) => ({
+    byCurrency: pickCurrencies(rawCurrency, (currency, item) => ({ currency, count: countOf(item) })),
+    valueByCurrency: pickCurrencies(rawValueByCurrency, (currency, item) => ({
       currency,
       amount: amountOf(item),
     })),

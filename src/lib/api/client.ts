@@ -3,10 +3,15 @@ import { env } from '@/config/env';
 import { installInterceptors } from './interceptors';
 
 let unauthorizedHandler: () => void = () => {};
+let tokenRefreshedHandler: (token: string, rawUser?: unknown) => void = () => {};
 
 /** The auth store registers its logout + redirect here. */
 export function setUnauthorizedHandler(fn: () => void): void {
   unauthorizedHandler = fn;
+}
+
+export function setTokenRefreshedHandler(fn: (token: string, rawUser?: unknown) => void): void {
+  tokenRefreshedHandler = fn;
 }
 
 export const api = axios.create({
@@ -16,5 +21,7 @@ export const api = axios.create({
   headers: { 'Accept-Language': 'lo' },
 });
 
-installInterceptors(api, { onUnauthorized: () => unauthorizedHandler() });
-
+installInterceptors(api, {
+  onUnauthorized: () => unauthorizedHandler(),
+  onTokenRefreshed: (token, rawUser) => tokenRefreshedHandler(token, rawUser),
+});

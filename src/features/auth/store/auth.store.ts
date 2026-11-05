@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { setUnauthorizedHandler } from '@/lib/api/client';
+import { setTokenRefreshedHandler, setUnauthorizedHandler } from '@/lib/api/client';
 import { normalizeError } from '@/lib/api/errors';
 import { runLogoutResets } from '@/lib/auth/logout-registry';
 import {
@@ -7,11 +7,12 @@ import {
   hasSessionHint,
   readSessionToken,
   readTokenExpiry,
-  setSessionToken,
+  setSessionTokens,
 } from '@/lib/auth/session';
 import type { ApiError } from '@/types/api';
 import type { User } from '@/types/domain';
 import { authService } from '../api/auth.service';
+import { toUser } from '../lib/user-mapper';
 import type { LoginInput } from '../schemas/login.schema';
 
 interface AuthState {
@@ -24,6 +25,7 @@ interface AuthState {
   logout(): Promise<void>;
   fetchMe(): Promise<void>;
   expire(): void;
+  updateUser(user: User): void;
 }
 
 let expiryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -74,11 +76,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   endReason: null,
   error: null,
 
+  updateUser(user: User) {
+    set({ user });
+  },
+
   async login(input) {
     set({ status: 'loading' });
     try {
-      const { token, user } = await authService.login(input);
-      setSessionToken(token, input.remember ?? false);
+      const { token, refreshToken, user } = await authService.login(input);
+      setSessionTokens({ accessToken: token, refreshToken }, input.remember ?? false);
       scheduleExpiryTimer(token);
       set({ user, status: 'authenticated', endReason: null, error: null });
     } catch (e) {
@@ -131,3 +137,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 }));
 
 setUnauthorizedHandler(() => useAuthStore.getState().expire());
+
+setTokenRefreshedHandler((token, rawUser) => {
+  scheduleExpiryTimer(token);
+  if (rawUser) {
+    useAuthStore.getState().updateUser(toUser(rawUser));
+  } else {
+    void useAuthStore.getState().fetchMe();
+  }
+});

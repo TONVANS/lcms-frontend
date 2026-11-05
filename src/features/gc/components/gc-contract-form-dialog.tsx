@@ -1,11 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FileTextIcon, Loader2 } from 'lucide-react';
+import { FileTextIcon, Loader2, Paperclip } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
+import { useCan } from '@/components/guards/can';
 import { AlertBanner } from '@/components/shared/alert-banner';
+import { FileDropzone } from '@/components/shared/file-dropzone';
+import { FileList, type FileItem } from '@/components/shared/file-list';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { env } from '@/config/env';
+import { documentsService } from '@/features/documents';
 import { useReturnFocus } from '@/hooks/use-return-focus';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
@@ -22,8 +27,17 @@ import { gcService } from '../api/gc.service';
 import { diffPayload, toContractPayload } from '../lib/contract-mapper';
 import { emptyGcForm, fromContract, gcFormSchema, type GcFormValues } from '../schemas/gc.schema';
 import type { Contract } from '../types';
-import { GcFormFieldGroup, firstInvalidFieldId } from './gc-contract-form-fields';
+import { GcFormFieldGroup, SectionCard, firstInvalidFieldId } from './gc-contract-form-fields';
 import { applyGcServerErrors } from './gc-server-errors';
+
+const ACCEPT_ATTACHMENTS = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
+
+export interface StagedFile {
+  id: string;
+  file: File;
+}
+
+let stagedSeq = 0;
 
 export interface GcContractFormDialogProps {
   open: boolean;
@@ -52,7 +66,11 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
     shouldFocusError: false,
   });
   const { handleSubmit, formState } = form;
+  const canUpload = useCan('gc', 'create');
+  const [staged, setStaged] = useState<StagedFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const createdIdRef = useRef<string | null>(contract?.id ?? null);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -61,6 +79,17 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
       alive.current = false;
     };
   }, []);
+
+  const addFiles = (files: File[]) => {
+    setStaged((prev) => [...prev, ...files.map((file) => ({ id: `staged-${++stagedSeq}`, file }))]);
+  };
+
+  const stagedItems: FileItem[] = staged.map((s) => ({
+    id: s.id,
+    name: s.file.name,
+    size: s.file.size,
+    mime: s.file.type,
+  }));
 
   const onInvalid = (errors: FieldErrors<GcFormValues>) => {
     focusById(firstInvalidFieldId(errors));
@@ -77,9 +106,31 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
       if (contract) {
         const patch = diffPayload(contract, payload);
         saved = Object.keys(patch).length > 0 ? await gcService.update(contract.id, patch) : contract;
+        createdIdRef.current = saved.id;
+      } else if (createdIdRef.current !== null) {
+        saved = await gcService.update(createdIdRef.current, payload);
       } else {
         saved = await gcService.create(payload);
+        createdIdRef.current = saved.id;
       }
+
+      if (staged.length > 0) {
+        setUploadingFiles(true);
+        const results = await Promise.allSettled(
+          staged.map((s) => documentsService.upload('contracts', saved.id, s.file)),
+        );
+        const failed = staged.filter((_, i) => results[i].status === 'rejected');
+        if (failed.length > 0) {
+          toast.error(lo.gc.wizard.uploadFailed(failed.map((s) => s.file.name).join(', ')));
+        }
+        if (!alive.current) return;
+        setStaged(failed);
+        if (failed.length > 0) {
+          onSaved(saved);
+          return;
+        }
+      }
+
       busyRef.current = false;
       onBusyChange(false);
       onSaved(saved);
@@ -98,15 +149,18 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
     } finally {
       busyRef.current = false;
       onBusyChange(false);
+      if (alive.current) {
+        setUploadingFiles(false);
+      }
     }
   };
 
-  const saving = formState.isSubmitting;
+  const isBusy = formState.isSubmitting || uploadingFiles;
 
   return (
     <form
       noValidate
-      aria-busy={saving}
+      aria-busy={isBusy}
       onSubmit={(e) => {
         void handleSubmit(onValid, onInvalid)(e);
       }}
@@ -117,6 +171,34 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
         <GcFormFieldGroup group="dates" form={form} />
         <GcFormFieldGroup group="money" form={form} />
         <GcFormFieldGroup group="notes" form={form} />
+
+        <SectionCard
+          icon={Paperclip}
+          title={lo.gc.form.sectionDocuments}
+          description={lo.gc.form.sectionDocumentsDesc}
+        >
+          {canUpload ? (
+            <div className="flex flex-col gap-3">
+              <FileDropzone
+                disabled={isBusy}
+                accept={ACCEPT_ATTACHMENTS}
+                maxSizeMb={env.NEXT_PUBLIC_MAX_UPLOAD_MB}
+                onFilesSelected={addFiles}
+                onReject={(messages) => toast.error(messages.join(' · '))}
+              />
+              <p className="text-xs text-(--text-muted)">{lo.gc.wizard.stagedHint}</p>
+            </div>
+          ) : null}
+          {stagedItems.length > 0 ? (
+            <FileList
+              files={stagedItems}
+              onDelete={
+                isBusy ? undefined : (file) => setStaged((prev) => prev.filter((s) => s.id !== file.id))
+              }
+            />
+          ) : null}
+        </SectionCard>
+
         {banner ? <AlertBanner tone="rose" title={banner} /> : null}
       </div>
 
@@ -125,14 +207,14 @@ function GcContractFormBody({ contract, onOpenChange, onSaved, busyRef, onBusyCh
           {lo.gc.form.requiredHint}
         </span>
         <div className="flex items-center gap-2.5 ml-auto">
-          <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" disabled={isBusy} onClick={() => onOpenChange(false)}>
             {lo.gc.form.cancel}
           </Button>
-          <Button type="submit" disabled={saving} className="min-w-28 gap-2">
-            {saving ? (
+          <Button type="submit" disabled={isBusy} className="min-w-28 gap-2">
+            {isBusy ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                <span>{lo.gc.form.saving}</span>
+                <span>{uploadingFiles ? lo.dropzone.uploading : lo.gc.form.saving}</span>
               </>
             ) : (
               lo.gc.form.save

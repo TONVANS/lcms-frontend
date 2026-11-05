@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { FadeIn } from '@/components/shared/fade-in';
 import { GlassCard } from '@/components/shared/glass-card';
 import { lo } from '@/lib/i18n/lo';
@@ -54,8 +55,15 @@ export function BrandPanel() {
 
         {/* Brand Crest Header */}
         <div className="flex items-center gap-3.5">
-          <div className="flex size-12 sm:size-13 shrink-0 items-center justify-center rounded-2xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-[#1e3a8a] via-[#13294f] to-[#0b1b3a] text-[#d4b37a] shadow-[0_0_20px_rgba(212,179,122,0.25)]">
-            <Scale className="size-6 sm:size-6.5" aria-hidden="true" />
+          <div className="flex size-13 sm:size-14 shrink-0 items-center justify-center rounded-2xl border border-[rgba(212,179,122,0.35)] bg-gradient-to-br from-[#1e3a8a]/40 via-[#13294f]/60 to-[#0b1b3a] p-1.5 shadow-[0_0_20px_rgba(212,179,122,0.25)]">
+            <Image
+              src="/logo/logo.png"
+              alt="LCMS Logo"
+              width={48}
+              height={48}
+              className="size-10 sm:size-11 object-contain drop-shadow"
+              priority
+            />
           </div>
           <div className="min-w-0">
             <p className="font-heading text-2xl sm:text-[26px] font-bold tracking-wider text-(--gold-soft) drop-shadow-sm leading-tight">

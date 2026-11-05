@@ -1,7 +1,8 @@
 'use client';
 
-import { LifeBuoy, LogOut } from 'lucide-react';
+import { KeyRound, LifeBuoy, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,10 +16,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/features/auth';
 import { lo } from '@/lib/i18n/lo';
+import { ChangePasswordDialog } from './change-password-dialog';
 
 export function UserMenu() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   if (!user) return null;
 
   const initial = Array.from(user.fullName)[0] ?? '';
@@ -47,7 +50,9 @@ export function UserMenu() {
           {user.employeeCode ? (
             <span className="text-muted-foreground text-xs font-normal">{user.employeeCode}</span>
           ) : null}
-          <span className="text-muted-foreground text-xs font-normal">{lo.roles[user.role]}</span>
+          <span className="text-muted-foreground text-xs font-normal">
+            {user.roleTitle || lo.roles[user.role] || user.role}
+          </span>
           {(user.division ?? user.department) ? (
             <span className="text-muted-foreground text-xs font-normal">
               {user.division ?? user.department}
@@ -55,6 +60,10 @@ export function UserMenu() {
           ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setPasswordOpen(true)}>
+          <KeyRound aria-hidden="true" />
+          {lo.users.changePassword}
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/support">
             <LifeBuoy aria-hidden="true" />
@@ -66,6 +75,7 @@ export function UserMenu() {
           {lo.auth.logout}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
     </DropdownMenu>
   );
 }

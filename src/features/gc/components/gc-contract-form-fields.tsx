@@ -5,16 +5,18 @@ import { AlignLeft, Calendar, Coins, FileText, type LucideIcon } from 'lucide-re
 import { Controller, type FieldErrors, type UseFormReturn } from 'react-hook-form';
 import { DatePicker } from '@/components/shared/date-picker';
 import { MoneyInput } from '@/components/shared/money-input';
+import { DOT_TONE_CLASS } from '@/components/shared/status-badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useContractTypes } from '@/features/lookups';
+import { STATUS_META } from '@/lib/constants/status';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
-import type { Currency } from '@/types/domain';
+import type { ContractStatus, Currency } from '@/types/domain';
 import type { GcFormValues } from '../schemas/gc.schema';
-import { GC_CURRENCIES } from '../types';
+import { GC_CURRENCIES, GC_STATUSES } from '../types';
 
 export type GcFieldGroup = 'general' | 'dates' | 'money' | 'notes';
 
@@ -25,6 +27,7 @@ export const GC_FIELD_ORDER: readonly GcFormFieldName[] = [
   'title',
   'contractTypeId',
   'contractNumber',
+  'status',
   'signedDate',
   'effectiveDate',
   'expirationDate',
@@ -128,7 +131,7 @@ function NumberInput({
       onChange={(e) => {
         const text = e.target.value;
         setRaw(text);
-        const t = text.trim();
+        const t = text.trim().replace(/,/g, '');
         if (t === '') onChange(null);
         else onChange(/^\d*\.?\d*$/.test(t) && t !== '.' ? Number(t) : Number.NaN);
       }}
@@ -140,7 +143,7 @@ function msg(err: { message?: string } | undefined): string | undefined {
   return err?.message;
 }
 
-function SectionCard({
+export function SectionCard({
   icon: Icon,
   title,
   description,
@@ -219,7 +222,13 @@ function ContractTypeSelect({
   );
 }
 
-export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: UseFormReturn<GcFormValues> }) {
+export function GcFormFieldGroup({
+  group,
+  form,
+}: {
+  group: GcFieldGroup;
+  form: UseFormReturn<GcFormValues>;
+}) {
   const { register, control } = form;
   const errors = form.formState.errors;
   const f = lo.gc.fields;
@@ -236,6 +245,42 @@ export function GcFormFieldGroup({ group, form }: { group: GcFieldGroup; form: U
           </Field>
           <Field name="contractNumber" label={f.contractNumber} required error={msg(errors.contractNumber)}>
             {(c) => <Input {...c} {...register('contractNumber')} />}
+          </Field>
+          <Field name="status" label={f.status} error={msg(errors.status)}>
+            {(c, labelId) => (
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? 'DRAFT'}
+                    onValueChange={(v) => field.onChange(v as ContractStatus)}
+                  >
+                    <SelectTrigger
+                      {...c}
+                      id={c.id}
+                      aria-labelledby={`${labelId} ${c.id}`}
+                      className={cn('w-full', TOKEN_FIELD)}
+                    >
+                      <SelectValue placeholder={lo.status.DRAFT} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GC_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className={cn('size-2 shrink-0 rounded-full', DOT_TONE_CLASS[STATUS_META[s].tone])}
+                            />
+                            <span>{STATUS_META[s].label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            )}
           </Field>
         </div>
       </SectionCard>

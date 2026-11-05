@@ -5,6 +5,7 @@ const e = encodeURIComponent;
 export const endpoints = {
   auth: {
     login: '/auth/login',
+    refresh: '/auth/refresh',
     me: '/auth/me',
   },
 
@@ -71,6 +72,12 @@ export const endpoints = {
     list: '/users',
     detail: (id: string) => `/users/${e(id)}`,
     hrm: (empCode: string) => `/users/hrm/${e(empCode)}`,
+    resetPassword: (id: string) => `/users/${e(id)}/reset-password`,
+    changePassword: '/users/change-password',
+  },
+  roles: {
+    list: '/roles',
+    detail: (id: string) => `/roles/${e(id)}`,
   },
   auditLogs: {
     list: '/audit-logs',

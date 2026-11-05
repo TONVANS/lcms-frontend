@@ -63,7 +63,7 @@ export interface DataTableProps<T extends object> {
 const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 
 const STAGGER_ROWS = 10;
-const ROW_CLASS = 'border-b border-[var(--border-subtle)] hover:bg-(--row-hover)';
+const ROW_CLASS = 'group relative border-b border-[var(--border-subtle)] transition-colors hover:bg-(--row-hover)';
 const cellPadding = 'px-4 py-3.5';
 
 export function DataTable<T extends object>({
@@ -152,7 +152,7 @@ export function DataTable<T extends object>({
                           : undefined
                       }
                       className={cn(
-                        'text-xs font-semibold tracking-wider text-[var(--text-muted)]',
+                        'text-xs font-semibold text-[var(--text-muted)]',
                         cellPadding,
                         def?.align === 'end' && 'text-end',
                         def?.className,
@@ -167,15 +167,20 @@ export function DataTable<T extends object>({
                               order: sorted === 'asc' ? 'desc' : 'asc',
                             })
                           }
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring) focus-visible:outline-solid"
+                          className={cn(
+                            'group/sort inline-flex min-h-11 items-center gap-1.5 rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring) focus-visible:outline-solid',
+                            sorted
+                              ? 'font-bold text-[var(--gold)]'
+                              : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                          )}
                         >
-                          {title}
+                          <span>{title}</span>
                           {sorted === 'asc' ? (
-                            <ArrowUp className="size-3.5" aria-hidden="true" />
+                            <ArrowUp className="size-3.5 shrink-0 text-[var(--gold)]" aria-hidden="true" />
                           ) : sorted === 'desc' ? (
-                            <ArrowDown className="size-3.5" aria-hidden="true" />
+                            <ArrowDown className="size-3.5 shrink-0 text-[var(--gold)]" aria-hidden="true" />
                           ) : (
-                            <ChevronsUpDown className="size-3.5 opacity-50" aria-hidden="true" />
+                            <ChevronsUpDown className="size-3.5 shrink-0 opacity-40 transition-opacity group-hover/sort:opacity-80" aria-hidden="true" />
                           )}
                         </button>
                       ) : (
@@ -206,9 +211,10 @@ export function DataTable<T extends object>({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        'text-[var(--text)]',
+                        'text-[var(--text)] transition-colors',
                         cellPadding,
                         def?.align === 'end' && 'text-end',
+                        'first:relative first:before:absolute first:before:left-0 first:before:top-0 first:before:bottom-0 first:before:w-[3px] first:before:rounded-r first:before:bg-[var(--gold)] first:before:opacity-0 group-hover:first:before:opacity-100 first:before:transition-opacity first:before:duration-150',
                         def?.className,
                       )}
                     >

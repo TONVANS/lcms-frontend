@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { PermissionGuard } from '@/components/guards/permission-guard';
 import { LegalNewView } from '@/features/legal';
 
+export const instant = false;
+
 export default function LegalNewPage() {
   return (
     <PermissionGuard module="legal" permission="create">

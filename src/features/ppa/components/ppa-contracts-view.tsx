@@ -25,11 +25,11 @@ import { cn } from '@/lib/utils/cn';
 import { daysLeft, formatDate } from '@/lib/utils/date';
 import { ppaService } from '../api/ppa.service';
 import { usePpaListUrlSync } from '../hooks/use-ppa-list-url-sync';
-import { formatCapacity, formatTariff } from '../lib/format';
+import { formatNumber } from '@/lib/utils/number';
 import { usePpaListStore } from '../store/ppa-list.store';
 import {
-  POWER_CONTRACT_TYPES,
   POWER_PAGE_SIZES,
+  POWER_PURCHASE_PROJECT_TYPES,
   POWER_STATUSES,
   type PowerContract,
   type PowerContractType,
@@ -93,10 +93,18 @@ function SearchFilter() {
   );
 }
 
-function ProjectFilter({ suggestions }: { suggestions: readonly string[] }) {
+function ProjectFilter({ suggestions, contractType }: { suggestions: readonly string[]; contractType?: PowerContractType }) {
   const project = usePpaListStore((s) => s.query.projectTypeOrCustomer);
   const setQuery = usePpaListStore((s) => s.setQuery);
   const { text, onChange } = useDebouncedText(project, (v) => setQuery({ projectTypeOrCustomer: v }));
+
+  const placeholder =
+    contractType === 'SALE'
+      ? lo.ppa.list.projectFilterPlaceholderSale
+      : contractType === 'PURCHASE'
+        ? lo.ppa.list.projectFilterPlaceholderPurchase
+        : lo.ppa.list.projectFilterPlaceholder;
+
   return (
     <div className="w-full sm:w-64">
       <Label htmlFor="ppa-project-filter" className="sr-only">
@@ -107,7 +115,7 @@ function ProjectFilter({ suggestions }: { suggestions: readonly string[] }) {
         list="ppa-project-filter-options"
         value={text}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={lo.ppa.list.projectFilterPlaceholder}
+        placeholder={placeholder}
         className="h-10"
       />
       <datalist id="ppa-project-filter-options">
@@ -134,35 +142,45 @@ function RowActions({
 }) {
   const label = contract.contractNumber || contract.projectName;
   return (
-    <div className="flex items-center gap-1">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-inset)]/60 p-0.5 shadow-xs backdrop-blur-xs">
       <Link
         href={`/ppa/contracts/${encodeURIComponent(contract.id)}`}
         aria-label={`${lo.ppa.list.view} ${label}`}
-        className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-(--text-secondary) hover:text-(--text)', FOCUS_RING)}
+        title={lo.ppa.list.view}
+        className={cn(
+          'inline-flex size-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--text-strong)]',
+          FOCUS_RING,
+        )}
       >
-        <Eye aria-hidden="true" />
+        <Eye className="size-4" aria-hidden="true" />
       </Link>
       {canEdit ? (
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           aria-label={`${lo.ppa.list.edit} ${label}`}
+          title={lo.ppa.list.edit}
           onClick={() => onEdit(contract)}
-          className="text-(--text-secondary) hover:text-(--text)"
+          className={cn(
+            'inline-flex size-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--gold)]',
+            FOCUS_RING,
+          )}
         >
-          <Pencil aria-hidden="true" />
-        </Button>
+          <Pencil className="size-4" aria-hidden="true" />
+        </button>
       ) : null}
       {canDelete ? (
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           aria-label={`${lo.ppa.list.delete} ${label}`}
+          title={lo.ppa.list.delete}
           onClick={() => onDelete(contract)}
-          className="text-destructive hover:bg-destructive/10"
+          className={cn(
+            'inline-flex size-8 items-center justify-center rounded-md text-destructive/80 transition-colors hover:bg-destructive/15 hover:text-destructive',
+            FOCUS_RING,
+          )}
         >
-          <Trash2 aria-hidden="true" />
-        </Button>
+          <Trash2 className="size-4" aria-hidden="true" />
+        </button>
       ) : null}
     </div>
   );
@@ -205,28 +223,40 @@ export function PpaContractsView() {
       {
         id: 'contractNumber',
         header: `${lo.ppa.fields.contractNumber} / ${lo.ppa.fields.projectName}`,
-        className: 'min-w-56 whitespace-normal',
+        className: 'min-w-64 max-w-xs whitespace-normal',
         cell: (c) => (
-          <>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center rounded border border-[var(--ppa)]/25 bg-[var(--ppa)]/10 px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight text-[var(--ppa)]">
+                {c.contractNumber || c.id}
+              </span>
+            </div>
             <Link
               href={`/ppa/contracts/${encodeURIComponent(c.id)}`}
+              title={c.projectName}
               className={cn(
-                'rounded-sm font-medium text-(--text-strong) tabular-nums underline underline-offset-4 hover:text-(--ppa)',
+                'line-clamp-1 text-sm font-semibold text-[var(--text-strong)] transition-colors hover:text-[var(--gold)]',
                 FOCUS_RING,
               )}
             >
-              {c.contractNumber || c.id}
+              {c.projectName}
             </Link>
-            <span className="mt-0.5 block font-semibold text-(--text-strong)">{c.projectName}</span>
-          </>
+          </div>
         ),
       },
       {
         id: 'contractType',
         header: lo.ppa.fields.contractType,
         cell: (c) => (
-          <span className="inline-flex rounded-full border border-(--border-subtle) px-2 py-0.5 text-xs font-medium text-(--text-secondary)">
-            {lo.ppa.types[c.contractType]}
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+              c.contractType === 'SALE'
+                ? 'border border-(--emerald)/30 bg-(--emerald)/10 text-(--emerald)'
+                : 'border border-[var(--ppa)]/30 bg-[var(--ppa)]/10 text-[var(--ppa)]',
+            )}
+          >
+            {c.contractType === 'SALE' ? 'PSA · ສັນຍາຂາຍ' : 'PPA · ສັນຍາຊື້'}
           </span>
         ),
       },
@@ -234,32 +264,59 @@ export function PpaContractsView() {
         id: 'projectTypeOrCustomer',
         header: lo.ppa.fields.projectTypeOrCustomer,
         className: 'min-w-40 whitespace-normal',
-        cell: (c) => <span className="text-xs text-(--text-secondary)">{c.projectTypeOrCustomer || '—'}</span>,
+        cell: (c) => (
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-[var(--text-strong)]">{c.projectTypeOrCustomer || '—'}</span>
+            <span className="text-[10px] text-[var(--text-muted)]">
+              {c.contractType === 'SALE' ? lo.ppa.fields.customer : lo.ppa.fields.projectType}
+            </span>
+          </div>
+        ),
       },
       {
         id: 'capacity',
         header: lo.ppa.fields.installedCapacity,
         align: 'end',
-        cell: (c) => <span className="tabular-nums">{formatCapacity(c.capacityValue, c.capacityUnit)}</span>,
+        cell: (c) => {
+          if (c.capacityValue == null || !Number.isFinite(c.capacityValue)) {
+            return <span className="text-[var(--text-dim)]">—</span>;
+          }
+          return (
+            <div className="inline-flex items-baseline justify-end gap-1 tabular-nums">
+              <span className="text-sm font-semibold text-[var(--text-strong)]">{formatNumber(c.capacityValue)}</span>
+              <span className="text-[11px] font-normal text-[var(--text-muted)]">{c.capacityUnit ?? 'MW'}</span>
+            </div>
+          );
+        },
       },
       {
         id: 'tariff',
         header: lo.ppa.fields.tariff,
         align: 'end',
-        cell: (c) => <span className="tabular-nums">{formatTariff(c.tariffValue, c.tariffCurrency)}</span>,
+        cell: (c) => {
+          if (c.tariffValue == null || !Number.isFinite(c.tariffValue)) {
+            return <span className="text-[var(--text-dim)]">—</span>;
+          }
+          return (
+            <div className="inline-flex items-baseline justify-end gap-1 tabular-nums">
+              <span className="text-sm font-semibold text-[var(--text-strong)]">{formatNumber(c.tariffValue, 4)}</span>
+              <span className="text-[11px] font-normal text-[var(--text-muted)]">{c.tariffCurrency ?? 'USD'}/kWh</span>
+            </div>
+          );
+        },
       },
       {
         id: 'expirationDate',
         header: lo.ppa.fields.expirationDate,
         cell: (c) => (
-          <>
-            <span className="tabular-nums">{formatDate(c.expirationDate)}</span>
+          <div className="flex flex-col gap-1">
+            <span className="tabular-nums text-sm font-medium text-[var(--text)]">{formatDate(c.expirationDate)}</span>
             {c.expirationDate && c.status !== 'EXPIRED' && c.status !== 'TERMINATED' ? (
-              <span className="mt-1 block">
+              <div className="inline-flex">
                 <CountdownBadge days={daysLeft(c.expirationDate)} />
-              </span>
+              </div>
             ) : null}
-          </>
+          </div>
         ),
       },
       {
@@ -270,6 +327,8 @@ export function PpaContractsView() {
       {
         id: 'actions',
         header: lo.table.actions,
+        align: 'end',
+        className: 'w-24',
         cell: (c) => (
           <RowActions
             contract={c}
@@ -287,7 +346,8 @@ export function PpaContractsView() {
   const typeOptions = useMemo(
     () => [
       { value: ALL, label: lo.table.all },
-      ...POWER_CONTRACT_TYPES.map((t) => ({ value: t, label: lo.ppa.types[t] })),
+      { value: 'PURCHASE', label: lo.ppa.typesWithCode.PURCHASE },
+      { value: 'SALE', label: lo.ppa.typesWithCode.SALE },
     ],
     [],
   );
@@ -295,6 +355,10 @@ export function PpaContractsView() {
     () => [{ value: ALL, label: lo.table.all }, ...POWER_STATUSES.map((s) => ({ value: s, label: lo.status[s] }))],
     [],
   );
+
+  const projectSuggestions = useMemo(() => {
+    return projectTypes.items.length > 0 ? projectTypes.items : POWER_PURCHASE_PROJECT_TYPES;
+  }, [projectTypes.items]);
 
   const onConfirmDelete = async () => {
     if (!toDelete) return;
@@ -338,7 +402,7 @@ export function PpaContractsView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
             <SearchFilter />
-            <ProjectFilter suggestions={projectTypes.items} />
+            <ProjectFilter suggestions={projectSuggestions} contractType={query.contractType} />
             {hasFilters ? (
               <Button
                 variant="ghost"
@@ -453,6 +517,7 @@ export function PpaContractsView() {
           if (!open) setDialog((d) => ({ ...d, open: false }));
         }}
         contract={dialog.contract ?? undefined}
+        defaultType={query.contractType}
         onSaved={() => {
           void usePpaListStore.getState().fetch();
         }}

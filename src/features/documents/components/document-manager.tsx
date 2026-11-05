@@ -7,12 +7,16 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FileDropzone } from '@/components/shared/file-dropzone';
 import { FileList } from '@/components/shared/file-list';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { env } from '@/config/env';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import type { Attachment, AttachmentModule } from '@/types/domain';
 import { documentsService } from '../api/documents.service';
+import {
+  DocumentPreviewDialog,
+  type DocumentPreviewItem,
+  type PreviewKind,
+} from './document-preview-dialog';
 
 export interface DocumentManagerProps {
   module: AttachmentModule;
@@ -25,14 +29,6 @@ export interface DocumentManagerProps {
 
 /** PDF + images, matching the backend whitelist. */
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
-
-type PreviewKind = 'pdf' | 'image' | 'other';
-
-interface PreviewState {
-  name: string;
-  url: string;
-  kind: PreviewKind;
-}
 
 function previewKind(a: Attachment): PreviewKind {
   const mime = a.mimeType.toLowerCase();
@@ -58,7 +54,7 @@ export function DocumentManager({
   const [reloadKey, setReloadKey] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Attachment | null>(null);
-  const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [preview, setPreview] = useState<DocumentPreviewItem | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -80,7 +76,7 @@ export function DocumentManager({
     };
   }, [module, entityId, reloadKey]);
 
-  // Revoke a still-open preview URL on unmount.
+  // Revoke a still-open preview URL on unmount or when closed.
   useEffect(() => {
     if (!preview) return;
     const url = preview.url;
@@ -157,13 +153,22 @@ export function DocumentManager({
   const handlePreview = async (att: Attachment) => {
     try {
       const blob = await documentsService.preview(module, att.id);
-      setPreview({ name: att.fileName, url: URL.createObjectURL(blob), kind: previewKind(att) });
+      setPreview({
+        id: att.id,
+        name: att.fileName,
+        url: URL.createObjectURL(blob),
+        kind: previewKind(att),
+        fileSize: att.fileSize,
+        mimeType: att.mimeType,
+        uploadedAt: att.createdAt || undefined,
+      });
     } catch (err) {
       toast.error(errorText(err));
     }
   };
 
   const byId = (id: string) => documents.find((d) => d.id === id) ?? null;
+  const currentPreviewAttachment = preview?.id ? byId(preview.id) : null;
 
   return (
     <div className={className}>
@@ -222,36 +227,19 @@ export function DocumentManager({
         />
       )}
 
-      <Dialog
+      <DocumentPreviewDialog
         open={preview !== null}
         onOpenChange={(open) => {
           if (!open) setPreview(null);
         }}
-      >
-        <DialogContent className="flex h-[85vh] max-w-4xl flex-col gap-3">
-          <DialogHeader>
-            <DialogTitle className="truncate">{preview?.name}</DialogTitle>
-          </DialogHeader>
-          {preview?.kind === 'pdf' && (
-            <iframe
-              src={preview.url}
-              title={lo.documents.previewTitle(preview.name)}
-              className="min-h-0 w-full flex-1 rounded-lg bg-white"
-            />
-          )}
-          {preview?.kind === 'image' && (
-            // eslint-disable-next-line @next/next/no-img-element -- blob URL, not optimisable
-            <img
-              src={preview.url}
-              alt={preview.name}
-              className="min-h-0 w-full flex-1 object-contain"
-            />
-          )}
-          {preview?.kind === 'other' && (
-            <p className="text-sm text-[var(--text-muted)]">{lo.documents.previewUnsupported}</p>
-          )}
-        </DialogContent>
-      </Dialog>
+        preview={preview}
+        canDownload={canDownload}
+        onDownload={
+          currentPreviewAttachment && canDownload
+            ? () => handleDownload(currentPreviewAttachment)
+            : undefined
+        }
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

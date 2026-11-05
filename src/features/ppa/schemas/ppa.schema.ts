@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { lo } from '@/lib/i18n/lo';
-import { POWER_CAPACITY_UNITS, POWER_CONTRACT_TYPES, type PowerContract } from '../types';
+import type { ContractStatus } from '@/types/domain';
+import { durationTextToMonths, monthsToDurationText } from '../lib/format';
+import {
+  POWER_CAPACITY_UNITS,
+  POWER_CONTRACT_TYPES,
+  POWER_STATUSES,
+  type PowerContract,
+  type PowerContractType,
+} from '../types';
 
 const v = lo.ppa.validation;
 
@@ -19,6 +27,7 @@ export const powerContractSchema = z
     contractNumber: z.string().trim(),
     projectName: z.string().trim().min(1, v.projectNameRequired),
     projectTypeOrCustomer: z.string().trim().min(1, v.projectTypeOrCustomerRequired),
+    status: z.enum(POWER_STATUSES).optional(),
     durationText: z.string().trim(),
     durationMonths: numberField(v.numberInvalid).refine((n) => n === null || (Number.isInteger(n) && n >= 0), {
       message: v.durationMonthsInvalid,
@@ -52,12 +61,13 @@ export const powerContractSchema = z
 export type PowerFormValues = z.infer<typeof powerContractSchema>;
 export type PowerFormField = keyof PowerFormValues;
 
-export function emptyPowerForm(): PowerFormValues {
+export function emptyPowerForm(type: PowerContractType = 'PURCHASE'): PowerFormValues {
   return {
-    contractType: 'PURCHASE',
+    contractType: type,
     contractNumber: '',
     projectName: '',
     projectTypeOrCustomer: '',
+    status: 'DRAFT',
     durationText: '',
     durationMonths: null,
     signedDate: '',
@@ -69,7 +79,7 @@ export function emptyPowerForm(): PowerFormValues {
     projectLocation: '',
     tariff: '',
     tariffValue: null,
-    tariffCurrency: 'USD',
+    tariffCurrency: type === 'SALE' ? 'LAK' : 'USD',
     additionalDetails: '',
     notifyDaysBefore: 60,
   };
@@ -82,18 +92,19 @@ export function fromPowerContract(c: PowerContract): PowerFormValues {
     contractNumber: c.contractNumber,
     projectName: c.projectName,
     projectTypeOrCustomer: c.projectTypeOrCustomer,
+    status: c.status,
     durationText: c.durationText ?? '',
     durationMonths: c.durationMonths,
     signedDate: c.signedDate ?? '',
     effectiveDate: c.effectiveDate ?? '',
     expirationDate: c.expirationDate ?? '',
-    installedCapacity: '',
+    installedCapacity: c.installedCapacity ?? '',
     capacityValue: c.capacityValue,
     capacityUnit: c.capacityUnit ?? 'MW',
     projectLocation: c.projectLocation ?? '',
-    tariff: '',
+    tariff: c.tariff ?? '',
     tariffValue: c.tariffValue,
-    tariffCurrency: c.tariffCurrency ?? 'USD',
+    tariffCurrency: c.tariffCurrency ?? (c.contractType === 'SALE' ? 'LAK' : 'USD'),
     additionalDetails: c.additionalDetails ?? '',
     notifyDaysBefore: c.notifyDaysBefore ?? 60,
   };
@@ -105,6 +116,7 @@ export interface PowerContractPayload {
   contractNumber?: string;
   projectName?: string;
   projectTypeOrCustomer?: string;
+  status?: ContractStatus;
   durationText?: string;
   durationMonths?: number;
   signedDate?: string;
@@ -127,13 +139,19 @@ export function toPowerContractPayload(f: PowerFormValues): PowerContractPayload
     projectName: f.projectName.trim(),
     projectTypeOrCustomer: f.projectTypeOrCustomer.trim(),
   };
-  const text = (key: 'contractNumber' | 'durationText' | 'projectLocation' | 'additionalDetails') => {
+  out.status = f.status ?? 'DRAFT';
+  const text = (key: 'contractNumber' | 'projectLocation' | 'additionalDetails') => {
     const s = f[key].trim();
     if (s) out[key] = s;
   };
   text('contractNumber');
-  text('durationText');
-  if (f.durationMonths !== null) out.durationMonths = f.durationMonths;
+
+  // Handle duration: if durationMonths is present but durationText is empty, auto-generate durationText (and vice versa)
+  const dMonths = f.durationMonths ?? durationTextToMonths(f.durationText);
+  const dText = f.durationText.trim() || (dMonths !== null ? monthsToDurationText(dMonths) : '');
+  if (dText) out.durationText = dText;
+  if (dMonths !== null) out.durationMonths = dMonths;
+
   for (const key of ['signedDate', 'effectiveDate', 'expirationDate'] as const) {
     if (f[key]) out[key] = f[key];
   }
@@ -153,7 +171,7 @@ export function toPowerContractPayload(f: PowerFormValues): PowerContractPayload
     out.tariff = f.tariff.trim();
   }
   text('additionalDetails');
-  out.notifyDaysBefore = f.notifyDaysBefore;
+  out.notifyDaysBefore = f.notifyDaysBefore ?? 60;
   return out;
 }
 

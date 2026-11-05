@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&family=Noto+Serif+Lao:wght@500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -6,6 +7,8 @@
 
 /* ---------- Theme tokens: light (Cool Ice) ---------- */
 :root {
+  --font-noto-sans-lao: 'Noto Sans Lao', sans-serif;
+  --font-noto-serif-lao: 'Noto Serif Lao', serif;
   --bg-gradient: linear-gradient(160deg, #f4f7fc 0%, #e6edf8 50%, #d5e1f2 100%);
   --bg-base: #eef3fa;
   --surface-glass: rgba(255, 255, 255, 0.62);
@@ -269,6 +272,26 @@
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-shadow);
+}
+
+/* Custom sleek scrollbar for sidebar, modals and panels */
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

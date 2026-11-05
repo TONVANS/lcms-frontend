@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Scale } from 'lucide-react';
+import { Check, Loader2, Scale } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ export interface LegalCaseFormDialogProps {
 }
 
 function focusById(id: string | null): void {
-  if (id) window.document.getElementById(id)?.focus();
+  if (id) document.getElementById(id)?.focus();
 }
 
 function FormBody({
@@ -130,6 +130,7 @@ function FormBody({
         ) : null}
         {banner ? <AlertBanner tone="rose" title={banner} /> : null}
       </div>
+      {/* Design.md section 6: Dialog footer (Cancel ghost, Save gold primary) */}
       <DialogFooter className="mx-0 mb-0 flex shrink-0 items-center justify-between border-t border-(--border-subtle) bg-white/[0.02] px-6 py-4 sm:px-8">
         <span className="hidden text-xs text-(--text-muted) sm:inline">{L.requiredHint}</span>
         <div className="ml-auto flex items-center gap-2.5">
@@ -143,7 +144,10 @@ function FormBody({
                 <span>{L.saving}</span>
               </>
             ) : (
-              L.save
+              <>
+                <Check className="size-4 stroke-[2.5]" aria-hidden="true" />
+                <span>{L.save}</span>
+              </>
             )}
           </Button>
         </div>
@@ -162,7 +166,7 @@ export function LegalCaseFormDialog({ open, onOpenChange, legalCase, onSaved }: 
       icon={Scale}
       accent="litigation"
     >
-        <FormBody key={legalCase?.id ?? 'new'} legalCase={legalCase} onSaved={onSaved} />
+      <FormBody key={legalCase?.id ?? 'new'} legalCase={legalCase} onSaved={onSaved} />
     </FormDialogShell>
   );
 }

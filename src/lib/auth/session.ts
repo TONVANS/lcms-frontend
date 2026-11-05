@@ -1,4 +1,5 @@
 export const SESSION_COOKIE = 'lcms_session';
+export const REFRESH_COOKIE = 'lcms_refresh';
 
 const THIRTY_DAYS = 2592000;
 
@@ -29,7 +30,7 @@ export function readTokenExpiry(token: string): number | null {
  * Stores the bearer token (live: the raw JWT; mock: `mock:<username>`) in the
  * JS-readable session cookie. `max-age` only when "remember me", capped by token expiry.
  */
-export function setSessionToken(token: string, remember: boolean): void {
+export function setSessionToken(token: string, remember = false): void {
   if (typeof document === 'undefined') return;
   let cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
   if (typeof location !== 'undefined' && location.protocol === 'https:') cookie += '; Secure';
@@ -50,6 +51,26 @@ export function setSessionToken(token: string, remember: boolean): void {
   document.cookie = cookie;
 }
 
+export function setRefreshToken(refreshToken: string, remember = false): void {
+  if (typeof document === 'undefined') return;
+  let cookie = `${REFRESH_COOKIE}=${encodeURIComponent(refreshToken)}; path=/; SameSite=Lax`;
+  if (typeof location !== 'undefined' && location.protocol === 'https:') cookie += '; Secure';
+  if (remember) {
+    cookie += `; max-age=${THIRTY_DAYS}`;
+  }
+  document.cookie = cookie;
+}
+
+export function setSessionTokens(
+  tokens: { accessToken: string; refreshToken?: string },
+  remember = false,
+): void {
+  setSessionToken(tokens.accessToken, remember);
+  if (tokens.refreshToken) {
+    setRefreshToken(tokens.refreshToken, remember);
+  }
+}
+
 /** The raw cookie value (both modes), or null when absent. */
 export function readSessionToken(): string | null {
   if (typeof document === 'undefined') return null;
@@ -68,9 +89,27 @@ export function readSessionToken(): string | null {
   return null;
 }
 
+export function readRefreshToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  for (const part of document.cookie.split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name === REFRESH_COOKIE) {
+      const raw = rest.join('=');
+      if (raw === '') return null;
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+  }
+  return null;
+}
+
 export function clearSession(): void {
   if (typeof document === 'undefined') return;
   document.cookie = `${SESSION_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
+  document.cookie = `${REFRESH_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
 }
 
 export function setMockSession(username: string, remember: boolean): void {

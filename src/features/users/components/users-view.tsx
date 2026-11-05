@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { KeyRound, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
@@ -14,12 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/features/auth';
+import { rolesService, type Role } from '@/features/roles';
 import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { lo } from '@/lib/i18n/lo';
 import { USERS_PAGE_SIZE, usersService } from '../api/users.service';
-import { permissionSummary } from '../lib/user-mapper';
+import { impliesAllPermissions, permissionSummary } from '../lib/user-mapper';
 import { USERS_PAGE_SIZES, useUsersListStore, useUsersListUrlSync } from '../store/users-list.store';
 import { USER_ROLES, type AdminUser } from '../types';
+import { ResetPasswordDialog } from './reset-password-dialog';
 import { UserFormDialog } from './user-form-dialog';
 
 const L = lo.users;
@@ -82,6 +84,19 @@ export function UsersView() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [toDelete, setToDelete] = useState<AdminUser | null>(null);
+  const [toResetPassword, setToResetPassword] = useState<AdminUser | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const fetched = await rolesService.list();
+        if (fetched.length > 0) setRoles(fetched);
+      } catch {
+        // Fallback
+      }
+    })();
+  }, []);
 
   const refresh = () => void useUsersListStore.getState().fetch();
 
@@ -107,13 +122,31 @@ export function UsersView() {
       {
         id: 'role',
         header: L.columns.role,
-        cell: (u) => <span className="text-xs text-(--text-secondary)">{lo.roles[u.role]}</span>,
+        cell: (u) => (
+          <div>
+            <span className="text-xs font-medium text-(--text-strong)">
+              {u.roleTitle || lo.roles[u.role] || u.role}
+            </span>
+            {u.roleTitle && u.roleTitle !== u.role ? (
+              <span className="block text-[10px] text-(--text-muted)">{u.role}</span>
+            ) : null}
+          </div>
+        ),
       },
       {
         id: 'permissions',
         header: L.columns.permissions,
         className: 'hidden min-w-44 whitespace-normal md:table-cell',
-        cell: (u) => <span className="text-xs text-(--text-secondary)">{permissionSummary(u)}</span>,
+        cell: (u) => {
+          if (impliesAllPermissions(u.role)) {
+            return (
+              <span className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+                {lo.users.permissionAll}
+              </span>
+            );
+          }
+          return <span className="text-xs text-(--text-secondary)">{permissionSummary(u)}</span>;
+        },
       },
       {
         id: 'status',
@@ -135,6 +168,15 @@ export function UsersView() {
               }}
             >
               <Pencil aria-hidden="true" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title={L.resetPassword}
+              aria-label={`${L.resetPassword} ${u.fullName}`}
+              onClick={() => setToResetPassword(u)}
+            >
+              <KeyRound aria-hidden="true" className="size-4 text-amber-500/80 hover:text-amber-400" />
             </Button>
             {me && u.id === me.id ? null : (
               <Button
@@ -186,24 +228,32 @@ export function UsersView() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-(--border-glass) bg-(--surface-glass) p-4 shadow-(--shadow-card) backdrop-blur-md sm:p-5">
         <DebouncedSearch value={query.q} onCommit={(q) => setQuery({ q })} />
-        <div className="w-full sm:w-52">
+        <div className="w-full sm:w-56">
           <Label htmlFor="user-role-filter" className="sr-only">
             {L.roleFilter}
           </Label>
           <Select
             value={query.role ?? ALL}
-            onValueChange={(v) => setQuery({ role: v === ALL ? undefined : (v as AdminUser['role']) })}
+            onValueChange={(v) => setQuery({ role: v === ALL ? undefined : v })}
           >
             <SelectTrigger id="user-role-filter" aria-label={L.roleFilter} className="h-10 w-full">
               <SelectValue placeholder={L.allRoles} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>{L.allRoles}</SelectItem>
-              {USER_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {lo.roles[r]}
-                </SelectItem>
-              ))}
+              {roles.length > 0 ? (
+                roles.map((r) => (
+                  <SelectItem key={r.id} value={r.name}>
+                    {r.title || r.name}
+                  </SelectItem>
+                ))
+              ) : (
+                USER_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {lo.roles[r] ?? r}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -253,6 +303,13 @@ export function UsersView() {
         onOpenChange={setFormOpen}
         user={editing ?? undefined}
         onSaved={() => refresh()}
+      />
+      <ResetPasswordDialog
+        open={toResetPassword !== null}
+        onOpenChange={(o) => {
+          if (!o) setToResetPassword(null);
+        }}
+        user={toResetPassword}
       />
       <ConfirmDialog
         open={toDelete !== null}

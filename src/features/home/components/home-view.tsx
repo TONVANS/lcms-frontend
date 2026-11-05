@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -60,8 +61,8 @@ export function HomeView() {
           className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#d4b37a]/80 to-transparent"
         />
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-600/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-[rgba(212,179,122,0.3)] dark:bg-amber-500/10 dark:text-(--gold)">
-            <Sparkles className="size-3.5" aria-hidden="true" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-600/25 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-[rgba(212,179,122,0.3)] dark:bg-amber-500/10 dark:text-(--gold)">
+            <Image src="/logo/logo.png" alt="LCMS" width={18} height={18} className="size-4 object-contain" />
             <span>{lo.common.appName}</span>
           </div>
           <h1 className="animate-fade-in-hero font-heading text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-text-strong leading-tight">

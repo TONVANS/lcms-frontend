@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
@@ -19,10 +20,12 @@ import { FileList, type FileItem } from '@/components/shared/file-list';
 import { GlassCard } from '@/components/shared/glass-card';
 import { Stepper } from '@/components/shared/stepper';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { env } from '@/config/env';
 import { documentsService } from '@/features/documents';
 import { useProjectTypes } from '@/features/lookups';
-import { normalizeError } from '@/lib/api/errors';
+import { normalizeError, toUserMessage } from '@/lib/api/errors';
 import { MODULES } from '@/lib/constants/modules';
+import { STATUS_META } from '@/lib/constants/status';
 import { lo } from '@/lib/i18n/lo';
 import { cn } from '@/lib/utils/cn';
 import { formatDate } from '@/lib/utils/date';
@@ -41,8 +44,10 @@ import {
   type PpaFieldGroup,
 } from './ppa-contract-form-fields';
 import { applyPpaServerError, makePowerResolver } from './ppa-form-support';
+import { POWER_PURCHASE_PROJECT_TYPES, type PowerContractType } from '../types';
 
 const TOTAL_STEPS = 4;
+const ACCEPT_ATTACHMENTS = '.pdf,.png,.jpg,.jpeg,.gif,.webp';
 const FOCUS_RING =
   'focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--focus-ring)';
 
@@ -55,7 +60,7 @@ const STEP_LABELS = [
 const STEPS = STEP_LABELS.map((label, i) => ({ id: i + 1, label }));
 
 const STEP_FIELDS: Record<number, readonly PowerFormField[]> = {
-  1: ['contractType', 'contractNumber', 'projectName', 'projectTypeOrCustomer', 'projectLocation'],
+  1: ['contractType', 'contractNumber', 'projectName', 'projectTypeOrCustomer', 'projectLocation', 'status'],
   2: ['signedDate', 'effectiveDate', 'expirationDate', 'durationText', 'durationMonths', 'notifyDaysBefore'],
   3: ['capacityValue', 'capacityUnit', 'tariffValue', 'tariffCurrency'],
   4: ['additionalDetails'],
@@ -96,18 +101,24 @@ function SummaryAside({ control, completed }: { control: Control<PowerFormValues
   const v = useFormValues(control);
   const headingId = useId();
   const f = lo.ppa.fields;
+  const isSale = v.contractType === 'SALE';
   const rows: { label: string; value: string }[] = [
-    { label: f.contractType, value: v.contractType ? lo.ppa.types[v.contractType] : EMPTY },
+    { label: f.contractType, value: v.contractType ? lo.ppa.typesWithCode[v.contractType] : EMPTY },
     { label: f.contractNumber, value: displayText(v.contractNumber) },
-    { label: f.projectName, value: displayText(v.projectName) },
+    { label: f.status, value: v.status ? STATUS_META[v.status]?.label ?? v.status : lo.status.DRAFT },
+    { label: isSale ? f.projectNameSale : f.projectName, value: displayText(v.projectName) },
     {
-      label: v.contractType === 'SALE' ? f.customer : f.projectType,
+      label: isSale ? f.customer : f.projectType,
       value: displayText(v.projectTypeOrCustomer),
     },
     { label: f.expirationDate, value: v.expirationDate ? formatDate(v.expirationDate) : EMPTY },
     {
       label: f.installedCapacity,
       value: v.capacityValue !== null && Number.isFinite(v.capacityValue) ? formatCapacity(v.capacityValue, v.capacityUnit) : EMPTY,
+    },
+    {
+      label: f.tariff,
+      value: v.tariffValue !== null && Number.isFinite(v.tariffValue) ? formatTariff(v.tariffValue, v.tariffCurrency) : EMPTY,
     },
   ];
   return (
@@ -207,6 +218,7 @@ function ReviewStep({
 }) {
   const v = useFormValues(control);
   const f = lo.ppa.fields;
+  const isSale = v.contractType === 'SALE';
   const headingId = useId();
   const num = (n: number | null) => (n !== null && Number.isFinite(n) ? n : null);
   const date = (d: string) => (d ? formatDate(d) : EMPTY);
@@ -216,10 +228,10 @@ function ReviewStep({
         {lo.ppa.wizard.review}
       </h3>
       <ReviewSection step={1} onEdit={onEdit} locked={locked}>
-        <ReviewItem label={f.contractType}>{lo.ppa.types[v.contractType]}</ReviewItem>
+        <ReviewItem label={f.contractType}>{lo.ppa.typesWithCode[v.contractType]}</ReviewItem>
         <ReviewItem label={f.contractNumber}>{displayText(v.contractNumber)}</ReviewItem>
-        <ReviewItem label={f.projectName}>{displayText(v.projectName)}</ReviewItem>
-        <ReviewItem label={v.contractType === 'SALE' ? f.customer : f.projectType}>
+        <ReviewItem label={isSale ? f.projectNameSale : f.projectName}>{displayText(v.projectName)}</ReviewItem>
+        <ReviewItem label={isSale ? f.customer : f.projectType}>
           {displayText(v.projectTypeOrCustomer)}
         </ReviewItem>
         <ReviewItem label={f.projectLocation}>{displayText(v.projectLocation)}</ReviewItem>
@@ -228,8 +240,13 @@ function ReviewStep({
         <ReviewItem label={f.signedDate}>{date(v.signedDate)}</ReviewItem>
         <ReviewItem label={f.effectiveDate}>{date(v.effectiveDate)}</ReviewItem>
         <ReviewItem label={f.expirationDate}>{date(v.expirationDate)}</ReviewItem>
-        <ReviewItem label={f.durationText}>{displayText(v.durationText)}</ReviewItem>
-        <ReviewItem label={f.notifyDaysBefore}>{num(v.notifyDaysBefore) ?? EMPTY}</ReviewItem>
+        <ReviewItem label={f.durationText}>
+          {displayText(v.durationText)}
+          {v.durationMonths ? ` (${v.durationMonths} ${lo.ppa.fields.monthsUnit})` : ''}
+        </ReviewItem>
+        <ReviewItem label={f.notifyDaysBefore}>
+          {num(v.notifyDaysBefore) !== null ? `${num(v.notifyDaysBefore)} ${lo.ppa.fields.daysUnit}` : EMPTY}
+        </ReviewItem>
       </ReviewSection>
       <ReviewSection step={3} onEdit={onEdit} locked={locked}>
         <ReviewItem label={f.installedCapacity}>{formatCapacity(num(v.capacityValue), v.capacityUnit)}</ReviewItem>
@@ -251,9 +268,23 @@ export function PpaWizardView() {
   const router = useRouter();
   const canUpload = useCan('ppa', 'create');
   const projectTypes = useProjectTypes();
+
+  const [initialType] = useState<PowerContractType>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('contractType');
+      if (t === 'SALE' || t === 'PURCHASE') return t;
+    }
+    return 'PURCHASE';
+  });
+
   const form = useForm<PowerFormValues>({
-    resolver: makePowerResolver({ types: projectTypes.items, ready: projectTypes.status === 'ready', initial: '' }),
-    defaultValues: emptyPowerForm(),
+    resolver: makePowerResolver({
+      types: projectTypes.items.length > 0 ? projectTypes.items : POWER_PURCHASE_PROJECT_TYPES,
+      ready: true,
+      initial: '',
+    }),
+    defaultValues: emptyPowerForm(initialType),
     shouldFocusError: false,
   });
   const { control, handleSubmit, trigger } = form;
@@ -264,6 +295,7 @@ export function PpaWizardView() {
   const [staged, setStaged] = useState<StagedFile[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   // Guards against a second create: the lock is synchronous, the id survives a failed upload.
   const busyRef = useRef(false);
@@ -273,6 +305,16 @@ export function PpaWizardView() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pendingFocus = useRef<string | null>(null);
   const prevStep = useRef(step);
+
+  const resetForm = () => {
+    form.reset(emptyPowerForm(initialType));
+    setStaged([]);
+    setStep(1);
+    setMaxReached(1);
+    setValidated(0);
+    setBanner(null);
+    createdIdRef.current = null;
+  };
 
   useEffect(() => {
     mounted.current = true;
@@ -348,23 +390,34 @@ export function PpaWizardView() {
           return;
         }
       }
+
       const id = createdIdRef.current;
-      const results = await Promise.allSettled(
-        staged.map((s) => documentsService.upload('power-contracts', id, s.file)),
-      );
-      const failed = staged.filter((_, i) => results[i].status === 'rejected');
-      if (failed.length > 0) {
-        toast.error(lo.ppa.wizard.uploadFailed(failed.map((s) => s.file.name).join(', ')));
+      if (staged.length > 0) {
+        setUploadingFiles(true);
+        const results = await Promise.allSettled(
+          staged.map((s) => documentsService.upload('power-contracts', id, s.file)),
+        );
+        const failed = staged.filter((_, i) => results[i].status === 'rejected');
+        if (failed.length > 0) {
+          toast.error(lo.ppa.wizard.uploadFailed(failed.map((s) => s.file.name).join(', ')));
+        }
+        if (!mounted.current) return;
+        setStaged(failed);
       }
-      if (!mounted.current) return;
-      setStaged(failed);
       if (justCreated) toast.success(lo.ppa.wizard.created);
-      router.replace(`/ppa/contracts/${id}`);
+      resetForm();
+      router.push(`/ppa/contracts/${id}`);
+      router.refresh();
+    } catch (e) {
+      if (!mounted.current) return;
+      const err = normalizeError(e);
+      const msg = toUserMessage(err);
+      if (msg) toast.error(msg);
     } finally {
-      // Once the contract exists navigation always follows, so the form stays locked until unmount.
-      if (createdIdRef.current === null) {
-        busyRef.current = false;
+      busyRef.current = false;
+      if (mounted.current) {
         setSubmitting(false);
+        setUploadingFiles(false);
       }
     }
   };
@@ -425,6 +478,8 @@ export function PpaWizardView() {
                     <>
                       <FileDropzone
                         disabled={submitting}
+                        accept={ACCEPT_ATTACHMENTS}
+                        maxSizeMb={env.NEXT_PUBLIC_MAX_UPLOAD_MB}
                         onFilesSelected={addFiles}
                         onReject={(messages) => toast.error(messages.join(' · '))}
                       />
@@ -453,6 +508,7 @@ export function PpaWizardView() {
                 tabIndex={submitting ? -1 : undefined}
                 onClick={(e) => {
                   if (submitting) e.preventDefault();
+                  else resetForm();
                 }}
                 className={cn(
                   buttonVariants({ variant: 'ghost' }),
@@ -472,7 +528,14 @@ export function PpaWizardView() {
                   <Button type="submit">{lo.ppa.wizard.next}</Button>
                 ) : (
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? lo.ppa.form.saving : lo.ppa.wizard.submit}
+                    {submitting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        <span>{uploadingFiles ? lo.dropzone.uploading : lo.ppa.form.saving}</span>
+                      </span>
+                    ) : (
+                      lo.ppa.wizard.submit
+                    )}
                   </Button>
                 )}
               </div>

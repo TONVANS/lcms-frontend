@@ -5,6 +5,16 @@ export type { ContractStatus, Currency };
 export const POWER_CONTRACT_TYPES = ['PURCHASE', 'SALE'] as const;
 export type PowerContractType = (typeof POWER_CONTRACT_TYPES)[number];
 
+/** 5 standard power purchase project types per specification and Postman collection */
+export const POWER_PURCHASE_PROJECT_TYPES = [
+  'ໄຟຟ້ານໍ້າຕົກ',
+  'ພະລັງງານແສງຕາເວັນ',
+  'ພະລັງງານລົມ',
+  'ພະລັງງານຄວາມຮ້ອນ / ຖ່ານຫີນ',
+  'ພະລັງງານຊີວະມວນ',
+] as const;
+export type PowerPurchaseProjectType = (typeof POWER_PURCHASE_PROJECT_TYPES)[number];
+
 export const POWER_STATUSES: readonly ContractStatus[] = [
   'DRAFT',
   'ACTIVE',
