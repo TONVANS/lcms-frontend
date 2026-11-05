@@ -7,7 +7,7 @@ export const siteConfig = {
   slogan: 'ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ ຍົກລະດັບການຄຸ້ມຄອງ',
   description:
     'EDL LCMS (Legal Contract Management System) - ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ ລັດວິສາຫະກິດໄຟຟ້າລາວ (EDL). ລວມສັນຍາພະລັງງານໄຟຟ້າ (PPA), ສັນຍາທົ່ວໄປ (GC) ແລະ ວຽກງານນິຕິກຳ ໄວ້ໃນບ່ອນດຽວ ພ້ອມແຈ້ງເຕືອນ Real-time ປອດໄພມາດຕະຖານສາກົນ SSL 256-bit.',
-  url: env.NEXT_PUBLIC_SITE_URL || 'https://lcms.edl.com.la',
+  url: env.NEXT_PUBLIC_SITE_URL || 'https://lcms-frontend.02091886915-ss.workers.dev',
   ogImage: '/og-image.png',
   ogImageWidth: 1200,
   ogImageHeight: 630,

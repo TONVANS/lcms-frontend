@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { LoginForm } from '@/features/auth';
+import { siteConfig } from '@/config/site';
 
 export const metadata: Metadata = {
   title: 'ເຂົ້າສູ່ລະບົບ',
@@ -10,6 +11,15 @@ export const metadata: Metadata = {
     title: 'ເຂົ້າສູ່ລະບົບ | EDL LCMS',
     description:
       'ເຂົ້າສູ່ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ EDL LCMS - ລັດວິສາຫະກິດໄຟຟ້າລາວ (EDL)',
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: siteConfig.ogImageWidth,
+        height: siteConfig.ogImageHeight,
+        alt: siteConfig.ogImageAlt,
+        type: 'image/png',
+      },
+    ],
   },
 };
 
