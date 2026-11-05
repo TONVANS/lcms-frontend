@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ຄຸ້ມຄອງໂຄງສ້າງພະແນກ ແລະ ຝ່າຍຕ່າງໆ ຂອງ ລັດວິສາຫະກິດໄຟຟ້າລາວ',
 };
 
-export const instant = false;
 
 export default function AdminDepartmentsPage() {
   return (

@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ກວດສອບປະຫວັດການດຳເນີນງານ ແລະ ການປ່ຽນແປງຂໍ້ມູນໃນລະບົບ 100%',
 };
 
-export const instant = false;
 
 export default function AdminAuditLogsPage() {
   return (

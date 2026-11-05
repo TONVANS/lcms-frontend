@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     'ຄຸ້ມຄອງ, ຄົ້ນຫາ ແລະ ກວດສອບລາຍການສັນຍາທົ່ວໄປ ແລະ ຈັດຊື້-ຈັດຈ້າງທັງໝົດ',
 };
 
-export const instant = false;
 
 export default function ContractsListPage() {
   return (

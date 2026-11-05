@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: 'ລົງທະບຽນ ແລະ ສ້າງສັນຍາທົ່ວໄປ/ຈັດຊື້-ຈັດຈ້າງໃໝ່',
 };
 
-export const instant = false;
 
 export default function NewContractPage() {
   return (

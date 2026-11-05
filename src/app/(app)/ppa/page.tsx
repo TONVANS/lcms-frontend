@@ -7,7 +7,6 @@ export const metadata: Metadata = {
     'ພາບລວມລະບົບຄຸ້ມຄອງສັນຍາຊື້-ຂາຍໄຟຟ້າ Power Purchase Agreements, ຕິດຕາມສະຖານະ COD, Tariff ແລະ ຜົນຜະລິດພະລັງງານໄຟຟ້າ',
 };
 
-export const instant = false;
 
 export default function PpaDashboardPage() {
   return <PpaDashboardView />;

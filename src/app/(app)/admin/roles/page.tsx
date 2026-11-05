@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   description: 'ກຳນົດບົດບາດ ແລະ ສິດທິການເຂົ້າເຖິງຂໍ້ມູນໃນລະບົບ LCMS',
 };
 
-export const instant = false;
 
 export default function RolesPage() {
   return <RolesView />;

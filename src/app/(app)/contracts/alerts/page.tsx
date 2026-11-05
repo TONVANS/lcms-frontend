@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     'ລາຍການແຈ້ງເຕືອນສັນຍາທົ່ວໄປໃກ້ໝົດອາຍຸ ແລະ ກຳນົດເວລາພັນທະສັນຍາ',
 };
 
-export const instant = false;
 
 export default function ContractsAlertsPage() {
   return (

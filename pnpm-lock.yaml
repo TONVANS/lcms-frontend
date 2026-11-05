@@ -9,7 +9,7 @@ patchedDependencies:
     hash: b6f8bf127b779e60a05e023fc33d279df2570238a122c7ea3796d3da90cd2d52
     path: patches/@opennextjs__aws@4.1.15.patch
   '@opennextjs/cloudflare@1.20.16':
-    hash: 69b9deed8453510c7c0ccced29320256ddfad30da0d1871a1945d6314ad8dc8d
+    hash: fb97bf400b98f84cf202b3bce99824dba508f4a47cdfd2f8cfc5a8c3dfaf8414
     path: patches/@opennextjs__cloudflare@1.20.16.patch
 
 importers:
@@ -85,7 +85,7 @@ importers:
         version: 4.14.0(playwright-core@1.64.1)
       '@opennextjs/cloudflare':
         specifier: ^1.20.16
-        version: 1.20.16(patch_hash=69b9deed8453510c7c0ccced29320256ddfad30da0d1871a1945d6314ad8dc8d)(next@16.4.2(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(wrangler@4.157.0(@types/node@20.19.43))
+        version: 1.20.16(patch_hash=fb97bf400b98f84cf202b3bce99824dba508f4a47cdfd2f8cfc5a8c3dfaf8414)(next@16.4.2(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(wrangler@4.157.0(@types/node@20.19.43))
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
@@ -7024,7 +7024,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.16(patch_hash=69b9deed8453510c7c0ccced29320256ddfad30da0d1871a1945d6314ad8dc8d)(next@16.4.2(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(wrangler@4.157.0(@types/node@20.19.43))':
+  '@opennextjs/cloudflare@1.20.16(patch_hash=fb97bf400b98f84cf202b3bce99824dba508f4a47cdfd2f8cfc5a8c3dfaf8414)(next@16.4.2(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(wrangler@4.157.0(@types/node@20.19.43))':
     dependencies:
       '@ast-grep/napi': 0.45.3
       '@dotenvx/dotenvx': 2.38.2

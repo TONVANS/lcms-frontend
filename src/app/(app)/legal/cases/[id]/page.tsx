@@ -3,7 +3,6 @@ import { ModuleGuard } from '@/components/guards/module-guard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LegalCaseDetailView } from '@/features/legal';
 
-export const instant = false;
 
 export default async function CaseDetailPage({
   params,

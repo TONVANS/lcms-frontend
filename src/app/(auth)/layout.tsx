@@ -8,7 +8,6 @@ import { lo } from '@/lib/i18n/lo';
 import { ShieldCheck } from 'lucide-react';
 import { BrandPanel } from './_brand-panel';
 
-export const instant = false;
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

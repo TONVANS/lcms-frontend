@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   },
 };
 
-export const instant = false;
 
 async function LoginContent({ searchParams }: { searchParams: PageProps<'/login'>['searchParams'] }) {
   const params = await searchParams;

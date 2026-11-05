@@ -10,7 +10,6 @@ export const metadata: Metadata = {
     'ຕິດຕາມຄວາມຄືບໜ້າຄະດີຄວາມ, ການໄຕ່ສວນສານ ແລະ ການແກ້ໄຂຂໍ້ຂັດແຍ່ງ',
 };
 
-export const instant = false;
 
 export default function LegalCasesPage() {
   return (

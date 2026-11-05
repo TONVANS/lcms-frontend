@@ -7,7 +7,6 @@ export const metadata: Metadata = {
     'ສູນກາງລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ EDL LCMS - ລວມສັນຍາພະລັງງານໄຟຟ້າ (PPA), ສັນຍາທົ່ວໄປ (GC) ແລະ ວຽກງານນິຕິກຳ ໄວ້ໃນບ່ອນດຽວ',
 };
 
-export const instant = false;
 
 export default function HomePage() {
   return <HomeView />;

@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ຄຸ້ມຄອງ ແລະ ກຳນົດປະເພດສັນຍາຕ່າງໆ ໃນລະບົບ LCMS',
 };
 
-export const instant = false;
 
 export default function AdminContractTypesPage() {
   return (

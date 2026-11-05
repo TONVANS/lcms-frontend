@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     'ພາບລວມວຽກງານນິຕິກຳ, ຄຸ້ມຄອງລະບຽບກົດໝາຍ ແລະ ຕິດຕາມຄະດີຄວາມ',
 };
 
-export const instant = false;
 
 export default function LegalDashboardPage() {
   return (

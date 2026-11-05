@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ສ້າງ ແລະ ລົງທະບຽນຂໍ້ມູນນິຕິກຳ ຫຼື ຄະດີຄວາມໃໝ່',
 };
 
-export const instant = false;
 
 export default function LegalNewPage() {
   return (

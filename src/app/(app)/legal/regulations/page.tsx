@@ -10,7 +10,6 @@ export const metadata: Metadata = {
     'ຄັງເກັບກຳ ແລະ ຄົ້ນຫາລະບຽບກົດໝາຍ, ນິຕິກຳ ແລະ ຂໍ້ຕົກລົງຕ່າງໆ',
 };
 
-export const instant = false;
 
 export default function LegalRegulationsPage() {
   return (

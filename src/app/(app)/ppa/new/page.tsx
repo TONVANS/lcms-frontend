@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: 'ລົງທະບຽນ ແລະ ສ້າງຂໍ້ມູນສັນຍາຊື້-ຂາຍໄຟຟ້າໃໝ່ເຂົ້າສູ່ລະບົບ',
 };
 
-export const instant = false;
 
 export default function PpaNewContractPage() {
   return (

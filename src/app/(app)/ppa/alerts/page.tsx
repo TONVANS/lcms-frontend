@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     'ລາຍການແຈ້ງເຕືອນສັນຍາຊື້-ຂາຍໄຟຟ້າໃກ້ໝົດອາຍຸ ແລະ ກຳນົດເວລາສຳຄັນ 90/30/7 ມື້',
 };
 
-export const instant = false;
 
 export default function PpaAlertsPage() {
   return (

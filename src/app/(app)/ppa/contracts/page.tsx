@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     'ຄຸ້ມຄອງ, ຄົ້ນຫາ ແລະ ກວດສອບລາຍການສັນຍາຊື້-ຂາຍໄຟຟ້າທັງໝົດໃນລະບົບ',
 };
 
-export const instant = false;
 
 export default function PpaContractsPage() {
   return (

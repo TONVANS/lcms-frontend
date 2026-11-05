@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PpaContractDetailView } from '@/features/ppa';
 
-export const instant = false;
 
 export default async function PpaContractDetailPage({
   params,

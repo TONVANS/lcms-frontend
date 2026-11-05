@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ສູນກາງການແຈ້ງເຕືອນທັງໝົດໃນລະບົບ EDL LCMS',
 };
 
-export const instant = false;
 
 export default function NotificationsPage() {
   return (

@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ຄຸ້ມຄອງ ແລະ ກຳນົດສິດທິບັນຊີຜູ້ໃຊ້ງານໃນລະບົບ LCMS',
 };
 
-export const instant = false;
 
 export default function AdminUsersPage() {
   return (

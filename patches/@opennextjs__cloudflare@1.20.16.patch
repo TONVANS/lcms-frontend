@@ -10,3 +10,32 @@ index 7420316008e9651c5a1e41d2edcc3d00b8d023f8..323db85743be06041348600a659897b8
              // When @vercel/og is not used, alias the edge entry to a throwing shim so the
              // dynamic `import("next/dist/compiled/@vercel/og/index.edge.js")` call site
              // emitted by Next.js does not drag the library (~800 KiB) and its
+diff --git a/dist/cli/build/patches/plugins/next-server.js b/dist/cli/build/patches/plugins/next-server.js
+index f57f2c9ffb356ee6eed19c61d623c8a461de2ef3..c6fca9de34099669356f2f6addd7b769906f4a31 100644
+--- a/dist/cli/build/patches/plugins/next-server.js
++++ b/dist/cli/build/patches/plugins/next-server.js
+@@ -28,6 +28,7 @@ export function patchNextServer(updater, buildOpts) {
+                 contents = patchCode(contents, createComposableCacheHandlersRule(composableCacheHandler));
+                 // Node middleware are not supported on Cloudflare yet
+                 contents = patchCode(contents, disableNodeMiddlewareRule);
++                contents = patchCode(contents, disableMiddlewareManifestRule);
+                 contents = patchCode(contents, attachRequestMetaRule);
+                 return contents;
+             },
+@@ -45,6 +46,16 @@ fix: |-
+     // patched by open next
+   }
+ `;
++export const disableMiddlewareManifestRule = `
++rule:
++  pattern:
++    selector: method_definition
++    context: "class { getMiddlewareManifest($$$PARAMS) { $$$_ } }"
++fix: |-
++  getMiddlewareManifest($$$PARAMS) {
++    return null;
++  }
++`;
+ export const buildIdRule = `
+ rule:
+   pattern:

@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   description: 'ຕິດຕໍ່ຝ່າຍສະໜັບສະໜູນ, ແຈ້ງບັນຫາ ແລະ ສອບຖາມຂໍ້ມູນການໃຊ້ງານລະບົບ EDL LCMS',
 };
 
-export const instant = false;
 
 export default function SupportPage() {
   return (
