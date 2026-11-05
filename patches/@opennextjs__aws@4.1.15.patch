@@ -1,0 +1,19 @@
+diff --git a/dist/build/copyTracedFiles.js b/dist/build/copyTracedFiles.js
+index 9090f0ffc9c7346950fbf6e0bcabb10944f7ba8f..586ffaa9fe6aaa28f9d03f701d3cb17c59b4906f 100644
+--- a/dist/build/copyTracedFiles.js
++++ b/dist/build/copyTracedFiles.js
+@@ -237,7 +237,13 @@ File ${serverPath} does not exist
+                 symlinkSync(symlink, to);
+             }
+             catch (e) {
+-                if (e.code !== "EEXIST") {
++                if (e.code === "EPERM" || e.code === "EACCES") {
++                    try {
++                        cpSync(from, to, { recursive: true });
++                    } catch (cpErr) {
++                        logger.debug("Error copying fallback file/dir:", cpErr);
++                    }
++                } else if (e.code !== "EEXIST") {
+                     throw e;
+                 }
+             }

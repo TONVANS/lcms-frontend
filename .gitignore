@@ -46,6 +46,10 @@ next-env.d.ts
 # agent tooling
 .superpowers/
 
+# cloudflare & open-next
+/.open-next/
+/.wrangler/
+
 # playwright
 /test-results
 /playwright-report

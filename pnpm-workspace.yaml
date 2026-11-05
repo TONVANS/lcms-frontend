@@ -1,3 +1,7 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+patchedDependencies:
+  '@opennextjs/aws@4.1.15': patches/@opennextjs__aws@4.1.15.patch
+  '@opennextjs/cloudflare@1.20.16': patches/@opennextjs__cloudflare@1.20.16.patch
