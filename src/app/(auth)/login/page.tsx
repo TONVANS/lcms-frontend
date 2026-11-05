@@ -1,5 +1,17 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { LoginForm } from '@/features/auth';
+
+export const metadata: Metadata = {
+  title: 'ເຂົ້າສູ່ລະບົບ',
+  description:
+    'ເຂົ້າສູ່ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ EDL LCMS - ລັດວິສາຫະກິດໄຟຟ້າລາວ (EDL)',
+  openGraph: {
+    title: 'ເຂົ້າສູ່ລະບົບ | EDL LCMS',
+    description:
+      'ເຂົ້າສູ່ລະບົບບໍລິຫານສັນຍາ ແລະ ກົດໝາຍ EDL LCMS - ລັດວິສາຫະກິດໄຟຟ້າລາວ (EDL)',
+  },
+};
 
 export const instant = false;
 

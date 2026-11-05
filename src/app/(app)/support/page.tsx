@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SupportView } from '@/features/support';
+
+export const metadata: Metadata = {
+  title: 'ສູນຊ່ວຍເຫຼືອ ແລະ ຕິດຕໍ່ສອບຖາມ (Support)',
+  description: 'ຕິດຕໍ່ຝ່າຍສະໜັບສະໜູນ, ແຈ້ງບັນຫາ ແລະ ສອບຖາມຂໍ້ມູນການໃຊ້ງານລະບົບ EDL LCMS',
+};
 
 export const instant = false;
 

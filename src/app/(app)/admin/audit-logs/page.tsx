@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuditLogsView } from '@/features/admin';
+
+export const metadata: Metadata = {
+  title: 'ບັນທຶກການເຄື່ອນໄຫວລະບົບ (Audit Logs)',
+  description: 'ກວດສອບປະຫວັດການດຳເນີນງານ ແລະ ການປ່ຽນແປງຂໍ້ມູນໃນລະບົບ 100%',
+};
 
 export const instant = false;
 

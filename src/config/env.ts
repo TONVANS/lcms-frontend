@@ -8,6 +8,7 @@ const schema = z.object({
     .min(1)
     .default('https://likely-ecology-refused-letters.trycloudflare.com/api'),
   NEXT_PUBLIC_MAX_UPLOAD_MB: z.coerce.number().positive().default(25),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -18,6 +19,7 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     NEXT_PUBLIC_API_MODE: raw.NEXT_PUBLIC_API_MODE || undefined,
     NEXT_PUBLIC_API_BASE_URL: raw.NEXT_PUBLIC_API_BASE_URL || undefined,
     NEXT_PUBLIC_MAX_UPLOAD_MB: raw.NEXT_PUBLIC_MAX_UPLOAD_MB || undefined,
+    NEXT_PUBLIC_SITE_URL: raw.NEXT_PUBLIC_SITE_URL || undefined,
   });
 }
 
@@ -27,4 +29,5 @@ export const env: Env = parseEnv({
   NEXT_PUBLIC_API_MODE: process.env.NEXT_PUBLIC_API_MODE,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   NEXT_PUBLIC_MAX_UPLOAD_MB: process.env.NEXT_PUBLIC_MAX_UPLOAD_MB,
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
 });

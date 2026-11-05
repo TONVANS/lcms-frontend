@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ContractTypesView } from '@/features/admin';
+
+export const metadata: Metadata = {
+  title: 'ຈັດການປະເພດສັນຍາ (Contract Types)',
+  description: 'ຄຸ້ມຄອງ ແລະ ກຳນົດປະເພດສັນຍາຕ່າງໆ ໃນລະບົບ LCMS',
+};
 
 export const instant = false;
 

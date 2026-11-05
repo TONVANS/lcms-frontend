@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DepartmentsView } from '@/features/admin';
+
+export const metadata: Metadata = {
+  title: 'ຈັດການພະແນກ (Departments)',
+  description: 'ຄຸ້ມຄອງໂຄງສ້າງພະແນກ ແລະ ຝ່າຍຕ່າງໆ ຂອງ ລັດວິສາຫະກິດໄຟຟ້າລາວ',
+};
 
 export const instant = false;
 

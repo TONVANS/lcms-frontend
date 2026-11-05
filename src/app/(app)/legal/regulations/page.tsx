@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ModuleGuard } from '@/components/guards/module-guard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LegalDocumentsView } from '@/features/legal';
+
+export const metadata: Metadata = {
+  title: 'ລະບຽບກົດໝາຍ ແລະ ນິຕິກຳ (Regulations)',
+  description:
+    'ຄັງເກັບກຳ ແລະ ຄົ້ນຫາລະບຽບກົດໝາຍ, ນິຕິກຳ ແລະ ຂໍ້ຕົກລົງຕ່າງໆ',
+};
 
 export const instant = false;
 
