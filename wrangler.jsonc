@@ -14,7 +14,7 @@
   "vars": {
     "NEXT_PUBLIC_APP_NAME": "LCMS",
     "NEXT_PUBLIC_API_MODE": "live",
-    "NEXT_PUBLIC_API_BASE_URL": "https://likely-ecology-refused-letters.trycloudflare.com/api",
+    "NEXT_PUBLIC_API_BASE_URL": "https://super-built-six-rand.trycloudflare.com/api",
     "NEXT_PUBLIC_MAX_UPLOAD_MB": "25",
     "NEXT_PUBLIC_SITE_URL": "https://lcms-frontend.02091886915-ss.workers.dev",
     "SESSION_COOKIE_NAME": "lcms_session"
